@@ -39,7 +39,9 @@ Send one request per dispensed CD item:
 | `action` | no | `"dispense"` (default) or `"reverse"` when an item is un-dispensed or deleted in Halo. A reverse shows under To confirm so a pharmacist records a correction; it never silently changes the register. |
 | `dispensed_at` | yes | ISO date or datetime |
 | `drug.name` / `drug.strength` / `drug.form` | name + strength | Use the generic name if Halo has it. It's matched to the register by name + strength (+ form). |
-| `quantity` | yes | Total **base units** supplied (tablets, capsules, ml, patches), not packs. |
+| `quantity` | yes | Total **base units** actually supplied today (tablets, capsules, ml, patches). Not packs. For an owing or instalment, send only what was handed over. |
+| `unit` | recommended | `tablets`, `capsules`, `ml`, `patches`… If Halo only has a pack quantity, send e.g. `"unit": "OP"`. The item is then always held under To confirm and never auto-posted. |
+| `drug.brand` | optional | Brand as dispensed (e.g. `OxyNorm`). `drug.name` should be the generic name (oxycodone hydrochloride); brand is used as a fallback for matching. |
 | `patient.name` / `patient.address` | yes | Both required in the CD register. |
 | `prescriber.*`, `prescription_ref` | recommended | Fills the "authority to be in possession" column. |
 | `pharmacist.psi_number` | needed for auto-post | The pharmacist who dispensed or checked the item. |

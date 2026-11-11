@@ -24,7 +24,7 @@ const Body = z.object({
   external_id: z.string().trim().min(1).max(120),
   action: z.enum(['dispense', 'reverse']).default('dispense'),
   dispensed_at: z.string().min(10), // ISO date or datetime
-  drug: z.object({ name: z.string().trim().min(2), strength: z.string().trim().min(1), form: z.string().trim().optional() }),
+  drug: z.object({ name: z.string().trim().min(2), strength: z.string().trim().min(1), form: z.string().trim().optional(), brand: z.string().trim().optional() }),
   quantity: z.coerce.number().positive().max(1_000_000),
   unit: z.string().trim().optional(),
   patient: z.object({ name: z.string().trim().min(2), address: z.string().trim().min(3) }),
@@ -57,11 +57,15 @@ export async function POST(req: Request) {
   if (existing) return NextResponse.json({ inbox_id: existing.id, status: existing.status, entry_id: existing.entry_id, problem: existing.problem, duplicate: true });
 
   const regs = await liveRegisters(k.pharmacy_id);
-  const { match } = matchRegister(regs, d.drug.name, d.drug.strength, d.drug.form);
+  let { match } = matchRegister(regs, d.drug.name, d.drug.strength, d.drug.form);
+  if (!match && d.drug.brand) match = matchRegister(regs, d.drug.brand, d.drug.strength, d.drug.form).match;
 
   let problem: string | null = null;
+  // A pack quantity ("1 OP", "2 packs") is not a register quantity. Never auto-post it.
+  const PACK_UNIT = /^(op|o\.p\.|original pack|packs?|box(es)?|cartons?|x)\b/i;
   let staffId: string | null = null;
   if (d.action === 'reverse') problem = 'Reversal from Halo — record a correction to the original supply';
+  else if (d.unit && PACK_UNIT.test(d.unit.trim())) problem = `Quantity was sent as ${d.quantity} ${d.unit}, not units. Enter the number of tablets/ml/patches`;
   else if (!match) problem = `No open register matches ${d.drug.name} ${d.drug.strength}${d.drug.form ? ` ${d.drug.form}` : ''}`;
 
   const { data: ph } = await db.from('pharmacies').select('subscription_status').eq('id', k.pharmacy_id).single();
