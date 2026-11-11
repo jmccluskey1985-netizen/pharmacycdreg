@@ -5,6 +5,7 @@ import { extractFromDocument, ScanError } from '@/lib/scan-extract';
 import { balancesFor } from '@/lib/registers';
 import { liveRegisters, matchRegister } from '@/lib/match';
 import { decideQuantity } from '@/lib/quantity';
+import { registerExemption } from '@/lib/cd-catalogue';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { can } from '@/lib/roles';
 
@@ -47,7 +48,8 @@ export async function POST(req: Request) {
     const balances = await balancesFor(regs.map((r) => r.id));
 
     const isInvoice = extraction.document_type === 'invoice';
-    const proposals = extraction.items.filter((i) => i.is_controlled_drug).map((item) => {
+    const exempt = extraction.items.filter((i) => i.is_controlled_drug && registerExemption(i.drug_name, i.strength, i.form, i.brand));
+    const proposals = extraction.items.filter((i) => i.is_controlled_drug && !registerExemption(i.drug_name, i.strength, i.form, i.brand)).map((item) => {
       const { match, candidates, state } = matchRegister(regs, item.drug_name, item.strength, item.form, item.brand);
       const qty = decideQuantity(item, extraction.document_type);
       return {
@@ -77,7 +79,8 @@ export async function POST(req: Request) {
     });
 
     const ignored = extraction.items.filter((i) => !i.is_controlled_drug).length;
-    return NextResponse.json({ scan_id: scan.id, extraction, proposals, ignored });
+    const exempt_lines = exempt.map((i) => ({ label: `${i.brand ?? i.drug_name} ${i.strength}`, reason: registerExemption(i.drug_name, i.strength, i.form, i.brand) }));
+    return NextResponse.json({ scan_id: scan.id, extraction, proposals, ignored, exempt: exempt_lines });
   } catch (err) {
     if (err instanceof ScanError) return NextResponse.json({ error: err.message }, { status: 422 });
     return errorResponse(err);

@@ -164,6 +164,13 @@ export default function ScanPage() {
           <p className="text-muted-foreground">{result.proposals.length} controlled drug line{result.proposals.length === 1 ? '' : 's'} found{result.ignored ? ` · ${result.ignored} other line${result.ignored === 1 ? '' : 's'} ignored` : ''}</p>
         </div>
 
+        {result.exempt?.length > 0 && (
+          <div className="mb-4 rounded-xl border border-border bg-muted p-4 text-sm">
+            <p className="mb-1 font-semibold">Not entered — no register needed</p>
+            <ul className="list-disc pl-5 text-muted-foreground">{result.exempt.map((e: any, i: number) => <li key={i}><b className="text-foreground">{e.label}</b>: {e.reason}</li>)}</ul>
+          </div>
+        )}
+
         {x.warnings?.length > 0 && (
           <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
             <p className="mb-1 flex items-center gap-2 font-semibold"><AlertTriangle className="h-4 w-4" /> Check before recording</p>

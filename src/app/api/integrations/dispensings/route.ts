@@ -6,6 +6,7 @@ import { liveRegisters, matchRegister } from '@/lib/match';
 import { currentBalance } from '@/lib/registers';
 import { canWrite } from '@/lib/stripe';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { registerExemption } from '@/lib/cd-catalogue';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,6 +56,14 @@ export async function POST(req: Request) {
   // Idempotency: same external_id + action → return what happened first time.
   const { data: existing } = await db.from('pmr_inbox').select('id, status, entry_id, problem').eq('pharmacy_id', k.pharmacy_id).eq('source', 'halo').eq('external_id', d.external_id).eq('action', d.action).maybeSingle();
   if (existing) return NextResponse.json({ inbox_id: existing.id, status: existing.status, entry_id: existing.entry_id, problem: existing.problem, duplicate: true });
+
+  const exemptReason = registerExemption(d.drug.name, d.drug.strength, d.drug.form, d.drug.brand);
+  if (exemptReason) {
+    const { data: ex } = await db.from('pmr_inbox')
+      .insert({ pharmacy_id: k.pharmacy_id, integration_key_id: k.id, source: 'halo', external_id: d.external_id, action: d.action, payload: d, status: 'rejected', problem: exemptReason, resolved_at: new Date().toISOString() })
+      .select('id').single();
+    return NextResponse.json({ inbox_id: ex?.id, status: 'not_required', problem: exemptReason });
+  }
 
   const regs = await liveRegisters(k.pharmacy_id);
   let { match } = matchRegister(regs, d.drug.name, d.drug.strength, d.drug.form);
