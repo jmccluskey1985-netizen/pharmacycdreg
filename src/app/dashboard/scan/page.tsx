@@ -309,11 +309,20 @@ function ProposalCard({ p, done, onDone, canRecord }: { p: any; done: boolean; o
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="font-semibold">{p.item.drug_name} {p.item.strength} <span className="font-normal text-muted-foreground">{p.item.form}</span></p>
-          <p className="text-sm text-muted-foreground">{p.item.pack_description} → <b className="text-foreground">{p.item.quantity} {p.item.quantity_unit}</b></p>
+          <p className="text-sm text-muted-foreground">{p.qty?.label ?? `${p.item.pack_description} → ${p.item.quantity}`} {p.qty?.quantity != null && <b className="text-foreground">→ {p.qty.quantity} {p.item.quantity_unit}</b>}</p>
+          {p.item.brand && <p className="text-xs text-muted-foreground">Brand: {p.item.brand}</p>}
           {p.item.notes && <p className="mt-1 text-xs text-muted-foreground">{p.item.notes}</p>}
         </div>
-        <span className={`badge ${confCls}`}>{conf} confidence</span>
+        <div className="flex flex-col items-end gap-1">
+          <span className={`badge ${confCls}`}>{conf} confidence</span>
+          {p.match_state && <span className={`badge ${p.match_state === 'your_register' ? 'bg-brand/15 text-primary' : p.match_state === 'pick_register' ? 'bg-amber-100 text-amber-900' : 'bg-muted text-muted-foreground'}`}>{p.match_state === 'your_register' ? 'YOUR REGISTER' : p.match_state === 'pick_register' ? 'PICK REGISTER' : 'NO REGISTER YET'}</span>}
+        </div>
       </div>
+      {p.qty?.flags?.length > 0 && (
+        <ul className="mt-2 space-y-1 rounded-lg bg-amber-50 p-2.5 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+          {p.qty.flags.map((f: string, i: number) => <li key={i}>⚠ {f}</li>)}
+        </ul>
+      )}
 
       {done ? (
         <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-primary"><CheckCircle2 className="h-4 w-4" /> Recorded</p>

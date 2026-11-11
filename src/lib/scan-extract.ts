@@ -19,6 +19,15 @@ const ItemSchema = z.object({
   likely_schedule: z.number().int().nullable(),
   confidence: z.enum(['high', 'medium', 'low']),
   notes: z.string(),
+  // Raw fields: what is literally on the page. Rules in lib/quantity.ts decide the
+  // register quantity from these (Halo's "the model reads, the rules decide").
+  brand: z.string().nullable(),
+  packs: z.number().nullable(),
+  pack_size: z.number().nullable(),
+  quantity_figures: z.string().nullable(),
+  quantity_words: z.string().nullable(),
+  duration_text: z.string().nullable(),
+  is_credit: z.boolean(),
 });
 
 export const ExtractionSchema = z.object({
@@ -58,7 +67,7 @@ const JSON_SCHEMA = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['drug_name', 'strength', 'form', 'quantity', 'quantity_unit', 'pack_description', 'is_controlled_drug', 'likely_schedule', 'confidence', 'notes'],
+        required: ['drug_name', 'strength', 'form', 'quantity', 'quantity_unit', 'pack_description', 'is_controlled_drug', 'likely_schedule', 'confidence', 'notes', 'brand', 'packs', 'pack_size', 'quantity_figures', 'quantity_words', 'duration_text', 'is_credit'],
         properties: {
           drug_name: { type: 'string', description: 'Generic (INN) name, e.g. "Oxycodone hydrochloride". Put any brand in notes.' },
           strength: { type: 'string', description: 'e.g. "10mg", "10mg/5ml"' },
@@ -69,7 +78,14 @@ const JSON_SCHEMA = {
           is_controlled_drug: { type: 'boolean', description: 'True if this is a Misuse of Drugs Regulations (Ireland) Schedule 2, 3 or 4 controlled drug' },
           likely_schedule: { type: ['integer', 'null'] },
           confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
-          notes: { type: 'string', description: 'Brand, ambiguities, words-and-figures mismatch, illegible parts' },
+          notes: { type: 'string', description: 'Ambiguities, illegible parts, anything the pharmacist must check' },
+          brand: { type: ['string', 'null'], description: 'Brand exactly as written (e.g. "OxyNorm"), else null' },
+          packs: { type: ['number', 'null'], description: 'Invoices: number of packs on the line (the qty column), else null' },
+          pack_size: { type: ['number', 'null'], description: 'Units per pack from the description (e.g. "OXYNORM CAPS 5MG 56" → 56), else null' },
+          quantity_figures: { type: ['string', 'null'], description: 'Prescriptions: total quantity in FIGURES exactly as written (e.g. "28"), else null' },
+          quantity_words: { type: ['string', 'null'], description: 'Prescriptions: total quantity in WORDS exactly as written (e.g. "twenty-eight"), else null' },
+          duration_text: { type: ['string', 'null'], description: 'Duration if written (e.g. "5/7", "28 days"), else null. Never convert it into a quantity.' },
+          is_credit: { type: 'boolean', description: 'True for a credit, return or negative line' },
         },
       },
     },
@@ -88,7 +104,8 @@ Invoices and delivery dockets:
 - If a page appears to be missing (page numbering, "continued"), add a warning.
 
 Prescriptions:
-- Quantity is the total to supply. Add a warning if words and figures disagree or the quantity is not written in both.
+- Controlled drug prescriptions must state the TOTAL quantity in both words and figures. Copy them exactly into quantity_words and quantity_figures. Put the total in quantity only if it is written; never work a quantity out from a dose and duration (put any duration in duration_text instead).
+- Add a warning if words and figures disagree, either is missing, or the script looks altered.
 
 Rules for everything:
 - Transcribe only what is on the document. If something is not visible, return null — never guess a name, address or quantity.

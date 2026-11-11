@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { extractFromDocument, ScanError } from '@/lib/scan-extract';
 import { balancesFor } from '@/lib/registers';
 import { liveRegisters, matchRegister } from '@/lib/match';
+import { decideQuantity } from '@/lib/quantity';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { can } from '@/lib/roles';
 
@@ -47,9 +48,12 @@ export async function POST(req: Request) {
 
     const isInvoice = extraction.document_type === 'invoice';
     const proposals = extraction.items.filter((i) => i.is_controlled_drug).map((item) => {
-      const { match, candidates } = matchRegister(regs, item.drug_name, item.strength, item.form);
+      const { match, candidates, state } = matchRegister(regs, item.drug_name, item.strength, item.form, item.brand);
+      const qty = decideQuantity(item, extraction.document_type);
       return {
         item,
+        match_state: state,
+        qty,
         register_id: match?.id ?? null,
         register_label: match?.label ?? null,
         current_balance: match ? balances[match.id] ?? 0 : null,
@@ -57,7 +61,7 @@ export async function POST(req: Request) {
         draft: {
           entry_type: isInvoice ? 'receipt' : 'supply',
           transaction_date: extraction.document_date ?? new Date().toISOString().slice(0, 10),
-          quantity: item.quantity,
+          quantity: qty.quantity ?? '',
           supplier_name: extraction.supplier_name,
           supplier_address: extraction.supplier_address,
           recipient_name: extraction.patient_name,
