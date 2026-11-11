@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Plus, Printer, PencilLine } from 'lucide-react';
 import { api } from '@/lib/api';
 import { can } from '@/lib/roles';
+import { canWrite } from '@/lib/stripe';
 import { LogoMark } from '@/components/logo';
 import { Modal } from '@/components/modal';
 import { useStaff } from '@/components/dashboard/staff-context';
@@ -49,7 +50,7 @@ function authorityCell(r: Raw) {
 }
 
 export default function RegisterBook({ params }: { params: { id: string } }) {
-  const { staff } = useStaff();
+  const { staff, pharmacy } = useStaff();
   const [data, setData] = useState<{ register: any; ledger: Ledger[]; entries: Raw[]; staff: Person[] } | null>(null);
   const [opened, setOpened] = useState(false);
   const [page, setPage] = useState(0);
@@ -117,7 +118,7 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
 
   if (!data) return <p className="text-muted-foreground">Opening register…</p>;
   const p = data.register.product;
-  const mayRecord = staff && can.record(staff.role);
+  const mayRecord = staff && can.record(staff.role) && canWrite(pharmacy?.subscription_status);
 
   return (
     <div>

@@ -41,7 +41,7 @@ const Body = z.object({
 // Open a new register (one live register per product per premises — FR13 is enforced by a unique index).
 export async function POST(req: Request) {
   try {
-    const { account, staff } = await requireStaff(can.openRegister);
+    const { account, staff } = await requireStaff(can.openRegister, { write: true });
     const parsed = Body.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) return NextResponse.json({ error: 'Check the product details', issues: parsed.error.flatten() }, { status: 400 });
     const b = parsed.data;

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Plus, Loader2 } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 import { ROLE_LABELS, type StaffRole } from '@/lib/roles';
@@ -22,7 +23,10 @@ export default function TeamPage() {
           <h1 className="text-2xl font-bold">Team</h1>
           <p className="text-sm text-muted-foreground">Everyone signs register entries with their own PIN.</p>
         </div>
-        <button onClick={() => setEditing({ role: 'pharmacist', is_active: true })} className="btn-primary"><Plus className="h-4 w-4" /> Add</button>
+        <div className="flex gap-2">
+          <Link href="/dashboard/billing" className="btn-secondary lg:hidden">Billing</Link>
+          <button onClick={() => setEditing({ role: 'pharmacist', is_active: true })} className="btn-primary"><Plus className="h-4 w-4" /> Add</button>
+        </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {staff.map((s) => {

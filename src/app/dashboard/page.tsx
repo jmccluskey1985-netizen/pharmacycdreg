@@ -7,6 +7,7 @@ import { api, ApiError } from '@/lib/api';
 import { can } from '@/lib/roles';
 import { useStaff } from '@/components/dashboard/staff-context';
 import { Modal } from '@/components/modal';
+import { canWrite } from '@/lib/stripe';
 
 interface Reg {
   id: string;
@@ -17,6 +18,7 @@ interface Reg {
 // The bookshelf: one "book" per drug/strength/form, grouped by class (FR4, FR8).
 export default function RegistersPage() {
   const { staff, pharmacy } = useStaff();
+  const writable = canWrite(pharmacy?.subscription_status);
   const [regs, setRegs] = useState<Reg[] | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -38,8 +40,8 @@ export default function RegistersPage() {
         </div>
         <div className="flex gap-2 whitespace-nowrap">
           {staff && can.manageStaff(staff.role) && <Link href="/dashboard/team" className="btn-secondary lg:hidden"><Users className="h-4 w-4" /> Team</Link>}
-          {staff && can.scan(staff.role) && <Link href="/dashboard/scan" className="btn-brand"><ScanLine className="h-4 w-4" /> Scan<span className="hidden sm:inline"> invoice</span></Link>}
-          {staff && can.openRegister(staff.role) && <button onClick={() => setOpen(true)} className="btn-primary"><Plus className="h-4 w-4" /> New<span className="hidden sm:inline"> register</span></button>}
+          {writable && staff && can.scan(staff.role) && <Link href="/dashboard/scan" className="btn-brand"><ScanLine className="h-4 w-4" /> Scan<span className="hidden sm:inline"> invoice</span></Link>}
+          {writable && staff && can.openRegister(staff.role) && <button onClick={() => setOpen(true)} className="btn-primary"><Plus className="h-4 w-4" /> New<span className="hidden sm:inline"> register</span></button>}
         </div>
       </div>
 

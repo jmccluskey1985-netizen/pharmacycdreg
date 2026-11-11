@@ -18,7 +18,7 @@ const normStrength = (s: string) => s.toLowerCase().replace(/\s|micrograms?/g, (
 // with a proposed register entry. Nothing is written to the register here.
 export async function POST(req: Request) {
   try {
-    const { account, staff } = await requireStaff(can.scan);
+    const { account, staff } = await requireStaff(can.scan, { write: true });
     const limit = checkRateLimit(`scan:${account.pharmacyId}`, 20, 60_000);
     if (!limit.ok) return NextResponse.json({ error: 'Too many scans — wait a moment' }, { status: 429 });
 

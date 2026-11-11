@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, ScanLine, Search, History, Users, Lock, Flame } from 'lucide-react';
+import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard } from 'lucide-react';
+import { BillingBanner } from './billing-banner';
 import { Logo } from '@/components/logo';
 import { ROLE_LABELS, can } from '@/lib/roles';
 import { useStaff } from './staff-context';
@@ -16,6 +17,7 @@ const NAV = [
   { href: '/dashboard/destructions', label: 'Destructions', icon: Flame, show: () => true },
   { href: '/dashboard/audit', label: 'Audit trail', icon: History, show: can.viewAudit },
   { href: '/dashboard/team', label: 'Team', icon: Users, show: can.manageStaff },
+  { href: '/dashboard/billing', label: 'Billing', icon: CreditCard, show: can.manageStaff },
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -57,7 +59,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </button>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:py-8">{children}</main>
+      <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:py-8">
+        <BillingBanner />
+        {children}
+      </main>
 
       {/* Mobile bottom nav with a raised Scan button */}
       <nav className="no-print fixed inset-x-0 bottom-0 z-30 grid border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" style={{ gridTemplateColumns: `repeat(${Math.min(items.length, 5)}, 1fr)` }}>

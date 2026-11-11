@@ -39,12 +39,28 @@ Electronic Controlled Drug Register for Irish community pharmacies. It is a sist
 | NFR1–3 | Staff roles + PIN + `can.*` checks on every route |
 | NFR6–9, 15, 16 | Supabase (EU region) backups/PITR; no delete path in app. Document retention and backup arrangements in your Evidence Pack (DOC-002, DEC-001). |
 
+## Pricing & billing
+
+Mirrors PharmacyConsultation.ie, with prices set in `src/config/pricing.ts`:
+- **€19/month + VAT**, a limited-time launch price shown against €29, and a **one-month free trial**.
+- **Self sign-up** at `/start`. The pharmacy is created, then Stripe Checkout runs with the **card required up front**, €0 today, and the card is charged automatically on day 30 unless cancelled. Irish VAT is handled by Stripe Tax, and the VAT number is captured at checkout.
+- `POST /api/stripe/webhook` keeps `pharmacies.subscription_status`, `trial_ends_at` and `current_period_end` in sync. One free month per pharmacy.
+- **Billing page** for the supervising pharmacist: the Stripe customer portal for card changes, invoices and cancelling.
+- **Trial reminders** go out 7, 3, 1 and 0 days before the end, via Vercel Cron → `/api/cron/trial-reminders`, which needs `CRON_SECRET`.
+- **The register is never locked.** Without an active trial or subscription it is **read-only**: view, search, print and export still work, but there are no new entries, registers or scans. This is enforced server-side in `requireStaff(…, { write: true })`.
+
+### Stripe setup (same account as PharmacyConsultation.ie)
+1. Create a product called "PharmacyCDReg" with a **€19/month recurring price** and tax behaviour set to exclusive. Put its price ID in `STRIPE_PRICE_ID`.
+2. Add a webhook endpoint at `https://pharmacycdreg.ie/api/stripe/webhook` for these events: `checkout.session.completed` and `customer.subscription.created`, `.updated` and `.deleted`. Put the signing secret in `STRIPE_WEBHOOK_SECRET`.
+3. Customer portal: allow cancelling and card updates, and set the return URL to `/dashboard/billing`.
+4. To end the launch offer, create a €29 price, point `STRIPE_PRICE_ID` at it, and set `PLAN.price = 29` with `launchOffer: false`. Existing customers keep €19.
+
 ## Setup
 
-1. Create a Supabase project in an EU region and run `supabase/migrations/0001_cd_register.sql` in its SQL editor.
+1. Create a Supabase project in an EU region and run `supabase/migrations/0001_cd_register.sql`, then `0002_billing.sql`, in its SQL editor.
 2. Copy `.env.example` to `.env.local` and fill it in. Generate `STAFF_SESSION_SECRET` with `openssl rand -hex 32`.
 3. `npm install && npm run dev`
-4. Create a pharmacy and its login:
+4. Pharmacies sign up themselves at `/start`. To set one up by hand instead, run:
    ```bash
    node --env-file=.env.local scripts/create-pharmacy.mjs --name "…" --address "…" --email … --password …
    ```

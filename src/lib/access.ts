@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceClient } from '@/lib/supabase/server';
 import { STAFF_COOKIE, decodeStaffSession, encodeStaffSession, staffCookieOptions } from '@/lib/staff-session';
 import type { StaffRole } from '@/lib/roles';
+import { canWrite } from '@/lib/stripe';
 
 export class HttpError extends Error {
   constructor(public status: number, message: string, public code?: string) {
@@ -36,7 +37,12 @@ export async function requireAccount(): Promise<Account> {
 }
 
 /** Step 2: the staff member identified by PIN. Re-checked on every request. */
-export async function requireStaff(allowed?: (r: StaffRole) => boolean): Promise<{ account: Account; staff: Staff }> {
+/**
+ * opts.write: the action adds to the register (entries, new registers, scans).
+ * Needs an active trial/subscription. Reading, search, print and export never do —
+ * the register must stay available for inspection whatever the billing state.
+ */
+export async function requireStaff(allowed?: (r: StaffRole) => boolean, opts: { write?: boolean } = {}): Promise<{ account: Account; staff: Staff }> {
   const account = await requireAccount();
   const session = decodeStaffSession(cookies().get(STAFF_COOKIE)?.value);
   if (!session || session.pharmacyId !== account.pharmacyId || session.authUserId !== account.authUserId) {
@@ -56,6 +62,12 @@ export async function requireStaff(allowed?: (r: StaffRole) => boolean): Promise
   }
   if (allowed && !allowed(staff.role)) {
     throw new HttpError(403, 'Your role does not allow this action', 'FORBIDDEN');
+  }
+  if (opts.write) {
+    const { data: ph } = await db.from('pharmacies').select('subscription_status').eq('id', account.pharmacyId).single();
+    if (!canWrite(ph?.subscription_status)) {
+      throw new HttpError(402, ph?.subscription_status ? 'Your subscription has ended. The register is read-only until it is reactivated.' : 'Start your free month to begin recording entries.', 'READ_ONLY');
+    }
   }
   // Sliding idle timeout: any authenticated activity extends the lock timer.
   try {

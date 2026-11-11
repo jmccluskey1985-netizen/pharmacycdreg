@@ -5,7 +5,10 @@ import { api, onLocked } from '@/lib/api';
 import type { StaffRole } from '@/lib/roles';
 
 export interface ActiveStaff { id: string; full_name: string; role: StaffRole; psi_number: string | null }
-export interface Pharmacy { id: string; name: string; address: string; psi_premises_number: string | null }
+export interface Pharmacy {
+  id: string; name: string; address: string; psi_premises_number: string | null;
+  subscription_status: string | null; trial_ends_at: string | null; current_period_end: string | null; cancel_at_period_end: boolean;
+}
 
 interface Ctx {
   loading: boolean;

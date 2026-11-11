@@ -3,7 +3,10 @@
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Loader2, ShieldCheck, ScanLine, BookOpen, Search } from 'lucide-react';
+import Link from 'next/link';
 import { Logo } from '@/components/logo';
+import { PricingCard } from '@/components/pricing-card';
+import { PLAN, formatEuro } from '@/config/pricing';
 import { getSupabaseClient } from '@/lib/supabase/client';
 
 // Same normalisation as PharmacyConsultation.ie (googlemail → gmail, trim, lower).
@@ -85,6 +88,11 @@ function LoginCard() {
         </button>
         <button type="button" onClick={onForgot} className="w-full text-sm text-primary hover:underline">Forgot password?</button>
       </form>
+      <div className="mt-6 border-t border-border pt-5 text-center">
+        <p className="text-sm text-muted-foreground">New to PharmacyCDReg?</p>
+        <Link href="/start" className="btn-brand mt-2 w-full">Start your free month</Link>
+        <p className="mt-2 text-xs text-muted-foreground">Then {formatEuro(PLAN.price)}/month{PLAN.originalPrice ? <> <s>{formatEuro(PLAN.originalPrice)}</s></> : null} · limited-time launch price</p>
+      </div>
     </div>
   );
 }
@@ -129,6 +137,22 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section id="pricing" className="border-t border-border bg-card/60">
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-2">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-widest text-brand">Simple pricing</p>
+            <h2 className="mt-2 text-3xl font-bold tracking-tight text-brand-dark dark:text-white">One price. Everything included.</h2>
+            <p className="mt-3 text-lg text-muted-foreground">No bundles, no modules you won&apos;t use — just your Controlled Drugs Register, done properly. Unlimited staff, registers and invoice scans.</p>
+            <ul className="mt-6 space-y-3 text-sm">
+              <li className="flex gap-3"><span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand/15 font-bold text-primary">1</span> Start your free month — set up in minutes, bring forward balances from your paper book.</li>
+              <li className="flex gap-3"><span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand/15 font-bold text-primary">2</span> Add your team, each with their own PIN.</li>
+              <li className="flex gap-3"><span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand/15 font-bold text-primary">3</span> Cancel any time. Your register stays readable and exportable — always.</li>
+            </ul>
+          </div>
+          <PricingCard />
         </div>
       </section>
 

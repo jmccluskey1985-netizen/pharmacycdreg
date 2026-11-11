@@ -9,7 +9,7 @@ import { can } from '@/lib/roles';
 // row is written by a database trigger, so it can't be skipped from here.
 export async function POST(req: Request) {
   try {
-    const { account, staff } = await requireStaff(can.record);
+    const { account, staff } = await requireStaff(can.record, { write: true });
     const parsed = EntrySchema.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) {
       return NextResponse.json({ error: 'Some required register details are missing', issues: parsed.error.flatten() }, { status: 400 });
