@@ -52,7 +52,7 @@ export function PinPad() {
 
   async function signOut() {
     await fetch('/api/staff/lock', { method: 'POST' });
-    await getSupabaseClient().auth.signOut();
+    await getSupabaseClient().auth.signOut().catch(() => {});
     window.location.href = '/';
   }
 

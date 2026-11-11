@@ -6,6 +6,7 @@ import { ArrowLeft, Loader2, Lock } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { PricingCard } from '@/components/pricing-card';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { DEMO } from '@/lib/demo/flag';
 
 // "Start your free month": create pharmacy + login → sign in → Stripe Checkout.
 export default function StartPage() {
@@ -18,6 +19,7 @@ export default function StartPage() {
     e.preventDefault();
     setBusy(true);
     setError(null);
+    if (DEMO) { window.location.href = '/dashboard'; return; }
     try {
       const res = await fetch('/api/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(f) });
       const d = await res.json().catch(() => ({}));

@@ -8,6 +8,7 @@ import { Logo } from '@/components/logo';
 import { PricingCard } from '@/components/pricing-card';
 import { PLAN, formatEuro } from '@/config/pricing';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { DEMO } from '@/lib/demo/flag';
 
 // Same normalisation as PharmacyConsultation.ie (googlemail → gmail, trim, lower).
 const normalizeEmail = (e: string) => e.toLowerCase().trim().replace(/@googlemail\.com$/, '@gmail.com');
@@ -30,6 +31,11 @@ function LoginCard() {
     setLoading(true);
     setError(null);
     setNotice(null);
+    if (DEMO) {
+      await fetch('/api/staff/lock', { method: 'POST' });
+      router.push('/dashboard');
+      return;
+    }
     try {
       const supabase = getSupabaseClient();
       // Shared dispensary computers: drop any previous login and active staff member first.
