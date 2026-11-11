@@ -99,8 +99,93 @@ Rules for everything:
 
 export class ScanError extends Error {}
 
-export async function extractFromDocument(files: { base64: string; mediaType: string }[], hint: 'invoice' | 'prescription' = 'invoice'): Promise<{ extraction: Extraction; model: string }> {
-  if (!process.env.ANTHROPIC_API_KEY) throw new ScanError('Document reading is not configured (ANTHROPIC_API_KEY missing)');
+type DocFile = { base64: string; mediaType: string };
+
+const userText = (n: number, hint: string) =>
+  `${n > 1 ? `These ${n} images are pages of one document. ` : ''}The pharmacist says this is a ${hint}. Extract the controlled-drug lines.`;
+
+function parseResult(raw: string | null | undefined): Extraction {
+  if (!raw) throw new ScanError('No result returned. Try a clearer photo.');
+  const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  let json: unknown;
+  try {
+    json = JSON.parse(cleaned);
+  } catch {
+    throw new ScanError('Could not understand the result. Try a clearer photo.');
+  }
+  const parsed = ExtractionSchema.safeParse(json);
+  if (!parsed.success) throw new ScanError('Could not understand the result. Try a clearer photo.');
+  return parsed.data;
+}
+
+/**
+ * Which reader to use. OpenRouter (same account and privacy settings as Halo) when
+ * OPENROUTER_API_KEY is set; otherwise Claude directly via ANTHROPIC_API_KEY.
+ */
+export async function extractFromDocument(files: DocFile[], hint: 'invoice' | 'prescription' = 'invoice'): Promise<{ extraction: Extraction; model: string }> {
+  if (process.env.OPENROUTER_API_KEY) return extractViaOpenRouter(files, hint);
+  if (process.env.ANTHROPIC_API_KEY) return extractViaAnthropic(files, hint);
+  throw new ScanError('Document reading is not configured (set OPENROUTER_API_KEY or ANTHROPIC_API_KEY)');
+}
+
+/**
+ * OpenRouter, mirroring Halo: the first model in OPENROUTER_MODELS is used, the
+ * rest are automatic fallbacks. Zero data retention is REQUIRED on every call
+ * (provider.zdr + data_collection deny), so only endpoints that store nothing are
+ * used. Structured JSON output is required of the provider.
+ */
+async function extractViaOpenRouter(files: DocFile[], hint: string): Promise<{ extraction: Extraction; model: string }> {
+  const models = (process.env.OPENROUTER_MODELS || '').split(',').map((m) => m.trim()).filter(Boolean);
+  if (!models.length) throw new ScanError('Document reading is not configured (OPENROUTER_MODELS missing)');
+
+  const parts = files.map((f) =>
+    f.mediaType === 'application/pdf'
+      ? { type: 'file', file: { filename: 'document.pdf', file_data: `data:application/pdf;base64,${f.base64}` } }
+      : { type: 'image_url', image_url: { url: `data:${f.mediaType};base64,${f.base64}` } },
+  );
+
+  let res: Response;
+  try {
+    res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'X-Title': 'PharmacyCDReg',
+      },
+      body: JSON.stringify({
+        model: models[0],
+        ...(models.length > 1 ? { models } : {}),
+        messages: [
+          { role: 'system', content: SYSTEM },
+          { role: 'user', content: [...parts, { type: 'text', text: userText(files.length, hint) }] },
+        ],
+        response_format: { type: 'json_schema', json_schema: { name: 'cd_extraction', strict: true, schema: JSON_SCHEMA } },
+        provider: { zdr: true, data_collection: 'deny', require_parameters: true },
+        temperature: 0,
+        max_tokens: 8000,
+      }),
+      signal: AbortSignal.timeout(100_000),
+    });
+  } catch {
+    throw new ScanError('Could not reach the document reader. Check the connection and try again.');
+  }
+
+  const data: any = await res.json().catch(() => ({}));
+  if (!res.ok || data.error) {
+    const msg: string = data?.error?.message || `HTTP ${res.status}`;
+    console.error('[scan] openrouter error', res.status, msg);
+    // Same distinctions Halo learned the hard way: a full provider vs an account that can't pay.
+    if (res.status === 402) throw new ScanError('The document reader account is out of credit. Top up OpenRouter, or enter the entry manually.');
+    if (res.status === 429) throw new ScanError('The document reader is busy. Wait a moment and try again.');
+    throw new ScanError('The document could not be read. Please enter the entry manually.');
+  }
+  const choice = data.choices?.[0];
+  if (choice?.finish_reason === 'length') throw new ScanError('The document was too long to read in one go. Try one page at a time.');
+  return { extraction: parseResult(choice?.message?.content), model: `openrouter:${data.model ?? models[0]}` };
+}
+
+async function extractViaAnthropic(files: DocFile[], hint: string): Promise<{ extraction: Extraction; model: string }> {
   const client = new Anthropic();
 
   // Several photos = several pages of ONE document (e.g. a two-page delivery docket).
@@ -117,21 +202,11 @@ export async function extractFromDocument(files: { base64: string; mediaType: st
     betas: ['server-side-fallback-2026-07-01'],
     fallbacks: 'default', // if a safety classifier declines, the API retries on a recommended model
     output_config: { effort: 'medium', format: { type: 'json_schema', schema: JSON_SCHEMA } },
-    messages: [{ role: 'user', content: [...media, { type: 'text', text: `${media.length > 1 ? `These ${media.length} images are pages of one document. ` : ''}The pharmacist says this is a ${hint}. Extract the controlled-drug lines.` }] }],
+    messages: [{ role: 'user', content: [...media, { type: 'text', text: userText(media.length, hint) }] }],
   });
 
   if (response.stop_reason === 'refusal') throw new ScanError('The document could not be read. Please enter the entry manually.');
   if (response.stop_reason === 'max_tokens') throw new ScanError('The document was too long to read in one go. Try one page at a time.');
-
   const text = response.content.find((b) => b.type === 'text');
-  if (!text || text.type !== 'text') throw new ScanError('No result returned. Try a clearer photo.');
-  let json: unknown;
-  try {
-    json = JSON.parse(text.text);
-  } catch {
-    throw new ScanError('Could not understand the result. Try a clearer photo.');
-  }
-  const parsed = ExtractionSchema.safeParse(json);
-  if (!parsed.success) throw new ScanError('Could not understand the result. Try a clearer photo.');
-  return { extraction: parsed.data, model: response.model };
+  return { extraction: parseResult(text && text.type === 'text' ? text.text : null), model: response.model };
 }
