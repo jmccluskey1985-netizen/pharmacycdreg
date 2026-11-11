@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 130">
+  <path d="M52 8C27 8 8 27 8 52c0 32 44 70 44 70s44-38 44-70C96 27 77 8 52 8z" fill="#54BD50"/>
+  <circle cx="52" cy="50" r="27" fill="#fff"/>
+  <rect x="45" y="33" width="14" height="34" rx="3.5" fill="#54BD50"/>
+  <rect x="35" y="43" width="34" height="14" rx="3.5" fill="#54BD50"/>
+  <text x="118" y="70" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-weight="700" font-size="58" letter-spacing="-1"><tspan fill="#184B21">Pharmacy</tspan><tspan fill="#54BD50">CDReg</tspan><tspan fill="#184B21">.ie</tspan></text>
+  <text x="120" y="112" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="30" fill="#6B7280">Electronic Controlled Drug Register</text>
+</svg>
