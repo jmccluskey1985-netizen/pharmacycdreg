@@ -155,7 +155,7 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
                   <header className="mb-4 grid gap-1 text-[rgb(var(--ink))]">
                     <p className="text-sm font-bold uppercase sm:text-base">Class of drug (drug name): <span className="font-semibold normal-case underline decoration-dotted underline-offset-4">{p.class_name}</span></p>
                     <p className="text-sm font-bold uppercase sm:text-base">Product: <span className="font-semibold normal-case underline decoration-dotted underline-offset-4">{p.drug_name} {p.strength} {p.form}</span></p>
-                    <p className="text-xs text-muted-foreground">Schedule {p.schedule} · counted in {p.unit} · current balance <b className="text-[rgb(var(--ink))]">{fmtQty(balance)} {p.unit}</b></p>
+                    <p className="text-xs text-muted-foreground">Schedule {p.schedule}{p.schedule_paragraph ? ` (${p.schedule_paragraph})` : ''}{p.parent ? ` · stereoisomer of ${p.parent.drug_name}, recorded in its part of the register` : ''} · counted in {p.unit} · current balance <b className="text-[rgb(var(--ink))]">{fmtQty(balance)} {p.unit}</b></p>
                   </header>
 
                   <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">

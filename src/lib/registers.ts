@@ -4,7 +4,7 @@ export async function getRegisterForPharmacy(registerId: string, pharmacyId: str
   const db = createServiceClient();
   const { data } = await db
     .from('cd_registers')
-    .select('id, pharmacy_id, opened_at, closed_at, product:cd_products(*)')
+    .select('id, pharmacy_id, opened_at, closed_at, product:cd_products(*, parent:is_stereoisomer_of(drug_name))')
     .eq('id', registerId)
     .eq('pharmacy_id', pharmacyId)
     .maybeSingle();
