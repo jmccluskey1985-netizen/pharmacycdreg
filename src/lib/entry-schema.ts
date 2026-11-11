@@ -10,6 +10,7 @@ const base = {
   transaction_date: date,
   notes: opt,
   scan_id: z.string().uuid().optional().nullable(),
+  inbox_id: z.string().uuid().optional().nullable(),
 };
 
 // Mandatory statutory fields per entry type (FR5, FR19). The database enforces the

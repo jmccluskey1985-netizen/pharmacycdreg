@@ -25,6 +25,7 @@ export interface EntryDraft {
   destruction_method?: string | null;
   notes?: string | null;
   scan_id?: string | null;
+  inbox_id?: string | null;
   corrects_entry_id?: string;
   correction_reason?: string;
 }

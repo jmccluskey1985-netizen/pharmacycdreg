@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard } from 'lucide-react';
+import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug } from 'lucide-react';
 import { BillingBanner } from './billing-banner';
 import { Logo } from '@/components/logo';
 import { ROLE_LABELS, can } from '@/lib/roles';
@@ -13,15 +13,17 @@ import { FirstRun } from './first-run';
 const NAV = [
   { href: '/dashboard', label: 'Registers', icon: BookOpen, show: () => true },
   { href: '/dashboard/scan', label: 'Scan', icon: ScanLine, show: can.scan, primary: true },
+  { href: '/dashboard/inbox', label: 'To confirm', icon: Inbox, show: can.record, badge: true },
   { href: '/dashboard/search', label: 'Search', icon: Search, show: () => true },
   { href: '/dashboard/destructions', label: 'Destructions', icon: Flame, show: () => true },
   { href: '/dashboard/audit', label: 'Audit trail', icon: History, show: can.viewAudit },
   { href: '/dashboard/team', label: 'Team', icon: Users, show: can.manageStaff },
+  { href: '/dashboard/integrations', label: 'Halo connection', icon: Plug, show: can.manageStaff },
   { href: '/dashboard/billing', label: 'Billing', icon: CreditCard, show: can.manageStaff },
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {
-  const { loading, staff, locked, hasPins, pharmacy, lock } = useStaff();
+  const { loading, staff, locked, hasPins, pharmacy, lock, inboxCount } = useStaff();
   const path = usePathname();
 
   if (loading) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading…</div>;
@@ -40,6 +42,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           {items.map((n) => (
             <Link key={n.href} href={n.href} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${active(n.href) ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
               <n.icon className="h-5 w-5" /> {n.label}
+              {(n as any).badge && inboxCount > 0 && <span className="ml-auto rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-white">{inboxCount}</span>}
             </Link>
           ))}
         </nav>
@@ -73,8 +76,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
               {n.label}
             </Link>
           ) : (
-            <Link key={n.href} href={n.href} className={`flex flex-col items-center gap-1 py-2.5 text-xs font-medium ${active(n.href) ? 'text-primary' : 'text-muted-foreground'}`}>
+            <Link key={n.href} href={n.href} className={`relative flex flex-col items-center gap-1 py-2.5 text-xs font-medium ${active(n.href) ? 'text-primary' : 'text-muted-foreground'}`}>
               <n.icon className="h-5 w-5" /> {n.label}
+              {(n as any).badge && inboxCount > 0 && <span className="absolute right-[22%] top-1.5 rounded-full bg-brand px-1.5 text-[10px] font-bold text-white">{inboxCount}</span>}
             </Link>
           ),
         )}

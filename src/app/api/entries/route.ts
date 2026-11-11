@@ -38,7 +38,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const row: Record<string, unknown> = { ...e, recorded_by_staff_id: staff.id, recorded_by_auth_user: account.authUserId, source: e.scan_id ? 'scan' : 'manual' };
+    const { inbox_id, ...fields } = e as typeof e & { inbox_id?: string | null };
+    if (inbox_id) {
+      const { data: ib } = await db.from('pmr_inbox').select('status').eq('id', inbox_id).eq('pharmacy_id', account.pharmacyId).maybeSingle();
+      if (!ib || ib.status !== 'pending') return NextResponse.json({ error: 'This Halo item was already dealt with' }, { status: 409 });
+    }
+    const row: Record<string, unknown> = { ...fields, recorded_by_staff_id: staff.id, recorded_by_auth_user: account.authUserId, source: inbox_id ? 'pmr' : e.scan_id ? 'scan' : 'manual' };
     if (e.entry_type === 'correction') {
       // Carry forward the original's fields the correction didn't change, so the effective row is complete.
       const { data: orig } = await db.from('cd_entries').select('*').eq('id', e.corrects_entry_id).single();
@@ -50,6 +55,9 @@ export async function POST(req: Request) {
     if (error) {
       if (error.code === '23514') return NextResponse.json({ error: 'A mandatory register field is missing' }, { status: 400 });
       throw error;
+    }
+    if (inbox_id) {
+      await db.from('pmr_inbox').update({ status: 'posted', entry_id: data.id, register_id: reg.id, resolved_by_staff_id: staff.id, resolved_at: new Date().toISOString() }).eq('id', inbox_id);
     }
     return NextResponse.json({ id: data.id, seq: data.seq, balance: resulting });
   } catch (err) {

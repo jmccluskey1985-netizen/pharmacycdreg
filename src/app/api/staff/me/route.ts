@@ -13,7 +13,8 @@ export async function GET() {
     const { count } = await db.from('staff').select('id', { count: 'exact', head: true }).eq('pharmacy_id', account.pharmacyId).eq('is_active', true).not('pin_hash', 'is', null);
     try {
       const { staff } = await requireStaff();
-      return NextResponse.json({ pharmacy, staff, locked: false, hasPins: (count ?? 0) > 0 });
+      const { count: inbox } = await db.from('pmr_inbox').select('id', { count: 'exact', head: true }).eq('pharmacy_id', account.pharmacyId).eq('status', 'pending');
+      return NextResponse.json({ pharmacy, staff, locked: false, hasPins: (count ?? 0) > 0, inboxCount: inbox ?? 0 });
     } catch (e) {
       if (e instanceof HttpError && e.status === 423) {
         return NextResponse.json({ pharmacy, staff: null, locked: true, hasPins: (count ?? 0) > 0 });

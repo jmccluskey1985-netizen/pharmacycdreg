@@ -3,6 +3,7 @@ import { requireStaff, errorResponse, audit } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase/server';
 import { extractFromDocument, ScanError } from '@/lib/scan-extract';
 import { balancesFor } from '@/lib/registers';
+import { liveRegisters, matchRegister } from '@/lib/match';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { can } from '@/lib/roles';
 
@@ -10,9 +11,6 @@ export const maxDuration = 120;
 
 const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
 const MAX_BYTES = 15 * 1024 * 1024;
-
-const norm = (s: string) => s.toLowerCase().replace(/hydrochloride|sulfate|sulphate|tartrate|citrate|base|\(.*?\)/g, '').replace(/[^a-z0-9]/g, '');
-const normStrength = (s: string) => s.toLowerCase().replace(/\s|micrograms?/g, (m) => (m.trim() ? 'mcg' : '')).replace(/mcg/g, 'mcg');
 
 // Photo/PDF of an Rx or invoice → extracted CD lines, each matched to a live register,
 // with a proposed register entry. Nothing is written to the register here.
@@ -44,27 +42,18 @@ export async function POST(req: Request) {
     if (error) throw error;
     await audit(account.pharmacyId, 'scan.read', staff, account.authUserId, { document_type: extraction.document_type, items: extraction.items.length }, { table: 'scans', id: scan.id });
 
-    const { data: regs } = await db
-      .from('cd_registers')
-      .select('id, product:cd_products(drug_name, strength, form, unit, class_name)')
-      .eq('pharmacy_id', account.pharmacyId)
-      .is('closed_at', null);
-    const balances = await balancesFor((regs ?? []).map((r: any) => r.id));
+    const regs = await liveRegisters(account.pharmacyId);
+    const balances = await balancesFor(regs.map((r) => r.id));
 
     const isInvoice = extraction.document_type === 'invoice';
     const proposals = extraction.items.filter((i) => i.is_controlled_drug).map((item) => {
-      const candidates = (regs ?? []).filter((r: any) => {
-        const dn = norm(r.product.drug_name), cn = norm(r.product.class_name), it = norm(item.drug_name);
-        return (dn.includes(it) || it.includes(dn) || it.includes(cn)) && it.length > 2;
-      });
-      const exact = candidates.filter((r: any) => normStrength(r.product.strength) === normStrength(item.strength));
-      const match: any = exact.length === 1 ? exact[0] : null;
+      const { match, candidates } = matchRegister(regs, item.drug_name, item.strength, item.form);
       return {
         item,
         register_id: match?.id ?? null,
-        register_label: match ? `${match.product.drug_name} ${match.product.strength} ${match.product.form}` : null,
+        register_label: match?.label ?? null,
         current_balance: match ? balances[match.id] ?? 0 : null,
-        candidates: (exact.length ? exact : candidates).map((r: any) => ({ id: r.id, label: `${r.product.drug_name} ${r.product.strength} ${r.product.form}` })),
+        candidates: candidates.map((r) => ({ id: r.id, label: r.label })),
         draft: {
           entry_type: isInvoice ? 'receipt' : 'supply',
           transaction_date: extraction.document_date ?? new Date().toISOString().slice(0, 10),
