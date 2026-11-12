@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser, Settings, UserRound, ListOrdered, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { NewEntryButton } from './new-entry';
 import { BillingBanner } from './billing-banner';
-import { Logo } from '@/components/logo';
+import { Logo, LogoMark } from '@/components/logo';
 import { ROLE_LABELS, can } from '@/lib/roles';
 import { useStaff } from './staff-context';
 import { PinPad } from './pin-pad';
@@ -43,27 +43,42 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const active = (href: string) => (href === '/dashboard' ? path === href || path.startsWith('/dashboard/register') : path.startsWith(href));
 
   return (
-    <div className={`min-h-screen pb-24 transition-[padding] lg:pb-0 ${hidden ? '' : 'lg:pl-64'}`}>
-      {/* Desktop sidebar (can be hidden; remembered on this device) */}
-      <aside className={`no-print fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-border bg-card ${hidden ? '' : 'lg:flex'}`}>
-        <div className="flex items-center justify-between px-5 py-5">
-          <Logo size="sm" />
-          <button onClick={toggle} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Hide sidebar" title="Hide sidebar"><PanelLeftClose className="h-5 w-5" /></button>
-        </div>
-        <nav className="flex-1 space-y-1 px-3">
+    <div className={`min-h-screen pb-24 transition-[padding] duration-200 lg:pb-0 ${hidden ? 'lg:pl-16' : 'lg:pl-64'}`}>
+      {/* Desktop sidebar: full, or collapsed to an icon rail (remembered on this device) */}
+      <aside className={`no-print fixed inset-y-0 left-0 hidden flex-col border-r border-border bg-card transition-[width] duration-200 lg:flex ${hidden ? 'w-16' : 'w-64'}`}>
+        {hidden ? (
+          <div className="flex flex-col items-center gap-2 py-4">
+            <Link href="/dashboard" aria-label="Registers"><LogoMark className="h-8 w-8" /></Link>
+            <button onClick={toggle} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Expand sidebar" title="Expand sidebar"><PanelLeftOpen className="h-5 w-5" /></button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between px-5 py-5">
+            <Logo size="sm" />
+            <button onClick={toggle} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Collapse sidebar" title="Collapse sidebar"><PanelLeftClose className="h-5 w-5" /></button>
+          </div>
+        )}
+        <nav className={`flex-1 space-y-1 overflow-y-auto ${hidden ? 'px-2' : 'px-3'}`}>
           {items.map((n) => (
-            <Link key={n.href} href={n.href} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${active(n.href) ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
-              <n.icon className="h-5 w-5" /> {n.label}
-              {(n as any).badge && inboxCount > 0 && <span className="ml-auto rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-white">{inboxCount}</span>}
+            <Link key={n.href} href={n.href} title={hidden ? n.label : undefined} aria-label={n.label}
+              className={`relative flex items-center rounded-lg py-2.5 text-sm font-medium transition ${hidden ? 'justify-center px-0' : 'gap-3 px-3'} ${active(n.href) ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
+              <n.icon className="h-5 w-5 flex-shrink-0" /> {!hidden && n.label}
+              {(n as any).badge && inboxCount > 0 && (hidden
+                ? <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-brand ring-2 ring-card" />
+                : <span className="ml-auto rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-white">{inboxCount}</span>)}
             </Link>
           ))}
         </nav>
-        <div className="border-t border-border p-4">
+        {hidden ? (
+          <div className="flex flex-col items-center gap-2 border-t border-border py-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-xs font-bold text-secondary-foreground" title={`${staff.full_name} · ${ROLE_LABELS[staff.role]}`}>{staff.full_name.split(' ').map((w) => w[0]).slice(0, 2).join('')}</span>
+            <button onClick={lock} className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground" title="Lock / switch user" aria-label="Lock / switch user"><Lock className="h-5 w-5" /></button>
+          </div>
+        ) : <div className="border-t border-border p-4">
           <p className="text-xs text-muted-foreground">{pharmacy?.name}</p>
           <p className="mt-2 text-sm font-semibold">{staff.full_name}</p>
           <p className="text-xs text-muted-foreground">{ROLE_LABELS[staff.role]}{staff.psi_number ? ` · PSI ${staff.psi_number}` : ''}</p>
           <button onClick={lock} className="btn-secondary mt-3 w-full text-sm"><Lock className="h-4 w-4" /> Lock / switch user</button>
-        </div>
+        </div>}
       </aside>
 
       {/* Mobile top bar */}
@@ -77,7 +92,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:py-6">
         {/* Top-left: show sidebar + New entry */}
         <div className="no-print mb-4 flex items-center gap-2">
-          {hidden && <button onClick={toggle} className="hidden rounded-lg border border-border bg-card p-2 text-muted-foreground hover:text-foreground lg:inline-flex" aria-label="Show sidebar" title="Show sidebar"><PanelLeftOpen className="h-5 w-5" /></button>}
           {can.record(staff.role) && <NewEntryButton />}
         </div>
         <BillingBanner />

@@ -5,6 +5,8 @@ import { getRegisterForPharmacy, currentBalance } from '@/lib/registers';
 import { EntrySchema, STOCK_EFFECT } from '@/lib/entry-schema';
 import { can } from '@/lib/roles';
 import { findOrCreatePatient } from '@/lib/patients';
+import { findDuplicate } from '@/lib/duplicates';
+import { audit } from '@/lib/access';
 
 // Make a register entry. Append-only: corrections are new rows (FR10/FR11). The audit
 // row is written by a database trigger, so it can't be skipped from here.
@@ -39,7 +41,15 @@ export async function POST(req: Request) {
       );
     }
 
-    const { inbox_id, ...fields } = e as typeof e & { inbox_id?: string | null };
+    const { inbox_id, allow_duplicate, duplicate_reason, ...fields } = e as typeof e & { inbox_id?: string | null };
+    // Same invoice / same prescription twice? Checked here so scanned, typed and Halo entries all pass through it.
+    const dup = e.entry_type === 'correction' ? null : await findDuplicate(db, reg.id, fields as any);
+    if (dup && !allow_duplicate) {
+      return NextResponse.json({ error: dup.message, code: dup.level === 'block' ? 'DUPLICATE' : 'POSSIBLE_DUPLICATE', duplicate_of_seq: dup.seq }, { status: 409 });
+    }
+    if (dup && allow_duplicate && (!duplicate_reason || duplicate_reason.length < 5)) {
+      return NextResponse.json({ error: 'Say why this isn’t a duplicate', code: dup.level === 'block' ? 'DUPLICATE' : 'POSSIBLE_DUPLICATE' }, { status: 400 });
+    }
     if (inbox_id) {
       const { data: ib } = await db.from('pmr_inbox').select('status').eq('id', inbox_id).eq('pharmacy_id', account.pharmacyId).maybeSingle();
       if (!ib || ib.status !== 'pending') return NextResponse.json({ error: 'This Halo item was already dealt with' }, { status: 409 });
@@ -80,6 +90,9 @@ export async function POST(req: Request) {
         if (!c?.length) await db.from('contacts').insert({ pharmacy_id: account.pharmacyId, kind: 'supplier', name, address });
         else if (address && c[0].address !== address) await db.from('contacts').update({ address, updated_at: new Date().toISOString() }).eq('id', c[0].id);
       } catch { /* quick-fill only; never block a register entry */ }
+    }
+    if (dup && allow_duplicate) {
+      await audit(account.pharmacyId, 'entry.duplicate_override', staff, account.authUserId, { seq: data.seq, similar_to_seq: dup.seq, level: dup.level, reason: duplicate_reason }, { table: 'cd_entries', id: data.id });
     }
     if (inbox_id) {
       await db.from('pmr_inbox').update({ status: 'posted', entry_id: data.id, register_id: reg.id, resolved_by_staff_id: staff.id, resolved_at: new Date().toISOString() }).eq('id', inbox_id);

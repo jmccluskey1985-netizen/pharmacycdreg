@@ -79,6 +79,10 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
   const fromRecord = (p: PatientRecord) => pickPatient({ name: `${p.first_name} ${p.surname}`.trim(), address: p.address, source: 'patient', patient_id: p.id, dob: p.date_of_birth, usual_prescriber: p.gp_name ? { name: p.gp_name, address: p.gp_address } : null });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Server flagged this as the same invoice / prescription as an existing line.
+  const [dup, setDup] = useState<{ level: 'block' | 'warn'; message: string } | null>(null);
+  const [overriding, setOverriding] = useState(false);
+  const [dupReason, setDupReason] = useState('');
   const set = (k: keyof EntryDraft) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setD({ ...d, [k]: e.target.value });
   const type = d.entry_type;
   const setVal = (k: keyof EntryDraft) => (v: string) => setD((x) => ({ ...x, [k]: v }));
@@ -111,12 +115,13 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
     return balance;
   }, [d.quantity, type, balance, correcting]);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  async function submit(e?: React.FormEvent, override = false) {
+    e?.preventDefault();
     setBusy(true);
     setError(null);
+    if (!override) { setDup(null); setOverriding(false); }
     try {
-      const body: Record<string, unknown> = { ...d, register_id: registerId, quantity: Number(d.quantity) };
+      const body: Record<string, unknown> = { ...d, register_id: registerId, quantity: Number(d.quantity), ...(override ? { allow_duplicate: true, duplicate_reason: dupReason } : {}) };
       if (correcting) {
         body.entry_type = 'correction';
         body.corrects_entry_id = correcting.id;
@@ -124,8 +129,13 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
       }
       for (const k of Object.keys(body)) if (body[k] === '') body[k] = null;
       const res = await api('/api/entries', { method: 'POST', json: body });
+      setDup(null); setOverriding(false); setDupReason('');
       onSaved(res);
     } catch (err) {
+      if (err instanceof ApiError && (err.code === 'DUPLICATE' || err.code === 'POSSIBLE_DUPLICATE') && err.status === 409) {
+        setDup({ level: err.code === 'DUPLICATE' ? 'block' : 'warn', message: err.message });
+        return;
+      }
       setError(err instanceof ApiError ? err.message : 'Could not save the entry');
     } finally {
       setBusy(false);
@@ -224,6 +234,23 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
         </div>
       )}
       {error && <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+      {dup && (
+        <div className={`space-y-2 rounded-lg border p-3 text-sm ${dup.level === 'block' ? 'border-destructive/40 bg-destructive/10' : 'border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100'}`}>
+          <p className="font-semibold">{dup.level === 'block' ? 'This looks like a duplicate — not recorded' : 'Possible duplicate — not recorded yet'}</p>
+          <p>{dup.message}</p>
+          {!overriding ? (
+            <div className="flex flex-wrap gap-2">
+              {onCancel && <button type="button" onClick={onCancel} className="btn-secondary py-1.5 text-sm">Don’t record it</button>}
+              <button type="button" onClick={() => setOverriding(true)} className="btn-ghost py-1.5 text-sm underline">It’s a separate {d.entry_type === 'receipt' ? 'delivery' : 'supply'}…</button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <input className="input" value={dupReason} onChange={(e) => setDupReason(e.target.value)} placeholder={d.entry_type === 'receipt' ? 'e.g. Second delivery on a separate docket' : 'e.g. New prescription, dated today, Rx 10412'} autoFocus />
+              <button type="button" disabled={busy || dupReason.trim().length < 5} onClick={() => submit(undefined, true)} className="btn-primary py-1.5 text-sm">Record anyway — reason saved in audit trail</button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex gap-3">
         {onCancel && <button type="button" onClick={onCancel} className="btn-secondary flex-1">Cancel</button>}

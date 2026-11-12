@@ -11,6 +11,9 @@ const base = {
   notes: opt,
   scan_id: z.string().uuid().optional().nullable(),
   inbox_id: z.string().uuid().optional().nullable(),
+  // Pharmacist confirms a flagged possible duplicate is a genuine separate entry.
+  allow_duplicate: z.boolean().optional(),
+  duplicate_reason: z.string().trim().max(300).optional().nullable(),
 };
 
 // Mandatory statutory fields per entry type (FR5, FR19). The database enforces the

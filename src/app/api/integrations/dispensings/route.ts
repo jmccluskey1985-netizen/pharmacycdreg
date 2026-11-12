@@ -1,4 +1,5 @@
 import { haloEnabled } from '@/lib/features';
+import { findDuplicate } from '@/lib/duplicates';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createServiceClient } from '@/lib/supabase/server';
@@ -92,6 +93,11 @@ export async function POST(req: Request) {
       else staffId = st.id;
     }
     if (!problem && match && (await currentBalance(match.id)) - d.quantity < 0) problem = 'Would take the balance below zero — check stock';
+    // Same prescription already in the register (e.g. sent twice from Halo, or also typed in)? Never auto-post it.
+    if (!problem && match) {
+      const dup = await findDuplicate(db, match.id, { entry_type: 'supply', transaction_date: d.dispensed_at.slice(0, 10), quantity: d.quantity, recipient_name: d.patient.name, prescriber_name: d.prescriber?.name ?? null, prescription_ref: d.prescription_ref ?? null });
+      if (dup) problem = `Possible duplicate: ${dup.message}`;
+    }
   } else if (!problem) {
     problem = null; // auto-post off: plain "to confirm"
   }

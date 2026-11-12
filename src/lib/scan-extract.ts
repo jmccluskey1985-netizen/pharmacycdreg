@@ -60,7 +60,7 @@ const JSON_SCHEMA = {
   properties: {
     document_type: { type: 'string', enum: ['prescription', 'invoice', 'other'] },
     document_date: { ...nullableString, description: 'Date on the document as YYYY-MM-DD' },
-    reference: { ...nullableString, description: 'Invoices: the INVOICE / docket NUMBER only (never the account, customer, shop ref, "Your Ref", reference, run, group, order, tote or product number). Prescriptions: Rx/GMS number.' },
+    reference: { ...nullableString, description: 'Invoices: the INVOICE / docket NUMBER only (never the account, customer, shop ref, "Your Ref", reference, run, group, order, tote or product number). Prescriptions: the Rx / order / GMS number (e.g. hospital "Order ID"), used to stop the same prescription being entered twice.' },
     reference_label: { ...nullableString, description: 'The label printed next to the reference exactly as written, e.g. "INVOICE", "Invoice No:", "NUMBER"' },
     supplier_evidence: { ...nullableString, description: 'Where you read the supplier: logo, letterhead, footer address, "Registered in Ireland" line, or "return to" box — quote it briefly' },
     supplier_name: { ...nullableString, description: 'Wholesaler/supplier (invoices only)' },
