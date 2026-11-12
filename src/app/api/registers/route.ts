@@ -36,6 +36,7 @@ const Body = z.object({
   unit: z.string().trim().min(1),
   opening_balance: z.coerce.number().min(0).optional(),
   opening_balance_note: z.string().trim().optional(),
+  opening_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
   // FR7: a stereoisomer preparation is recorded in the parent drug's part of the register.
   stereoisomer_of_register_id: z.string().uuid().optional().nullable(),
 });
@@ -98,7 +99,7 @@ export async function POST(req: Request) {
       const op = await db.from('cd_entries').insert({
         register_id: reg.data.id,
         entry_type: 'receipt',
-        transaction_date: new Date().toISOString().slice(0, 10),
+        transaction_date: b.opening_date && b.opening_date <= new Date().toISOString().slice(0, 10) ? b.opening_date : new Date().toISOString().slice(0, 10),
         quantity: b.opening_balance,
         supplier_name: 'Balance brought forward',
         supplier_address: b.opening_balance_note || 'Transferred from previous register',

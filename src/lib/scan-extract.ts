@@ -130,10 +130,24 @@ Rules for everything:
 
 export class ScanError extends Error {}
 
-type DocFile = { base64: string; mediaType: string };
+export type DocFile = { base64: string; mediaType: string };
 
 const userText = (n: number, hint: string) =>
   `${n > 1 ? `These ${n} images are pages of one document. ` : ''}The pharmacist says this is a ${hint}. Extract the controlled-drug lines.`;
+
+export interface ReadConfig<T> { system: string; schema: object; name: string; prompt: string; parse: (raw: string | null | undefined) => T }
+
+export function parseJsonWith<T>(schema: z.ZodType<T>) {
+  return (raw: string | null | undefined): T => {
+    if (!raw) throw new ScanError('No result returned. Try a clearer photo.');
+    const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+    let json: unknown;
+    try { json = JSON.parse(cleaned); } catch { throw new ScanError('Could not understand the result. Try a clearer photo.'); }
+    const parsed = schema.safeParse(json);
+    if (!parsed.success) throw new ScanError('Could not understand the result. Try a clearer photo.');
+    return parsed.data;
+  };
+}
 
 function parseResult(raw: string | null | undefined): Extraction {
   if (!raw) throw new ScanError('No result returned. Try a clearer photo.');
@@ -154,8 +168,14 @@ function parseResult(raw: string | null | undefined): Extraction {
  * OPENROUTER_API_KEY is set; otherwise Claude directly via ANTHROPIC_API_KEY.
  */
 export async function extractFromDocument(files: DocFile[], hint: 'invoice' | 'prescription' = 'invoice'): Promise<{ extraction: Extraction; model: string }> {
-  if (process.env.OPENROUTER_API_KEY) return extractViaOpenRouter(files, hint);
-  if (process.env.ANTHROPIC_API_KEY) return extractViaAnthropic(files, hint);
+  const { result, model } = await readDocument(files, { system: SYSTEM, schema: JSON_SCHEMA, name: 'cd_extraction', prompt: userText(files.length, hint), parse: parseResult });
+  return { extraction: result, model };
+}
+
+/** Read a document with any prompt + JSON schema, using the configured reader. */
+export async function readDocument<T>(files: DocFile[], cfg: ReadConfig<T>): Promise<{ result: T; model: string }> {
+  if (process.env.OPENROUTER_API_KEY) return extractViaOpenRouter(files, cfg);
+  if (process.env.ANTHROPIC_API_KEY) return extractViaAnthropic(files, cfg);
   throw new ScanError('Document reading is not configured (set OPENROUTER_API_KEY or ANTHROPIC_API_KEY)');
 }
 
@@ -165,7 +185,7 @@ export async function extractFromDocument(files: DocFile[], hint: 'invoice' | 'p
  * (provider.zdr + data_collection deny), so only endpoints that store nothing are
  * used. Structured JSON output is required of the provider.
  */
-async function extractViaOpenRouter(files: DocFile[], hint: string): Promise<{ extraction: Extraction; model: string }> {
+async function extractViaOpenRouter<T>(files: DocFile[], cfg: ReadConfig<T>): Promise<{ result: T; model: string }> {
   const models = (process.env.OPENROUTER_MODELS || '').split(',').map((m) => m.trim()).filter(Boolean);
   if (!models.length) throw new ScanError('Document reading is not configured (OPENROUTER_MODELS missing)');
 
@@ -188,10 +208,10 @@ async function extractViaOpenRouter(files: DocFile[], hint: string): Promise<{ e
         model: models[0],
         ...(models.length > 1 ? { models } : {}),
         messages: [
-          { role: 'system', content: SYSTEM },
-          { role: 'user', content: [...parts, { type: 'text', text: userText(files.length, hint) }] },
+          { role: 'system', content: cfg.system },
+          { role: 'user', content: [...parts, { type: 'text', text: cfg.prompt }] },
         ],
-        response_format: { type: 'json_schema', json_schema: { name: 'cd_extraction', strict: true, schema: JSON_SCHEMA } },
+        response_format: { type: 'json_schema', json_schema: { name: cfg.name, strict: true, schema: cfg.schema } },
         provider: { zdr: true, data_collection: 'deny', require_parameters: true },
         temperature: 0,
         max_tokens: 8000,
@@ -213,10 +233,10 @@ async function extractViaOpenRouter(files: DocFile[], hint: string): Promise<{ e
   }
   const choice = data.choices?.[0];
   if (choice?.finish_reason === 'length') throw new ScanError('The document was too long to read in one go. Try one page at a time.');
-  return { extraction: parseResult(choice?.message?.content), model: `openrouter:${data.model ?? models[0]}` };
+  return { result: cfg.parse(choice?.message?.content), model: `openrouter:${data.model ?? models[0]}` };
 }
 
-async function extractViaAnthropic(files: DocFile[], hint: string): Promise<{ extraction: Extraction; model: string }> {
+async function extractViaAnthropic<T>(files: DocFile[], cfg: ReadConfig<T>): Promise<{ result: T; model: string }> {
   const client = new Anthropic();
 
   // Several photos = several pages of ONE document (e.g. a two-page delivery docket).
@@ -229,15 +249,15 @@ async function extractViaAnthropic(files: DocFile[], hint: string): Promise<{ ex
   const response = await client.beta.messages.create({
     model: SCAN_MODEL,
     max_tokens: 16000,
-    system: SYSTEM,
+    system: cfg.system,
     betas: ['server-side-fallback-2026-07-01'],
     fallbacks: 'default', // if a safety classifier declines, the API retries on a recommended model
-    output_config: { effort: 'medium', format: { type: 'json_schema', schema: JSON_SCHEMA } },
-    messages: [{ role: 'user', content: [...media, { type: 'text', text: userText(media.length, hint) }] }],
+    output_config: { effort: 'medium', format: { type: 'json_schema', schema: cfg.schema as any } },
+    messages: [{ role: 'user', content: [...media, { type: 'text', text: cfg.prompt }] }],
   });
 
   if (response.stop_reason === 'refusal') throw new ScanError('The document could not be read. Please enter the entry manually.');
   if (response.stop_reason === 'max_tokens') throw new ScanError('The document was too long to read in one go. Try one page at a time.');
   const text = response.content.find((b) => b.type === 'text');
-  return { extraction: parseResult(text && text.type === 'text' ? text.text : null), model: response.model };
+  return { result: cfg.parse(text && text.type === 'text' ? text.text : null), model: response.model };
 }
