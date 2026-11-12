@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug } from 'lucide-react';
+import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser } from 'lucide-react';
 import { BillingBanner } from './billing-banner';
 import { Logo } from '@/components/logo';
 import { ROLE_LABELS, can } from '@/lib/roles';
@@ -17,6 +17,7 @@ const NAV = [
   { href: '/dashboard/search', label: 'Search', icon: Search, show: () => true },
   { href: '/dashboard/destructions', label: 'Destructions', icon: Flame, show: () => true },
   { href: '/dashboard/audit', label: 'Audit trail', icon: History, show: can.viewAudit },
+  { href: '/dashboard/contacts', label: 'Doctors & suppliers', icon: BookUser, show: can.record },
   { href: '/dashboard/team', label: 'Team', icon: Users, show: can.manageStaff },
   { href: '/dashboard/integrations', label: 'Halo connection', icon: Plug, show: can.manageStaff },
   { href: '/dashboard/billing', label: 'Billing', icon: CreditCard, show: can.manageStaff },

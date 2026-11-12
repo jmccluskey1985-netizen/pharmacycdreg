@@ -78,12 +78,20 @@ function seed() {
       { id: 'i2', action: 'dispense', status: 'pending', problem: 'Quantity was sent as 1 OP, not units. Enter the number of tablets/ml/patches', received_at: new Date(Date.now() - 5 * 60e3).toISOString(), register_id: 'r4', payload: { external_id: 'HALO-8842-1', dispensed_at: new Date(Date.now() - 6 * 60e3).toISOString(), drug: { name: 'Fentanyl', strength: '25mcg/hr', form: 'transdermal patch', brand: 'Matrifen' }, quantity: 1, unit: 'OP', patient: { name: 'Thomas Burke', address: 'Ard Na Gréine, Ennis' }, prescriber: { name: 'Dr L. Nolan' }, prescription_ref: 'Rx 10290', pharmacist: { psi_number: '23456', name: 'Ciarán Walsh' } } },
     ],
     keys: [{ id: 'k1', name: 'Halo – dispensary PC', key_prefix: 'cdr_live_Xq3vA9', auto_post: false, created_at: daysAgo(3), last_used_at: new Date(Date.now() - 5 * 60e3).toISOString() as string | null, revoked_at: null as string | null }],
+    contacts: [
+      { id: 'c1', kind: 'prescriber', name: 'Dr A. Walsh', address: 'Ennis Medical Centre, Ennis, Co. Clare', registration: '012345', gms_number: 'G0001', role: null },
+      { id: 'c2', kind: 'prescriber', name: 'Dr K. Ryan', address: 'Abbey Street Surgery, Ennis, Co. Clare', registration: '023456', gms_number: 'G0002', role: null },
+      { id: 'c3', kind: 'prescriber', name: 'Dr L. Nolan', address: 'Quay Street Clinic, Galway', registration: '034567', gms_number: null, role: null },
+      { id: 'c4', kind: 'supplier', name: 'United Drug', address: 'Magna Business Park, Citywest, Dublin 24', registration: null, gms_number: null, role: null },
+      { id: 'c5', kind: 'supplier', name: 'Uniphar Wholesale', address: 'Fourth Avenue, Cookstown, Dublin 24', registration: null, gms_number: null, role: null },
+      { id: 'c6', kind: 'witness', name: 'P. Doyle', address: null, registration: null, gms_number: null, role: 'Authorised officer (PSI)' },
+    ] as Json[],
     activeStaffId: null as string | null,
   };
 }
 type State = ReturnType<typeof seed>;
 
-const KEY = 'cdreg-demo-v2';
+const KEY = 'cdreg-demo-v3';
 let S: State;
 function load(): State {
   try {
@@ -281,6 +289,38 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     const key = `cdr_live_DEMO${Math.random().toString(36).slice(2, 14)}`;
     S.keys.unshift({ id: uid(), name: body.name, key_prefix: key.slice(0, 17), auto_post: false, created_at: today(), last_used_at: null, revoked_at: null });
     return res({ key });
+  }
+  if (path === '/api/contacts') {
+    if (needStaff()) return needStaff()!;
+    if (method === 'GET') return res({ contacts: (S as any).contacts.filter((c: Json) => c.is_active !== false) });
+    const list = Array.isArray(body.contacts) ? body.contacts : [body];
+    let added = 0;
+    for (const c of list) {
+      if (c.id) Object.assign((S as any).contacts.find((x: Json) => x.id === c.id) ?? {}, c);
+      else if (!(S as any).contacts.some((x: Json) => x.kind === c.kind && x.name.toLowerCase() === String(c.name).toLowerCase())) { (S as any).contacts.push({ ...c, id: uid() }); added++; }
+    }
+    return res({ ok: true, added });
+  }
+  if (path === '/api/suggest') {
+    if (needStaff()) return needStaff()!;
+    const kind = url.searchParams.get('kind') || '';
+    const q = (url.searchParams.get('q') || '').toLowerCase();
+    if (q.length < 2) return res({ suggestions: [] });
+    const out: Json[] = [];
+    if (kind !== 'patient') for (const c of (S as any).contacts) if (c.kind === kind && c.is_active !== false && [c.name, c.gms_number, c.registration].some((v: string) => v && v.toLowerCase().includes(q))) out.push({ ...c, source: 'list' });
+    const cols: Record<string, [string, string]> = { patient: ['recipient_name', 'recipient_address'], prescriber: ['prescriber_name', 'prescriber_address'], supplier: ['supplier_name', 'supplier_address'], witness: ['witness_name', 'witness_role'] };
+    const [n, a] = cols[kind] ?? cols.patient;
+    const seen = new Set(out.map((o) => o.name.toLowerCase()));
+    for (const e of [...S.entries].sort((x, y) => y.recorded_at.localeCompare(x.recorded_at))) {
+      const name = e[n]; if (!name || !name.toLowerCase().includes(q) || seen.has(name.toLowerCase()) || name === 'Balance brought forward') continue;
+      seen.add(name.toLowerCase());
+      out.push(kind === 'witness' ? { name, address: null, role: e[a], source: 'register' } : { name, address: e[a] ?? null, source: 'register' });
+    }
+    if (kind === 'prescriber' && out.length < 10) {
+      const { searchGms, GMS_LIST_DATE } = await import('@/lib/gms');
+      for (const g of searchGms(q, 10 - out.length)) if (!seen.has(g.n.toLowerCase())) out.push({ name: g.n, address: g.a, gms_number: g.g, source: 'gms', detail: `HSE GMS list (${GMS_LIST_DATE}): ${g.raw}` });
+    }
+    return res({ suggestions: out.slice(0, 10) });
   }
   if (path.startsWith('/api/billing/')) return res({ error: 'Billing opens Stripe in the live version — not available in the demo.' }, 400);
   return fail(404, 'Not available in the demo');

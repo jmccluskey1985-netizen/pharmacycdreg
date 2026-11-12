@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Loader2, PackagePlus, PackageMinus, Flame, Undo2, PencilLine } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
+import { QuickFillInput, type Suggestion } from './quickfill-input';
 
 export type EntryType = 'receipt' | 'supply' | 'destruction' | 'patient_return' | 'patient_return_destruction' | 'correction';
 
@@ -74,6 +75,17 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof EntryDraft) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setD({ ...d, [k]: e.target.value });
   const type = d.entry_type;
+  const setVal = (k: keyof EntryDraft) => (v: string) => setD((x) => ({ ...x, [k]: v }));
+  const pickSupplier = (p: Suggestion) => setD((x) => ({ ...x, supplier_name: p.name, supplier_address: p.address ?? x.supplier_address }));
+  const pickPatient = (p: Suggestion) => setD((x) => ({ ...x, recipient_name: p.name, recipient_address: p.address ?? x.recipient_address }));
+  const pickWitness = (p: Suggestion) => setD((x) => ({ ...x, witness_name: p.name, witness_role: p.role ?? x.witness_role }));
+  const pickPrescriber = (p: Suggestion) =>
+    setD((x) => ({
+      ...x,
+      prescriber_name: p.name,
+      prescriber_address: p.address ?? x.prescriber_address,
+      authority_to_possess: x.authority_to_possess || `Prescription — ${p.name}${p.registration ? ` (Reg ${p.registration})` : p.gms_number ? ` (GMS ${p.gms_number})` : ''}`,
+    }));
 
   const preview = useMemo(() => {
     const q = Number(d.quantity) || 0;
@@ -136,7 +148,7 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
 
       {type === 'receipt' && (
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Obtained from (name)"><input className="input" required value={d.supplier_name ?? ''} onChange={set('supplier_name')} placeholder="e.g. Wholesaler name" /></Field>
+          <Field label="Obtained from (name)"><QuickFillInput kind="supplier" required value={d.supplier_name ?? ''} onChange={setVal('supplier_name')} onPick={pickSupplier} placeholder="Start typing, e.g. United" /></Field>
           <Field label="Address"><input className="input" required value={d.supplier_address ?? ''} onChange={set('supplier_address')} /></Field>
           <Field label="Invoice / docket no." ><input className="input" value={d.notes ?? ''} onChange={set('notes')} /></Field>
         </div>
@@ -145,9 +157,9 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
       {type === 'supply' && (
         <>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Supplied to (name)"><input className="input" required value={d.recipient_name ?? ''} onChange={set('recipient_name')} /></Field>
+            <Field label="Supplied to (name)"><QuickFillInput kind="patient" required value={d.recipient_name ?? ''} onChange={setVal('recipient_name')} onPick={pickPatient} placeholder="Start typing a name" /></Field>
             <Field label="Address"><input className="input" required value={d.recipient_address ?? ''} onChange={set('recipient_address')} /></Field>
-            <Field label="Prescriber name"><input className="input" value={d.prescriber_name ?? ''} onChange={set('prescriber_name')} /></Field>
+            <Field label="Prescriber name"><QuickFillInput kind="prescriber" value={d.prescriber_name ?? ''} onChange={setVal('prescriber_name')} onPick={pickPrescriber} placeholder="Name, IMC or GMS no." /></Field>
             <Field label="Prescriber address"><input className="input" value={d.prescriber_address ?? ''} onChange={set('prescriber_address')} /></Field>
             <Field label="Authority to be in possession" hint="Prescription / requisition reference"><input className="input" value={d.authority_to_possess ?? ''} onChange={set('authority_to_possess')} placeholder="e.g. Prescription — Dr A. Byrne" /></Field>
             <Field label="Rx / reference no."><input className="input" value={d.prescription_ref ?? ''} onChange={set('prescription_ref')} /></Field>
@@ -162,7 +174,7 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
 
       {(type === 'destruction' || type === 'patient_return_destruction') && (
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Witness name"><input className="input" required value={d.witness_name ?? ''} onChange={set('witness_name')} /></Field>
+          <Field label="Witness name"><QuickFillInput kind="witness" required value={d.witness_name ?? ''} onChange={setVal('witness_name')} onPick={pickWitness} /></Field>
           <Field label="Witness capacity" hint="e.g. Authorised officer, PSI inspector, Garda"><input className="input" required value={d.witness_role ?? ''} onChange={set('witness_role')} /></Field>
           <Field label="Method of destruction"><input className="input" value={d.destruction_method ?? ''} onChange={set('destruction_method')} placeholder="e.g. Denaturing kit" /></Field>
           {type === 'patient_return_destruction' && <Field label="Returned by (patient)"><input className="input" value={d.recipient_name ?? ''} onChange={set('recipient_name')} /></Field>}
@@ -171,7 +183,7 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
 
       {type === 'patient_return' && (
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Returned by (patient name)"><input className="input" required value={d.recipient_name ?? ''} onChange={set('recipient_name')} /></Field>
+          <Field label="Returned by (patient name)"><QuickFillInput kind="patient" required value={d.recipient_name ?? ''} onChange={setVal('recipient_name')} onPick={pickPatient} /></Field>
           <Field label="Address"><input className="input" value={d.recipient_address ?? ''} onChange={set('recipient_address')} /></Field>
           <p className="text-xs text-muted-foreground sm:col-span-2">Patient returns are not pharmacy stock and do not change the balance. Record their destruction separately once witnessed.</p>
         </div>
