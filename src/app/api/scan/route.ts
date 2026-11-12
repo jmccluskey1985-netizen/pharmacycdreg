@@ -5,6 +5,7 @@ import { extractFromDocument, ScanError } from '@/lib/scan-extract';
 import { balancesFor } from '@/lib/registers';
 import { liveRegisters, matchRegister } from '@/lib/match';
 import { decideQuantity } from '@/lib/quantity';
+import { identifySupplier, looksLikeOwnPharmacy, checkReference } from '@/lib/invoice-rules';
 import { registerExemption } from '@/lib/cd-catalogue';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { can } from '@/lib/roles';
@@ -48,10 +49,48 @@ export async function POST(req: Request) {
     const balances = await balancesFor(regs.map((r) => r.id));
 
     const isInvoice = extraction.document_type === 'invoice';
+
+    // Invoice clean-up: right supplier (never our own ship-to block), invoice number check.
+    const docFlags: string[] = [];
+    if (isInvoice) {
+      const { data: ph } = await db.from('pharmacies').select('name, address').eq('id', account.pharmacyId).single();
+      if (ph && looksLikeOwnPharmacy(extraction.supplier_name, extraction.supplier_address, ph)) {
+        extraction.supplier_name = null;
+        extraction.supplier_address = null;
+      }
+      const known = identifySupplier(extraction.supplier_name, extraction.supplier_evidence, ...extraction.items.map((i) => i.notes));
+      if (known) {
+        extraction.supplier_name = known.name;
+        extraction.supplier_address = extraction.supplier_address && identifySupplier(extraction.supplier_address) ? extraction.supplier_address : known.address;
+      }
+      if (!extraction.supplier_name) docFlags.push('Supplier not found on the page — enter who sent it');
+      const refFlag = checkReference(extraction.reference, extraction.reference_label);
+      if (refFlag) docFlags.push(refFlag);
+    }
+
+    // Same delivery already recorded? (Invoice + CD docket / MDA receipt carry the same goods.)
+    const priorFor = async (registerId: string, qty: number | null) => {
+      if (!isInvoice) return null;
+      if (extraction.reference) {
+        const { data } = await db.from('cd_entries').select('seq').eq('register_id', registerId).eq('entry_type', 'receipt').ilike('notes', `%${extraction.reference}%`).limit(1);
+        if (data?.length) return { blocking: true, text: `Invoice ${extraction.reference} is already recorded on line ${data[0].seq} of this register — don't add it twice` };
+      }
+      if (qty && extraction.document_date) {
+        const d = new Date(extraction.document_date);
+        const from = new Date(d.getTime() - 4 * 864e5).toISOString().slice(0, 10);
+        const to = new Date(d.getTime() + 4 * 864e5).toISOString().slice(0, 10);
+        const { data } = await db.from('cd_entries').select('seq, notes').eq('register_id', registerId).eq('entry_type', 'receipt').eq('quantity', qty).gte('transaction_date', from).lte('transaction_date', to).limit(1);
+        if (data?.length) return { blocking: false, text: `Same amount received within a few days on line ${data[0].seq}${data[0].notes ? ` (${data[0].notes})` : ''} — is this the same delivery?` };
+      }
+      return null;
+    };
     const exempt = extraction.items.filter((i) => i.is_controlled_drug && registerExemption(i.drug_name, i.strength, i.form, i.brand));
-    const proposals = extraction.items.filter((i) => i.is_controlled_drug && !registerExemption(i.drug_name, i.strength, i.form, i.brand)).map((item) => {
+    const proposals = await Promise.all(extraction.items.filter((i) => i.is_controlled_drug && !registerExemption(i.drug_name, i.strength, i.form, i.brand)).map(async (item) => {
       const { match, candidates, state } = matchRegister(regs, item.drug_name, item.strength, item.form, item.brand);
       const qty = decideQuantity(item, extraction.document_type);
+      qty.flags.push(...docFlags);
+      const prior = match ? await priorFor(match.id, qty.quantity) : null;
+      if (prior) { qty.flags.unshift(prior.text); if (prior.blocking) qty.blocking = true; }
       return {
         item,
         match_state: state,
@@ -71,12 +110,12 @@ export async function POST(req: Request) {
           prescriber_name: extraction.prescriber_name,
           prescriber_address: extraction.prescriber_address,
           authority_to_possess: !isInvoice && extraction.prescriber_name ? `Prescription — ${extraction.prescriber_name}${extraction.prescriber_registration ? ` (Reg ${extraction.prescriber_registration})` : ''}` : null,
-          prescription_ref: extraction.reference,
+          prescription_ref: isInvoice ? null : extraction.reference,
           notes: isInvoice && extraction.reference ? `Invoice ${extraction.reference}` : null,
           scan_id: scan.id,
         },
       };
-    });
+    }));
 
     const ignored = extraction.items.filter((i) => !i.is_controlled_drug).length;
     const exempt_lines = exempt.map((i) => ({ label: `${i.brand ?? i.drug_name} ${i.strength}`, reason: registerExemption(i.drug_name, i.strength, i.form, i.brand) }));

@@ -5,6 +5,8 @@
  * total must be written in words and figures, so we never work a quantity out from a
  * dose × duration, and we never round to packs.
  */
+import { packSizeFromText } from './invoice-rules';
+
 export type QtySource = 'packs_x_size' | 'invoice_quantity' | 'words_and_figures' | 'figures_only' | 'none';
 
 export interface QtyDecision {
@@ -53,6 +55,8 @@ export interface RawItem {
   duration_text: string | null;
   is_credit: boolean;
   confidence: 'high' | 'medium' | 'low';
+  line_text?: string | null;
+  handwritten_qty?: string | null;
 }
 
 export function decideQuantity(item: RawItem, kind: 'invoice' | 'prescription' | 'other'): QtyDecision {
@@ -64,10 +68,25 @@ export function decideQuantity(item: RawItem, kind: 'invoice' | 'prescription' |
 
   if (kind === 'invoice') {
     if (item.is_credit) return { quantity: null, source: 'none', label: 'Credit / return line', flags: [...flags, 'Credit or return — not a receipt. Record a correction if stock was already entered'], blocking: true };
+    // Handwritten change by the qty (e.g. printed 8, written 5 = what arrived). A tick is fine.
+    let blocking = false;
+    const hw = (item.handwritten_qty || '').match(/\d+(\.\d+)?/);
+    if (hw && item.packs != null && Number(hw[0]) !== item.packs) {
+      flags.push(`Handwritten “${item.handwritten_qty}” beside printed ${item.packs} — confirm how many packs actually arrived`);
+      blocking = true;
+    }
+    const fromText = packSizeFromText(item.line_text);
+    if (item.packs != null && item.pack_size == null && fromText != null) {
+      item = { ...item, pack_size: fromText };
+      flags.push(`Pack size ${fromText} taken from the printed line — check`);
+    } else if (item.pack_size != null && fromText != null && fromText !== item.pack_size && item.line_text && !new RegExp(`\\b${item.pack_size}\\b`).test(item.line_text)) {
+      flags.push(`Pack size ${item.pack_size} not on the printed line (it shows ${fromText}) — check the PACK column`);
+      blocking = true;
+    }
     if (item.packs != null && item.pack_size != null) {
       const q = item.packs * item.pack_size;
       if (item.quantity && Math.abs(item.quantity - q) > 0.001) flags.push(`Reader said ${item.quantity}, packs × size gives ${q} — using ${q}`);
-      return { quantity: q, source: 'packs_x_size', label: `${item.packs} pack${item.packs === 1 ? '' : 's'} × ${item.pack_size} = ${q}`, flags, blocking: false };
+      return { quantity: q, source: 'packs_x_size', label: `${item.packs} pack${item.packs === 1 ? '' : 's'} × ${item.pack_size} = ${q}`, flags, blocking };
     }
     if (item.packs != null && item.pack_size == null) flags.push('Pack size not found in the description — check units per pack');
     return { quantity: item.quantity || null, source: item.quantity ? 'invoice_quantity' : 'none', label: item.quantity ? `${item.quantity} ${item.quantity_unit}` : 'No quantity read', flags, blocking: !item.quantity };

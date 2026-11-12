@@ -28,12 +28,16 @@ const ItemSchema = z.object({
   quantity_words: z.string().nullable(),
   duration_text: z.string().nullable(),
   is_credit: z.boolean(),
+  line_text: z.string().nullable().optional(),
+  handwritten_qty: z.string().nullable().optional(),
 });
 
 export const ExtractionSchema = z.object({
   document_type: z.enum(['prescription', 'invoice', 'other']),
   document_date: z.string().nullable(),
   reference: z.string().nullable(),
+  reference_label: z.string().nullable().optional(),
+  supplier_evidence: z.string().nullable().optional(),
   supplier_name: z.string().nullable(),
   supplier_address: z.string().nullable(),
   patient_name: z.string().nullable(),
@@ -50,11 +54,13 @@ const nullableString = { type: ['string', 'null'] };
 const JSON_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['document_type', 'document_date', 'reference', 'supplier_name', 'supplier_address', 'patient_name', 'patient_address', 'prescriber_name', 'prescriber_address', 'prescriber_registration', 'items', 'warnings'],
+  required: ['document_type', 'document_date', 'reference', 'reference_label', 'supplier_evidence', 'supplier_name', 'supplier_address', 'patient_name', 'patient_address', 'prescriber_name', 'prescriber_address', 'prescriber_registration', 'items', 'warnings'],
   properties: {
     document_type: { type: 'string', enum: ['prescription', 'invoice', 'other'] },
     document_date: { ...nullableString, description: 'Date on the document as YYYY-MM-DD' },
-    reference: { ...nullableString, description: 'Invoice number or prescription/GMS number' },
+    reference: { ...nullableString, description: 'Invoices: the INVOICE / docket NUMBER only (never the account, customer, shop ref, "Your Ref", reference, run, group, order, tote or product number). Prescriptions: Rx/GMS number.' },
+    reference_label: { ...nullableString, description: 'The label printed next to the reference exactly as written, e.g. "INVOICE", "Invoice No:", "NUMBER"' },
+    supplier_evidence: { ...nullableString, description: 'Where you read the supplier: logo, letterhead, footer address, "Registered in Ireland" line, or "return to" box — quote it briefly' },
     supplier_name: { ...nullableString, description: 'Wholesaler/supplier (invoices only)' },
     supplier_address: nullableString,
     patient_name: { ...nullableString, description: 'Patient (prescriptions only)' },
@@ -67,7 +73,7 @@ const JSON_SCHEMA = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['drug_name', 'strength', 'form', 'quantity', 'quantity_unit', 'pack_description', 'is_controlled_drug', 'likely_schedule', 'confidence', 'notes', 'brand', 'packs', 'pack_size', 'quantity_figures', 'quantity_words', 'duration_text', 'is_credit'],
+        required: ['drug_name', 'strength', 'form', 'quantity', 'quantity_unit', 'pack_description', 'is_controlled_drug', 'likely_schedule', 'confidence', 'notes', 'brand', 'packs', 'pack_size', 'quantity_figures', 'quantity_words', 'duration_text', 'is_credit', 'line_text', 'handwritten_qty'],
         properties: {
           drug_name: { type: 'string', description: 'Generic (INN) name, e.g. "Oxycodone hydrochloride". Put any brand in notes.' },
           strength: { type: 'string', description: 'e.g. "10mg", "10mg/5ml"' },
@@ -86,6 +92,8 @@ const JSON_SCHEMA = {
           quantity_words: { type: ['string', 'null'], description: 'Prescriptions: total quantity in WORDS exactly as written (e.g. "twenty-eight"), else null' },
           duration_text: { type: ['string', 'null'], description: 'Duration if written (e.g. "5/7", "28 days"), else null. Never convert it into a quantity.' },
           is_credit: { type: 'boolean', description: 'True for a credit, return or negative line' },
+          line_text: { type: ['string', 'null'], description: 'The whole printed line exactly as on the page, all columns left to right (e.g. "2  OXYNORM 5MG CAPSULES  56  6.52")' },
+          handwritten_qty: { type: ['string', 'null'], description: 'Any HANDWRITTEN number or mark written by the qty on this line (e.g. a ticked-in "5" or "0"), exactly as seen, else null' },
         },
       },
     },
@@ -97,9 +105,15 @@ const SYSTEM = `You read Irish community-pharmacy documents and extract the cont
 
 Invoices and delivery dockets:
 - They list many products; most are not controlled drugs. Return every line you can read but set is_controlled_drug accurately. Lines are often flagged "CD", "C/D", "CD2", "Sch 2" or printed on a separate CD docket — use that as a strong signal, but also recognise CDs by name (e.g. OxyNorm/OxyContin = oxycodone, MST/Zomorph = morphine (but Oramorph 10mg/5ml and other oral morphine ≤ 2mg/ml is Schedule 5 — not a register drug; Oramorph Concentrated 20mg/ml is), Durogesic/Matrifen = fentanyl, Palexia = tapentadol, Targin = oxycodone/naloxone, Ritalin/Concerta = methylphenidate, Elvanse = lisdexamfetamine, methadone, buprenorphine, pethidine, ketamine; benzodiazepines and Z-drugs are Schedule 4).
-- The quantity column is usually number of PACKS. The register needs base units, so quantity = packs × pack size (pack size is in the description, e.g. "OXYNORM CAPS 5MG 56" → 56 per pack). Put the arithmetic in pack_description, e.g. "2 packs x 56".
-- supplier_name/supplier_address are the wholesaler's trading name and address from the letterhead (not the pharmacy's own address, which is the delivery/ship-to address).
-- reference is the invoice or docket number; document_date is the invoice/delivery date.
+- Photos are often rotated 90° or 180°. Read them in the correct orientation.
+- The quantity column (QTY / Quantity) is the number of PACKS. The register needs base units, so quantity = packs × pack size. Pack size is EITHER in its own column (headed "Packsize" or "PACK") OR at the end of the description (e.g. "OXYCONTIN 10MG PROLONGED-RELEASE TABS 56" → 56). Put the arithmetic in pack_description, e.g. "2 packs x 56". A trailing manufacturer name (e.g. "28 TEVA") is not part of the pack size.
+- On dot-matrix invoices the PACK/PRICE columns can sit half a line above or below their description. Match columns by row order, and copy the whole line into line_text. If you can't be sure which pack size belongs to which line, set confidence low and say so.
+- Staff often handwrite a tick, a "0" or a different number next to the printed qty (what actually arrived). Put it in handwritten_qty; do NOT use it to change packs.
+- The pharmacy itself appears as "Delivered To", "Deliver To", "Invoice To", the ship-to block or a company name in the top-left (e.g. a "Ltd" trading as the pharmacy). That is NEVER the supplier.
+- supplier_name/supplier_address are the company that sent the goods: from the logo, letterhead, the footer address line, the "Registered in Ireland" line or the "return to" box. CD dockets and MDA receipts often show the supplier only in the footer or the wording (e.g. "returned signed … to UNIPHAR PLC"). Say where you found it in supplier_evidence. If no address for the supplier is printed, return null for supplier_address.
+- reference is the INVOICE or docket NUMBER: the value labelled "INVOICE", "Invoice No", or "NUMBER" on a CD docket. Never use ACCOUNT, Shop Ref, Your Ref, Reference, Run/Ref, Group, Rep Code, Order, Tote, Bin, PC Ref, Batch or Product numbers. Copy its printed label into reference_label.
+- document_date is the invoice/docket date (not the print/run time or expiry dates). Convert DD/MM/YY to YYYY-MM-DD (Irish day-first dates).
+- An invoice and its CD docket / MDA receipt for the same delivery are separate pages that list the same goods. Read what is on the page you are given.
 - If a line is a credit, return or negative quantity, add a warning and set confidence low — it is not a receipt.
 - If a page appears to be missing (page numbering, "continued"), add a warning.
 
