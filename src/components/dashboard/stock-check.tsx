@@ -40,7 +40,7 @@ export function StockCheckButton({ registerId, unit, balance, canRecord }: { reg
 
   return (
     <>
-      <button onClick={() => { setOpen(true); setDone(null); }} className="btn-secondary"><ClipboardCheck className="h-4 w-4" /> <span className="hidden sm:inline">Stock</span> check</button>
+      <button onClick={() => { setOpen(true); setDone(null); }} className="btn-secondary"><ClipboardCheck className="h-4 w-4" /> Stock check</button>
       <Modal open={open} onClose={() => setOpen(false)} title="Stock check">
         <div className="space-y-4">
           {canRecord && (

@@ -4,10 +4,11 @@ import { useRef } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { productFor, CD_PRODUCTS } from '@/data/cd-products';
+import { brandOf } from '@/lib/product-name';
 
 interface Reg {
   id: string; balance: number; low_stock?: boolean; check_due?: boolean;
-  product: { drug_name: string; class_name: string; strength: string; form: string; unit: string; parent?: { drug_name: string } | null };
+  product: { drug_name: string; class_name: string; strength: string; form: string; unit: string; brand?: string | null; parent?: { drug_name: string } | null };
 }
 interface TypeGroup { key: string; brand: string; form: string; order: number; regs: Reg[] }
 
@@ -18,9 +19,10 @@ function arrange(regs: Reg[]) {
   const byClass = new Map<string, Map<string, TypeGroup>>();
   for (const r of regs) {
     const p = productFor(r.product.drug_name, r.product.form);
-    const key = p ? p.key : `${r.product.drug_name}|${r.product.form}`;
+    const brand = brandOf(r.product) ?? r.product.drug_name;
+    const key = `${p ? p.key : `${r.product.drug_name}|${r.product.form}`}|${brand.toLowerCase()}`;
     const types = byClass.get(r.product.class_name) ?? new Map<string, TypeGroup>();
-    const g = types.get(key) ?? { key, brand: p?.brands[0] ?? r.product.drug_name, form: p?.form ?? r.product.form, order: p ? CD_PRODUCTS.indexOf(p) : 999, regs: [] };
+    const g = types.get(key) ?? { key, brand, form: p?.form ?? r.product.form, order: p ? CD_PRODUCTS.indexOf(p) : 999, regs: [] };
     g.regs.push(r);
     types.set(key, g);
     byClass.set(r.product.class_name, types);

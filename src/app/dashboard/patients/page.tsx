@@ -1,4 +1,5 @@
 'use client';
+import { brandOf } from '@/lib/product-name';
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -127,7 +128,7 @@ function PatientDetail({ patient, onBack, onChanged }: { patient: PatientRecord;
                 <tbody>{data.rows.slice().reverse().map((r) => (
                   <tr key={r.id}>
                     <td className="tabular-nums">{fmt(r.transaction_date)}</td>
-                    <td><Link href={`/dashboard/register/${r.register_id}`} className="text-primary hover:underline">{r.product?.drug_name} {r.product?.strength}</Link></td>
+                    <td><Link href={`/dashboard/register/${r.register_id}`} className="text-primary hover:underline">{r.product ? `${brandOf(r.product) ?? r.product.drug_name} ${r.product.strength}` : ''}</Link></td>
                     <td>{TYPES[r.entry_type] ?? r.entry_type}</td>
                     <td>{r.prescriber_name}</td>
                     <td className="text-xs">{[r.authority_to_possess, r.prescription_ref].filter(Boolean).join(' · ')}</td>

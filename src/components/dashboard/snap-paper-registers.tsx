@@ -60,7 +60,7 @@ export function SnapPaperRegisters({ onChanged }: { onChanged: () => void }) {
     update(it.key, { status: 'opening', error: undefined });
     try {
       const d = await api('/api/registers', { method: 'POST', json: {
-        drug_name: it.f.drug_name, class_name: cat?.class ?? it.f.drug_name.split(' ')[0], schedule: p?.likely_schedule ?? 2, schedule_paragraph: cat?.para ?? null,
+        drug_name: it.f.drug_name, brand: p?.brand ?? cat?.brands[0] ?? null, class_name: cat?.class ?? it.f.drug_name.split(' ')[0], schedule: p?.likely_schedule ?? 2, schedule_paragraph: cat?.para ?? null,
         form: it.f.form, strength: it.f.strength, unit: it.f.unit,
         opening_balance: it.f.balance ? Number(it.f.balance) : undefined, opening_date: it.f.date || undefined,
         opening_balance_note: `Paper CD register${p?.product_written ? ` (${p.product_written})` : ''}${it.f.date ? `, last entry ${fmt(it.f.date)}` : ''}`,

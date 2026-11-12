@@ -1,19 +1,21 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import { genericKey, sameStrength } from '@/lib/cd-catalogue';
+import { productTitle, genericLine } from '@/lib/product-name';
 
 const norm = (s: string) => s.toLowerCase().replace(/hydrochloride|sulfate|sulphate|tartrate|citrate|base|\(.*?\)/g, '').replace(/[^a-z0-9]/g, '');
 const normStrength = (s: string) => s.toLowerCase().replace(/\s+/g, '').replace(/micrograms?|µg|ug/g, 'mcg').replace(/milligrams?/g, 'mg');
 
-export interface RegisterOption { id: string; label: string; drug_name: string; strength: string; form: string; unit: string; class_name: string }
+export interface RegisterOption { id: string; label: string; drug_name: string; strength: string; form: string; unit: string; class_name: string; brand?: string | null }
 
 export async function liveRegisters(pharmacyId: string): Promise<RegisterOption[]> {
   const db = createServiceClient();
   const { data } = await db
     .from('cd_registers')
-    .select('id, product:cd_products(drug_name, strength, form, unit, class_name)')
+    .select('id, product:cd_products(*)')
     .eq('pharmacy_id', pharmacyId)
     .is('closed_at', null);
-  return (data ?? []).map((r: any) => ({ id: r.id, ...r.product, label: `${r.product.drug_name} ${r.product.strength} ${r.product.form}` }));
+  // Register id must win over the product's own id; label leads with the brand.
+  return (data ?? []).map((r: any) => ({ ...r.product, id: r.id, label: `${productTitle(r.product)}${genericLine(r.product) ? ` (${genericLine(r.product)})` : ''}` }));
 }
 
 export type MatchState = 'your_register' | 'pick_register' | 'no_register' ;

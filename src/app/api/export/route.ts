@@ -17,7 +17,7 @@ export async function GET() {
     const db = createServiceClient();
     const [{ data: pharmacy }, { data: regs }, { data: people }] = await Promise.all([
       db.from('pharmacies').select('name, address, psi_premises_number').eq('id', account.pharmacyId).single(),
-      db.from('cd_registers').select('id, opened_at, closed_at, product:cd_products(drug_name, strength, form, unit, class_name, schedule, schedule_paragraph)').eq('pharmacy_id', account.pharmacyId),
+      db.from('cd_registers').select('id, opened_at, closed_at, product:cd_products(*)').eq('pharmacy_id', account.pharmacyId),
       db.from('staff').select('id, full_name, psi_number').eq('pharmacy_id', account.pharmacyId),
     ]);
     const regMap = new Map((regs ?? []).map((r: any) => [r.id, r]));

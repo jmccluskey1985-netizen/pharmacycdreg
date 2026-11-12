@@ -1,3 +1,4 @@
+import { productTitle } from '@/lib/product-name';
 import { NextResponse } from 'next/server';
 import { requireStaff, errorResponse, audit } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase/server';
@@ -32,7 +33,7 @@ export async function GET(req: Request) {
       linkedIds = (linked ?? []).map((x) => x.id);
     }
     if (name.length < 2) return NextResponse.json({ error: 'Choose a patient' }, { status: 400 });
-    const { data: regs } = await db.from('cd_registers').select('id, product:cd_products(drug_name, strength, form, unit)').eq('pharmacy_id', account.pharmacyId);
+    const { data: regs } = await db.from('cd_registers').select('id, product:cd_products(*)').eq('pharmacy_id', account.pharmacyId);
     const regMap = new Map((regs ?? []).map((r: any) => [r.id, r.product]));
     if (!regMap.size) return NextResponse.json({ rows: [], totals: [] });
 
@@ -47,7 +48,7 @@ export async function GET(req: Request) {
     const totals: Record<string, { label: string; unit: string; supplied: number; returned: number; count: number }> = {};
     for (const r of rows) {
       const k = r.register_id;
-      const t = (totals[k] ||= { label: `${r.product.drug_name} ${r.product.strength} ${r.product.form}`, unit: r.product.unit, supplied: 0, returned: 0, count: 0 });
+      const t = (totals[k] ||= { label: productTitle(r.product), unit: r.product.unit, supplied: 0, returned: 0, count: 0 });
       if (r.entry_type === 'supply') { t.supplied += Number(r.quantity); t.count++; } else if (r.entry_type === 'patient_return') t.returned += Number(r.quantity);
     }
     await audit(account.pharmacyId, 'report.patient', staff, account.authUserId, { rows: rows.length, from, to });

@@ -1,4 +1,5 @@
 'use client';
+import { productTitle, brandOf, genericLine } from '@/lib/product-name';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -9,7 +10,7 @@ import { genericKey } from '@/lib/cd-catalogue';
 import { QuickFillInput } from '@/components/dashboard/quickfill-input';
 
 const TYPES: Record<string, string> = { receipt: 'Obtained', supply: 'Supplied', destruction: 'Destroyed', patient_return: 'Patient return', patient_return_destruction: 'Return destroyed' };
-interface Reg { id: string; balance: number; product: { drug_name: string; strength: string; form: string; unit: string; class_name: string } }
+interface Reg { id: string; balance: number; product: { drug_name: string; strength: string; form: string; unit: string; class_name: string; brand?: string | null } }
 
 const sameForm = (a: string, b: string) => a.toLowerCase().replace(/s$/, '') === b.toLowerCase().replace(/s$/, '');
 
@@ -19,7 +20,7 @@ function matchRegisters(regs: Reg[], q: string): Reg[] {
   if (t.length < 2) return [];
   const products = searchCdProducts(t);
   const viaBrand = (r: Reg) => products.some((p) => p.brands.some((b) => b.toLowerCase().includes(t.split(' ')[0])) && genericKey(p.generic) === genericKey(r.product.drug_name) && sameForm(p.form, r.product.form));
-  const viaText = (r: Reg) => t.split(/\s+/).every((w) => `${r.product.drug_name} ${r.product.class_name} ${r.product.strength} ${r.product.form}`.toLowerCase().includes(w));
+  const viaText = (r: Reg) => t.split(/\s+/).every((w) => `${productTitle(r.product)} ${r.product.drug_name} ${r.product.class_name}`.toLowerCase().includes(w));
   return regs.filter((r) => viaBrand(r) || viaText(r)).sort((a, b) => a.product.drug_name.localeCompare(b.product.drug_name) || a.product.form.localeCompare(b.product.form) || parseFloat(a.product.strength) - parseFloat(b.product.strength));
 }
 
@@ -81,8 +82,8 @@ function DrugSearch() {
               )}
               {matches.map((r) => (
                 <li key={r.id} className="flex items-center hover:bg-secondary">
-                  <button type="button" onClick={() => pick(`${r.product.drug_name} ${r.product.strength} ${r.product.form}`, [r.id])} className="flex flex-1 items-center justify-between gap-3 px-3 py-2 text-left text-sm">
-                    <span><b>{r.product.strength}</b> {r.product.drug_name} <span className="text-muted-foreground">· {r.product.form}</span></span>
+                  <button type="button" onClick={() => pick(productTitle(r.product), [r.id])} className="flex flex-1 items-center justify-between gap-3 px-3 py-2 text-left text-sm">
+                    <span><b>{brandOf(r.product) ?? r.product.drug_name} {r.product.strength}</b> <span className="text-muted-foreground">· {r.product.form}</span></span>
                     <span className="text-xs tabular-nums text-muted-foreground">{r.balance} {r.product.unit}</span>
                   </button>
                   <Link href={`/dashboard/register/${r.id}`} className="px-3 py-2 text-muted-foreground hover:text-foreground" title="Open register"><BookOpen className="h-4 w-4" /></Link>
@@ -115,7 +116,7 @@ function ResultsTable({ results, title }: { results: any[]; title?: string }) {
           {results.map((r) => (
             <tr key={r.id}>
               <td className="tabular-nums">{r.transaction_date}</td>
-              <td><Link href={`/dashboard/register/${r.register_id}`} className="text-primary underline-offset-2 hover:underline">{r.product?.drug_name} {r.product?.strength}</Link></td>
+              <td><Link href={`/dashboard/register/${r.register_id}`} className="text-primary underline-offset-2 hover:underline">{r.product ? `${brandOf(r.product) ?? r.product.drug_name} ${r.product.strength}` : ''}</Link></td>
               <td>{TYPES[r.entry_type]}{r.correction_count > 0 && <span className="badge ml-1 bg-amber-100 text-amber-900">corrected</span>}</td>
               <td>{r.entry_type === 'receipt' ? r.supplier_name : r.recipient_name ?? (r.witness_name ? `Witness: ${r.witness_name}` : '')}</td>
               <td className="text-xs">{[r.authority_to_possess, r.prescriber_name, r.prescription_ref].filter(Boolean).join(' · ')}</td>
@@ -199,7 +200,7 @@ function PatientReport() {
                   {data.rows.map((r) => (
                     <tr key={r.id}>
                       <td className="tabular-nums">{r.transaction_date}</td>
-                      <td><Link href={`/dashboard/register/${r.register_id}`} className="text-primary underline-offset-2 hover:underline">{r.product?.drug_name} {r.product?.strength}</Link> <span className="text-xs text-muted-foreground">{r.product?.form}</span></td>
+                      <td><Link href={`/dashboard/register/${r.register_id}`} className="text-primary underline-offset-2 hover:underline">{r.product ? `${brandOf(r.product) ?? r.product.drug_name} ${r.product.strength}` : ''}</Link> <span className="text-xs text-muted-foreground">{r.product?.form}</span></td>
                       <td>{TYPES[r.entry_type]}{r.correction_count > 0 && <span className="badge ml-1 bg-amber-100 text-amber-900">corrected</span>}</td>
                       <td>{r.prescriber_name}</td>
                       <td className="text-xs">{[r.authority_to_possess, r.prescription_ref].filter(Boolean).join(' · ')}</td>

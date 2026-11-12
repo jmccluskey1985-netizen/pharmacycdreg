@@ -18,7 +18,7 @@ export async function GET(req: Request) {
 
     const { data: regs } = await db
       .from('cd_registers')
-      .select('id, product:cd_products(drug_name, strength, form, class_name, unit)')
+      .select('id, product:cd_products(*)')
       .eq('pharmacy_id', account.pharmacyId);
     const regMap = new Map((regs ?? []).map((r: any) => [r.id, r.product]));
     if (!regMap.size) return NextResponse.json({ results: [] });

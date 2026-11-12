@@ -7,7 +7,7 @@ import { genericKey, sameStrength } from '@/lib/cd-catalogue';
 import { api, ApiError } from '@/lib/api';
 
 interface Existing { product: { drug_name: string; strength: string; form: string } }
-type Pick = { product: CdProduct; strength: string; balance: string };
+type Pick = { product: CdProduct; strength: string; balance: string; brand: string };
 
 const sameForm = (a: string, b: string) => a.toLowerCase().replace(/s$/, '') === b.toLowerCase().replace(/s$/, '');
 export const isOpen = (regs: Existing[], p: CdProduct, strength: string) =>
@@ -26,7 +26,7 @@ export function SetupFromList({ registers, onDone }: { registers: Existing[]; on
   const toggle = (p: CdProduct, s: string) => setPicks((x) => {
     const k = id(p, s);
     const next = { ...x };
-    if (next[k]) delete next[k]; else next[k] = { product: p, strength: s, balance: '' };
+    if (next[k]) delete next[k]; else next[k] = { product: p, strength: s, balance: '', brand: p.brands[0] };
     return next;
   });
   const list = Object.entries(picks);
@@ -38,14 +38,14 @@ export function SetupFromList({ registers, onDone }: { registers: Existing[]; on
     for (const [, x] of list) {
       try {
         await api('/api/registers', { method: 'POST', json: {
-          drug_name: x.product.generic, class_name: x.product.class, schedule: 2, schedule_paragraph: x.product.para,
+          drug_name: x.product.generic, brand: x.brand, class_name: x.product.class, schedule: 2, schedule_paragraph: x.product.para,
           form: x.product.form, strength: x.strength, unit: x.product.unit,
           opening_balance: x.balance ? Number(x.balance) : undefined, opening_date: date,
           opening_balance_note: 'Brought forward from paper CD register',
         } });
         ok++;
       } catch (e) {
-        failed.push(`${x.product.brands[0]} ${x.strength}: ${e instanceof ApiError ? e.message : 'failed'}`);
+        failed.push(`${x.brand} ${x.strength}: ${e instanceof ApiError ? e.message : 'failed'}`);
       }
     }
     setBusy(false);
@@ -91,7 +91,14 @@ export function SetupFromList({ registers, onDone }: { registers: Existing[]; on
           <div className="max-h-40 space-y-1.5 overflow-y-auto">
             {list.map(([k, x]) => (
               <div key={k} className="flex items-center justify-between gap-2 text-sm">
-                <span className="truncate">{x.product.brands[0]} {x.strength} <span className="text-muted-foreground">{x.product.form}</span></span>
+                <span className="flex min-w-0 items-center gap-1.5">
+                  {x.product.brands.length > 1 ? (
+                    <select className="input w-auto py-1 text-sm font-semibold" value={x.brand} onChange={(e) => setPicks({ ...picks, [k]: { ...x, brand: e.target.value } })} aria-label="Brand">
+                      {x.product.brands.map((b) => <option key={b}>{b}</option>)}
+                    </select>
+                  ) : <b>{x.brand}</b>}
+                  <span className="truncate">{x.strength} <span className="text-muted-foreground">{x.product.form}</span></span>
+                </span>
                 <input className="input w-28 py-1.5" type="number" min="0" step="any" inputMode="decimal" placeholder={`0 ${x.product.unit}`} value={x.balance} onChange={(e) => setPicks({ ...picks, [k]: { ...x, balance: e.target.value } })} />
               </div>
             ))}

@@ -16,7 +16,7 @@ const FEATURES = [
 
 const PREVIEWS = [
   { src: '/previews/register-book.webp', alt: 'A register page laid out like the paper Controlled Drugs Register, with a correction struck through and footnoted', title: 'The register, page by page', text: 'Same columns as the paper register: date, name and address, authority, amount obtained or supplied, running balance, pharmacist. Corrections are struck through and footnoted — never hidden.' },
-  { src: '/previews/invoice-scan.webp', alt: 'Invoice scan result: 2 packs × 56 = 112 capsules matched to the oxycodone register', title: 'Invoices read for you', text: 'Photograph the wholesaler invoice. Controlled drug lines are picked out, packs × pack size worked out, matched to the right register — and Schedule 5 lines like Oramorph 10mg/5ml left out. You check and confirm each line.' },
+  { src: '/previews/invoice-scan.webp', alt: 'Invoice scan result: OxyNorm 5mg capsules, 2 packs × 56 = 112, matched to the OxyNorm 5mg register', title: 'Invoices read for you', text: 'Photograph the wholesaler invoice. Controlled drug lines are picked out, packs × pack size worked out, matched to the right register — and Schedule 5 lines like Oramorph 10mg/5ml left out. You check and confirm each line.' },
 ];
 
 function WaitlistForm() {
@@ -204,7 +204,7 @@ export default function LandingPage() {
                 <p className="mt-2 text-lg text-muted-foreground">Check a balance or record an entry from anywhere in the pharmacy. Each person signs in with their own PIN.</p>
               </div>
               <figure className="mx-auto w-60 overflow-hidden rounded-[2.2rem] bg-black p-2 shadow-soft ring-1 ring-border sm:w-64">
-                <img src="/previews/phone.webp" alt="PharmacyCDReg on a phone: registers with balances" loading="lazy" className="w-full rounded-[1.8rem]" />
+                <img src="/previews/phone.webp" alt="PharmacyCDReg on a phone: the OxyNorm 5mg capsule register page" loading="lazy" className="w-full rounded-[1.8rem]" />
               </figure>
             </div>
           </div>

@@ -7,6 +7,7 @@
  */
 'use client';
 import { decideQuantity } from '@/lib/quantity';
+import { productTitle } from '@/lib/product-name';
 import { genericKey, sameStrength, registerExemption } from '@/lib/cd-catalogue';
 
 type Json = Record<string, any>;
@@ -23,11 +24,11 @@ const STAFF = [
 
 const P = (id: string, drug_name: string, class_name: string, form: string, strength: string, unit: string, extra: Json = {}) => ({ id, drug_name, class_name, schedule: 2, schedule_paragraph: 'para 1', form, strength, unit, is_stereoisomer_of: null, parent: null, ...extra });
 const PRODUCTS = [
-  P('p1', 'Oxycodone hydrochloride', 'Oxycodone', 'capsule', '5mg', 'capsules'),
-  P('p2', 'Oxycodone hydrochloride', 'Oxycodone', 'prolonged-release tablet', '10mg', 'tablets'),
-  P('p3', 'Morphine sulfate', 'Morphine', 'concentrated oral solution', '20mg/ml', 'ml'),
-  P('p4', 'Fentanyl', 'Fentanyl', 'transdermal patch', '25mcg/hr', 'patches'),
-  P('p5', 'Methylphenidate hydrochloride', 'Methylphenidate', 'prolonged-release tablet', '18mg', 'tablets'),
+  P('p1', 'Oxycodone hydrochloride', 'Oxycodone', 'capsule', '5mg', 'capsules', { brand: 'OxyNorm' }),
+  P('p2', 'Oxycodone hydrochloride', 'Oxycodone', 'prolonged-release tablet', '10mg', 'tablets', { brand: 'OxyContin' }),
+  P('p3', 'Morphine sulfate', 'Morphine', 'prolonged-release tablet', '10mg', 'tablets', { brand: 'MST Continus' }),
+  P('p4', 'Fentanyl', 'Fentanyl', 'transdermal patch', '25mcg/hr', 'patches', { brand: 'Durogesic' }),
+  P('p5', 'Methylphenidate hydrochloride', 'Methylphenidate', 'prolonged-release tablet', '18mg', 'tablets', { brand: 'Concerta XL' }),
 ];
 
 function seedEntries() {
@@ -53,10 +54,10 @@ function seedEntries() {
   // Oxycodone 10mg PR
   add('r2', 'receipt', 20, 140, 's1', BF('Paper register vol. 3, page 101'));
   add('r2', 'supply', 8, 56, 's2', { recipient_name: 'Patrick Hayes', recipient_address: '22 Abbey St, Ennis', prescriber_name: 'Dr A. Walsh', authority_to_possess: 'Prescription — Dr A. Walsh', prescription_ref: 'GMS 88240' });
-  // Morphine oral solution
-  add('r3', 'receipt', 20, 300, 's1', BF('Paper register vol. 2, page 40'));
-  add('r3', 'receipt', 7, 300, 's1', { ...UN, notes: 'Invoice UW-22918' });
-  add('r3', 'supply', 3, 100, 's2', { recipient_name: 'Bridget Lynch', recipient_address: '9 Mill Rd, Ennis', prescriber_name: 'Dr K. Ryan', authority_to_possess: 'Prescription — Dr K. Ryan', prescription_ref: 'Rx 10250' });
+  // MST Continus 10mg
+  add('r3', 'receipt', 20, 60, 's1', BF('Paper register vol. 2, page 40'));
+  add('r3', 'receipt', 7, 60, 's1', { ...UN, notes: 'Invoice UW-22918' });
+  add('r3', 'supply', 3, 56, 's2', { recipient_name: 'Bridget Lynch', recipient_address: '9 Mill Rd, Ennis', prescriber_name: 'Dr K. Ryan', authority_to_possess: 'Prescription — Dr K. Ryan', prescription_ref: 'Rx 10250' });
   // Fentanyl patches
   add('r4', 'receipt', 20, 15, 's1', BF('Paper register vol. 3, page 120'));
   add('r4', 'supply', 4, 5, 's2', { recipient_name: 'Thomas Burke', recipient_address: 'Ard Na Gréine, Ennis', prescriber_name: 'Dr L. Nolan', authority_to_possess: 'Prescription — Dr L. Nolan', prescription_ref: 'Rx 10255' });
@@ -74,7 +75,7 @@ function seed() {
     entries: seedEntries() as Json[],
     audit: [] as Json[],
     inbox: [
-      { id: 'i1', action: 'dispense', status: 'pending', problem: null, received_at: new Date(Date.now() - 20 * 60e3).toISOString(), register_id: 'r3', payload: { external_id: 'HALO-8840-2', dispensed_at: new Date(Date.now() - 22 * 60e3).toISOString(), drug: { name: 'Morphine sulfate', strength: '20mg/ml', form: 'concentrated oral solution', brand: 'Oramorph Concentrated' }, quantity: 30, unit: 'ml', patient: { name: 'Margaret Cleary', address: '4 Station Rd, Ennis' }, prescriber: { name: 'Dr A. Walsh', registration: '012345' }, prescription_ref: 'GMS 88301', pharmacist: { psi_number: '23456', name: 'Ciarán Walsh' } } },
+      { id: 'i1', action: 'dispense', status: 'pending', problem: null, received_at: new Date(Date.now() - 20 * 60e3).toISOString(), register_id: 'r3', payload: { external_id: 'HALO-8840-2', dispensed_at: new Date(Date.now() - 22 * 60e3).toISOString(), drug: { name: 'Morphine sulfate', strength: '10mg', form: 'prolonged-release tablet', brand: 'MST Continus' }, quantity: 28, unit: 'tablets', patient: { name: 'Margaret Cleary', address: '4 Station Rd, Ennis' }, prescriber: { name: 'Dr A. Walsh', registration: '012345' }, prescription_ref: 'GMS 88301', pharmacist: { psi_number: '23456', name: 'Ciarán Walsh' } } },
       { id: 'i2', action: 'dispense', status: 'pending', problem: 'Quantity was sent as 1 OP, not units. Enter the number of tablets/ml/patches', received_at: new Date(Date.now() - 5 * 60e3).toISOString(), register_id: 'r4', payload: { external_id: 'HALO-8842-1', dispensed_at: new Date(Date.now() - 6 * 60e3).toISOString(), drug: { name: 'Fentanyl', strength: '25mcg/hr', form: 'transdermal patch', brand: 'Matrifen' }, quantity: 1, unit: 'OP', patient: { name: 'Thomas Burke', address: 'Ard Na Gréine, Ennis' }, prescriber: { name: 'Dr L. Nolan' }, prescription_ref: 'Rx 10290', pharmacist: { psi_number: '23456', name: 'Ciarán Walsh' } } },
     ],
     keys: [{ id: 'k1', name: 'Halo – dispensary PC', key_prefix: 'cdr_live_Xq3vA9', auto_post: false, created_at: daysAgo(3), last_used_at: new Date(Date.now() - 5 * 60e3).toISOString() as string | null, revoked_at: null as string | null }],
@@ -91,7 +92,7 @@ function seed() {
 }
 type State = ReturnType<typeof seed>;
 
-const KEY = 'cdreg-demo-v3';
+const KEY = 'cdreg-demo-v4';
 let S: State;
 function load(): State {
   try {
@@ -218,7 +219,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     }
     if (regList().some((r) => norm(r.product.drug_name) === norm(body.drug_name) && norm(r.product.strength) === norm(body.strength) && norm(r.product.form) === norm(body.form))) return fail(409, 'A live register for this product already exists');
     const pid = uid(), rid = uid();
-    S.products.push({ id: pid, drug_name: body.drug_name, class_name: cls, schedule: sched, schedule_paragraph: body.schedule_paragraph || null, form: body.form, strength: body.strength, unit: body.unit, is_stereoisomer_of: parentId, parent: null } as any);
+    S.products.push({ id: pid, drug_name: body.drug_name, brand: body.brand ?? null, class_name: cls, schedule: sched, schedule_paragraph: body.schedule_paragraph || null, form: body.form, strength: body.strength, unit: body.unit, is_stereoisomer_of: parentId, parent: null } as any);
     S.registers.push({ id: rid, product_id: pid, opened_at: today(), closed_at: null });
     if (Number(body.opening_balance) > 0) S.entries.push({ id: uid(), register_id: rid, seq: 1, entry_type: 'receipt', transaction_date: today(), recorded_at: new Date().toISOString(), quantity: String(body.opening_balance), supplier_name: 'Balance brought forward', supplier_address: body.opening_balance_note || 'Transferred from previous register', notes: 'Opening balance', recorded_by_staff_id: st!.id, source: 'manual' } as any);
     audit('register.opened', { drug_name: body.drug_name });
@@ -271,7 +272,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     if (needStaff()) return needStaff()!;
     const X = ((S as any).settings ||= { name: 'Quayside Pharmacy (demo)', address: '1 Quay St, Ennis, Co. Clare', psi_premises_number: '1234', invoice_names: null, lock_minutes: 15, locum_default_days: 14, stock_check_frequency: 'monthly', halo_enabled: true, migrated: true });
     if (method === 'PATCH') { const { low_stock, ...f } = body; Object.assign(X, f); for (const l of low_stock ?? []) ((S as any).lowStock ||= {})[l.register_id] = l.level; }
-    return res({ settings: X, registers: regList().map((r: Json) => ({ id: r.id, label: `${r.product.drug_name} ${r.product.strength} ${r.product.form}`, unit: r.product.unit, balance: r.balance, low_stock_level: (S as any).lowStock?.[r.id] ?? null })) });
+    return res({ settings: X, registers: regList().map((r: Json) => ({ id: r.id, label: productTitle(r.product), unit: r.product.unit, balance: r.balance, low_stock_level: (S as any).lowStock?.[r.id] ?? null })) });
   }
   if (path === '/api/settings/reader/models') return res({ models: [{ id: 'example/vision-model-a', name: 'Example vision model A', prompt_price: 1 }, { id: 'example/vision-model-b', name: 'Example vision model B', prompt_price: 0.5 }] });
   if (path === '/api/settings/reader') {
@@ -316,7 +317,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
       .filter((e) => ['supply', 'patient_return', 'patient_return_destruction'].includes(e.entry_type) && (e.recipient_name || '').toLowerCase() === name)
       .sort((a, b) => a.transaction_date.localeCompare(b.transaction_date));
     const totals: Record<string, Json> = {};
-    for (const r of rows) { const t = (totals[r.register_id] ||= { label: `${r.product.drug_name} ${r.product.strength} ${r.product.form}`, unit: r.product.unit, supplied: 0, returned: 0, count: 0 }); if (r.entry_type === 'supply') { t.supplied += Number(r.quantity); t.count++; } else if (r.entry_type === 'patient_return') t.returned += Number(r.quantity); }
+    for (const r of rows) { const t = (totals[r.register_id] ||= { label: productTitle(r.product), unit: r.product.unit, supplied: 0, returned: 0, count: 0 }); if (r.entry_type === 'supply') { t.supplied += Number(r.quantity); t.count++; } else if (r.entry_type === 'patient_return') t.returned += Number(r.quantity); }
     return res({ rows, totals: Object.values(totals) });
   }
   if (path === '/api/audit') {
@@ -340,9 +341,9 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     const isRx = fd?.get?.('hint') === 'prescription';
     const extraction = isRx
       ? { document_type: 'prescription', document_date: today(), reference: 'Rx 10302', supplier_name: null, supplier_address: null, patient_name: 'Eileen Moran', patient_address: '12 Bindon St, Ennis', prescriber_name: 'Dr A. Walsh', prescriber_address: 'Ennis Medical Centre', prescriber_registration: '012345', warnings: [], items: [{ drug_name: 'Oxycodone hydrochloride', strength: '5mg', form: 'capsule', quantity: 28, quantity_unit: 'capsules', pack_description: '28 (twenty-eight)', is_controlled_drug: true, likely_schedule: 2, confidence: 'high', notes: '', brand: 'OxyNorm', packs: null, pack_size: null, quantity_figures: '28', quantity_words: 'twenty-eight', duration_text: null, is_credit: false }] }
-      : { document_type: 'invoice', document_date: today(), reference: 'Invoice 4472210', supplier_name: 'United Drug', supplier_address: 'Magna Business Park, Citywest, Dublin 24', patient_name: null, patient_address: null, prescriber_name: null, prescriber_address: null, prescriber_registration: null, warnings: ['Demo: this is sample output — no photo was read'], items: [
+      : { document_type: 'invoice', document_date: today(), reference: 'Invoice 4472210', supplier_name: 'United Drug', supplier_address: 'Magna Business Park, Citywest, Dublin 24', patient_name: null, patient_address: null, prescriber_name: null, prescriber_address: null, prescriber_registration: null, warnings: [], items: [
           { drug_name: 'Oxycodone hydrochloride', strength: '5mg', form: 'capsule', quantity: 112, quantity_unit: 'capsules', pack_description: 'OXYNORM CAPS 5MG 56 — CD2', is_controlled_drug: true, likely_schedule: 2, confidence: 'high', notes: '', brand: 'OxyNorm', packs: 2, pack_size: 56, quantity_figures: null, quantity_words: null, duration_text: null, is_credit: false },
-          { drug_name: 'Morphine sulfate', strength: '20mg/ml', form: 'concentrated oral solution', quantity: 240, quantity_unit: 'ml', pack_description: 'ORAMORPH CONC 20MG/ML 120ML', is_controlled_drug: true, likely_schedule: 2, confidence: 'medium', notes: '', brand: 'Oramorph Concentrated', packs: 2, pack_size: 120, quantity_figures: null, quantity_words: null, duration_text: null, is_credit: false },
+          { drug_name: 'Morphine sulfate', strength: '10mg', form: 'prolonged-release tablet', quantity: 60, quantity_unit: 'tablets', pack_description: 'MST CONTINUS 10MG PR TABLETS 60', is_controlled_drug: true, likely_schedule: 2, confidence: 'high', notes: '', brand: 'MST Continus', packs: 1, pack_size: 60, quantity_figures: null, quantity_words: null, duration_text: null, is_credit: false },
           { drug_name: 'Morphine sulfate', strength: '10mg/5ml', form: 'oral solution', quantity: 300, quantity_unit: 'ml', pack_description: 'ORAMORPH 10MG/5ML 100ML', is_controlled_drug: true, likely_schedule: 5, confidence: 'high', notes: '', brand: 'Oramorph', packs: 3, pack_size: 100, quantity_figures: null, quantity_words: null, duration_text: null, is_credit: false },
           { drug_name: 'Paracetamol', strength: '500mg', form: 'tablet', quantity: 100, quantity_unit: 'tablets', pack_description: '1 x 100', is_controlled_drug: false, likely_schedule: null, confidence: 'high', notes: '', brand: null, packs: 1, pack_size: 100, quantity_figures: null, quantity_words: null, duration_text: null, is_credit: false }] };
     const regs = regList();
@@ -352,7 +353,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
       const exact = same.filter((r) => sameStrength(r.product.strength, item.strength));
       const match = exact.length === 1 ? exact[0] : null;
       const qty = decideQuantity(item, extraction.document_type as any);
-      return { item, qty, match_state: match ? 'your_register' : same.length ? 'pick_register' : 'no_register', register_id: match?.id ?? null, register_label: match ? `${match.product.drug_name} ${match.product.strength} ${match.product.form}` : null, current_balance: match?.balance ?? null, candidates: regs.filter((r) => norm(r.product.drug_name).includes(norm(item.drug_name))).map((r) => ({ id: r.id, label: `${r.product.drug_name} ${r.product.strength} ${r.product.form}` })), draft: { entry_type: isRx ? 'supply' : 'receipt', transaction_date: today(), quantity: qty.quantity ?? '', supplier_name: extraction.supplier_name, supplier_address: extraction.supplier_address, recipient_name: extraction.patient_name, recipient_address: extraction.patient_address, prescriber_name: extraction.prescriber_name, prescriber_address: extraction.prescriber_address, authority_to_possess: isRx ? `Prescription — ${extraction.prescriber_name}` : null, prescription_ref: extraction.reference, notes: isRx ? null : extraction.reference, scan_id: null } };
+      return { item, qty, match_state: match ? 'your_register' : same.length ? 'pick_register' : 'no_register', register_id: match?.id ?? null, register_label: match ? productTitle(match.product) : null, current_balance: match?.balance ?? null, candidates: regs.filter((r) => norm(r.product.drug_name).includes(norm(item.drug_name))).map((r) => ({ id: r.id, label: productTitle(r.product) })), draft: { entry_type: isRx ? 'supply' : 'receipt', transaction_date: today(), quantity: qty.quantity ?? '', supplier_name: extraction.supplier_name, supplier_address: extraction.supplier_address, recipient_name: extraction.patient_name, recipient_address: extraction.patient_address, prescriber_name: extraction.prescriber_name, prescriber_address: extraction.prescriber_address, authority_to_possess: isRx ? `Prescription — ${extraction.prescriber_name}` : null, prescription_ref: extraction.reference, notes: isRx ? null : extraction.reference, scan_id: null } };
     });
     audit('scan.read', { document_type: extraction.document_type });
     return res({ scan_id: 'demo', extraction, proposals, exempt, ignored: extraction.items.filter((i: any) => !i.is_controlled_drug).length });
@@ -360,7 +361,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
   if (path === '/api/inbox') {
     if (needStaff()) return needStaff()!;
     const regs = regList();
-    return res({ items: S.inbox.filter((i) => i.status === 'pending').map((i) => ({ ...i, balance: i.register_id ? balance(i.register_id) : null, candidates: regs.map((r) => ({ id: r.id, label: `${r.product.drug_name} ${r.product.strength} ${r.product.form}`, unit: r.product.unit })) })) });
+    return res({ items: S.inbox.filter((i) => i.status === 'pending').map((i) => ({ ...i, balance: i.register_id ? balance(i.register_id) : null, candidates: regs.map((r) => ({ id: r.id, label: productTitle(r.product), unit: r.product.unit })) })) });
   }
   if ((m = path.match(/^\/api\/inbox\/([^/]+)\/reject$/))) {
     const ib = S.inbox.find((i) => i.id === m![1]);

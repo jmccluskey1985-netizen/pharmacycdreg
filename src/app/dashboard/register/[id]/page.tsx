@@ -1,5 +1,6 @@
 'use client';
 
+import { productTitle, genericLine, brandOf } from '@/lib/product-name';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Plus, Printer, PencilLine } from 'lucide-react';
@@ -149,7 +150,8 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
             <div className="flex flex-1 flex-col justify-center px-8 sm:px-14">
               <p className="text-2xl font-extrabold uppercase tracking-wide text-brand-dark sm:text-3xl">Register of Controlled Drugs</p>
               <p className="mt-2 text-base text-slate-600 sm:text-lg">for recording the obtaining and supplying of controlled drugs</p>
-              <p className="mt-6 text-sm text-slate-500">{p.class_name} — {p.drug_name} {p.strength} {p.form}</p>
+              <p className="mt-6 text-lg font-bold text-slate-700">{productTitle(p)}</p>
+              {genericLine(p) && <p className="text-sm text-slate-500">{p.class_name} — {genericLine(p)}</p>}
             </div>
             <div className="relative hidden w-[38%] items-end justify-end bg-gradient-to-b from-brand-dark to-brand-deep p-6 sm:flex">
               <span className="absolute inset-y-0 left-0 w-4 bg-brand/60" />
@@ -165,7 +167,7 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
                 <div className="min-w-0 flex-1 p-4 sm:p-6">
                   <header className="mb-4 grid gap-1 text-[rgb(var(--ink))]">
                     <p className="text-sm font-bold uppercase sm:text-base">Class of drug (drug name): <span className="font-semibold normal-case underline decoration-dotted underline-offset-4">{p.class_name}</span></p>
-                    <p className="text-sm font-bold uppercase sm:text-base">Product: <span className="font-semibold normal-case underline decoration-dotted underline-offset-4">{p.drug_name} {p.strength} {p.form}</span></p>
+                    <p className="text-sm font-bold uppercase sm:text-base">Product: <span className="text-lg font-extrabold normal-case underline decoration-dotted underline-offset-4 sm:text-xl">{productTitle(p)}</span>{genericLine(p) && <span className="ml-2 text-xs font-medium normal-case text-muted-foreground">({genericLine(p)})</span>}</p>
                     <p className="text-xs text-muted-foreground">Schedule {p.schedule}{p.schedule_paragraph ? ` (${p.schedule_paragraph})` : ''}{p.parent ? ` · stereoisomer of ${p.parent.drug_name}, recorded in its part of the register` : ''} · counted in {p.unit} · current balance <b className="text-[rgb(var(--ink))]">{fmtQty(balance)} {p.unit}</b></p>
                   </header>
 
@@ -261,7 +263,7 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
         </button>
       )}
 
-      <Modal open={adding} onClose={() => setAdding(false)} title={`New entry — ${p.drug_name} ${p.strength}`}>
+      <Modal open={adding} onClose={() => setAdding(false)} title={`New entry — ${brandOf(p) ?? p.drug_name} ${p.strength}`}>
         <EntryForm registerId={params.id} unit={p.unit} balance={balance} initial={addType ? { entry_type: addType } : undefined} onCancel={() => setAdding(false)} onSaved={async () => { setAdding(false); await load(); }} />
       </Modal>
       <Modal open={!!correcting} onClose={() => setCorrecting(null)} title="Correct a register entry">

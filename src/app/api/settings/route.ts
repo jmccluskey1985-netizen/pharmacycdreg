@@ -1,3 +1,4 @@
+import { productTitle } from '@/lib/product-name';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireStaff, errorResponse, audit } from '@/lib/access';
@@ -13,9 +14,9 @@ export async function GET() {
     const { account } = await requireStaff(can.manageStaff);
     const db = createServiceClient();
     const settings = await getSettings(db, account.pharmacyId);
-    const { data: regs } = await db.from('cd_registers').select('*, product:cd_products(drug_name, strength, form, unit)').eq('pharmacy_id', account.pharmacyId).is('closed_at', null);
+    const { data: regs } = await db.from('cd_registers').select('*, product:cd_products(*)').eq('pharmacy_id', account.pharmacyId).is('closed_at', null);
     const bal = await balancesFor((regs ?? []).map((r: any) => r.id));
-    const registers = (regs ?? []).map((r: any) => ({ id: r.id, label: `${r.product.drug_name} ${r.product.strength} ${r.product.form}`, unit: r.product.unit, balance: bal[r.id] ?? 0, low_stock_level: r.low_stock_level ?? null }));
+    const registers = (regs ?? []).map((r: any) => ({ id: r.id, label: productTitle(r.product), unit: r.product.unit, balance: bal[r.id] ?? 0, low_stock_level: r.low_stock_level ?? null }));
     return NextResponse.json({ settings, registers });
   } catch (err) {
     return errorResponse(err);

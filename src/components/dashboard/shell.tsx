@@ -93,7 +93,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
       <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:py-6">
         {/* Top-left: show sidebar + New entry */}
-        {!path.startsWith('/dashboard/scan') && <div className="no-print mb-4 flex flex-wrap items-center gap-2">
+        {!path.startsWith('/dashboard/scan') && !path.startsWith('/dashboard/register/') && <div className="no-print mb-4 flex flex-wrap items-center gap-2">
           {can.scan(staff.role) && <Link href="/dashboard/scan?type=prescription" className="btn-brand"><ScanLine className="h-4 w-4" /> Scan Rx</Link>}
           {can.record(staff.role) && <NewEntryButton />}
         </div>}

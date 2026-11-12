@@ -1,4 +1,5 @@
 'use client';
+import { productTitle, brandOf, genericLine } from '@/lib/product-name';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -9,7 +10,7 @@ import { api } from '@/lib/api';
 import { useStaff } from './staff-context';
 
 type Source = 'dispensing' | 'invoice' | 'destruction' | 'patient_return';
-interface Reg { id: string; balance: number; closed_at: string | null; product: { drug_name: string; strength: string; form: string; unit: string } }
+interface Reg { id: string; balance: number; closed_at: string | null; product: { drug_name: string; strength: string; form: string; unit: string; brand?: string | null } }
 
 const SOURCES: { key: Source; title: string; text: string; icon: any; entry: string; scan?: 'prescription' | 'invoice' }[] = [
   { key: 'dispensing', title: 'From a dispensing', text: 'Supplied to a patient on a prescription', icon: PackageMinus, entry: 'supply', scan: 'prescription' },
@@ -34,7 +35,7 @@ export function NewEntryButton() {
 
   const close = () => { setOpen(false); setSource(null); setTyping(false); setQ(''); };
   const go = (href: string) => { close(); router.push(href); };
-  const shown = (regs ?? []).filter((r) => `${r.product.drug_name} ${r.product.strength} ${r.product.form}`.toLowerCase().includes(q.toLowerCase()));
+  const shown = (regs ?? []).filter((r) => `${productTitle(r.product)} ${r.product.drug_name}`.toLowerCase().includes(q.toLowerCase()));
 
   return (
     <>
@@ -82,7 +83,7 @@ export function NewEntryButton() {
               {regs && shown.length === 0 && <p className="p-4 text-sm text-muted-foreground">No CD book for that yet. <button onClick={() => go('/dashboard?new=register')} className="font-semibold text-primary underline">Open a new CD book</button></p>}
               {shown.map((r) => (
                 <button key={r.id} onClick={() => go(`/dashboard/register/${r.id}?new=${source.entry}`)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/60">
-                  <span className="font-medium">{r.product.drug_name} {r.product.strength} <span className="font-normal text-muted-foreground">{r.product.form}</span></span>
+                  <span className="font-medium">{brandOf(r.product) ?? r.product.drug_name} {r.product.strength} <span className="font-normal text-muted-foreground">{r.product.form}</span></span>
                   <span className="text-sm tabular-nums text-muted-foreground">{r.balance} {r.product.unit}</span>
                 </button>
               ))}

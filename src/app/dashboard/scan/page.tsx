@@ -1,4 +1,5 @@
 'use client';
+import { productTitle, brandOf, genericLine } from '@/lib/product-name';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -342,9 +343,9 @@ function ProposalCard({ p, done, onDone, canRecord, autoOpen }: { p: any; done: 
     <div className={`card ${done ? 'opacity-60' : ''}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="font-semibold">{p.item.drug_name} {p.item.strength} <span className="font-normal text-muted-foreground">{p.item.form}</span></p>
+          <p className="text-lg font-bold leading-tight">{p.item.brand || p.item.drug_name} {p.item.strength} <span className="text-base font-normal text-muted-foreground">{p.item.form}</span></p>
+          {p.item.brand && <p className="text-xs text-muted-foreground">{p.item.drug_name}</p>}
           <p className="text-sm text-muted-foreground">{p.qty?.label ?? `${p.item.pack_description} → ${p.item.quantity}`} {p.qty?.quantity != null && <b className="text-foreground">→ {p.qty.quantity} {p.item.quantity_unit}</b>}</p>
-          {p.item.brand && <p className="text-xs text-muted-foreground">Brand: {p.item.brand}</p>}
           {p.item.notes && <p className="mt-1 text-xs text-muted-foreground">{p.item.notes}</p>}
         </div>
         <div className="flex flex-col items-end gap-1">

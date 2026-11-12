@@ -1,5 +1,6 @@
 'use client';
 
+import { productTitle, genericLine, brandOf } from '@/lib/product-name';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Plus, ScanLine, Users, Download, Camera, Loader2, AlertTriangle, CheckCircle2, GalleryHorizontal, Table2, ListChecks, ChevronRight, Search, X } from 'lucide-react';
@@ -112,7 +113,7 @@ export default function RegistersPage() {
 }
 
 function NewRegisterForm({ onDone, registers }: { onDone: () => void; registers: Reg[] }) {
-  const [f, setF] = useState({ drug_name: '', class_name: '', schedule: '2', schedule_paragraph: '', form: '', strength: '', unit: 'tablets', opening_balance: '', opening_balance_note: '', opening_date: '', stereoisomer_of_register_id: '' });
+  const [f, setF] = useState({ drug_name: '', brand: '', class_name: '', schedule: '2', schedule_paragraph: '', form: '', strength: '', unit: 'tablets', opening_balance: '', opening_balance_note: '', opening_date: '', stereoisomer_of_register_id: '' });
   const [reading, setReading] = useState(false);
   const [paper, setPaper] = useState<any>(null);
 
@@ -134,6 +135,7 @@ function NewRegisterForm({ onDone, registers }: { onDone: () => void; registers:
       setF((x) => ({
         ...x,
         drug_name: p.drug_name || x.drug_name,
+        brand: p.brand || x.brand,
         class_name: p.drug_name ? p.drug_name.split(' ')[0] : x.class_name,
         schedule: p.likely_schedule ? String(p.likely_schedule) : x.schedule,
         form: p.form || x.form,
@@ -176,7 +178,8 @@ function NewRegisterForm({ onDone, registers }: { onDone: () => void; registers:
         <input type="file" accept="image/*,application/pdf" capture="environment" multiple className="hidden" onChange={readPage} />
       </label>
       {paper && <PaperResult d={paper} chosen={f.opening_balance} onChoose={(n) => setF((x) => ({ ...x, opening_balance: String(n) }))} />}
-      <div className="sm:col-span-2"><label className="label">Drug (generic name)</label><input className="input" required value={f.drug_name} onChange={set('drug_name')} placeholder="e.g. Oxycodone hydrochloride" /></div>
+      <div><label className="label">Brand</label><input className="input" value={f.brand} onChange={set('brand')} placeholder="e.g. OxyNorm" /></div>
+      <div><label className="label">Drug (generic name)</label><input className="input" required value={f.drug_name} onChange={set('drug_name')} placeholder="e.g. Oxycodone hydrochloride" /></div>
       <label className="flex items-start gap-2 text-sm sm:col-span-2">
         <input type="checkbox" className="mt-0.5 h-5 w-5" checked={stereo} onChange={(e) => setStereo(e.target.checked)} />
         <span>This is a <b>stereoisomer</b> of a drug already registered. It will be recorded in that drug&apos;s part of the register.</span>
@@ -257,7 +260,7 @@ function TypeTable({ items }: { items: Reg[] }) {
         <tbody className="divide-y divide-border">
           {items.map((r) => (
             <tr key={r.id} className="hover:bg-muted/40">
-              <td className="px-4 py-2.5 font-medium"><Link href={`/dashboard/register/${r.id}`} className="hover:underline">{r.product.drug_name} {r.product.strength}</Link>
+              <td className="px-4 py-2.5 font-medium"><Link href={`/dashboard/register/${r.id}`} className="hover:underline">{brandOf(r.product) ?? r.product.drug_name} {r.product.strength}</Link>{genericLine(r.product) && <span className="block text-xs font-normal text-muted-foreground">{genericLine(r.product)}</span>}
                 {r.low_stock && <span className="ml-2 rounded-full bg-amber-200 px-2 py-0.5 text-[11px] font-bold text-amber-950">Low</span>}
                 {r.check_due && <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-bold text-secondary-foreground">Check due</span>}</td>
               <td className="px-4 py-2.5 text-muted-foreground">{r.product.form}</td>

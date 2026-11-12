@@ -15,7 +15,7 @@ export async function GET() {
     const db = createServiceClient();
     const { data } = await db
       .from('cd_registers')
-      .select('*, product:cd_products(id, drug_name, schedule, schedule_paragraph, class_name, form, strength, unit, is_stereoisomer_of, parent:is_stereoisomer_of(drug_name))')
+      .select('*, product:cd_products(*, parent:is_stereoisomer_of(drug_name))')
       .eq('pharmacy_id', account.pharmacyId)
       .is('closed_at', null);
     const regs = (data ?? []) as any[];
@@ -48,6 +48,7 @@ export async function GET() {
 
 const Body = z.object({
   drug_name: z.string().trim().min(2),
+  brand: z.string().trim().max(80).optional().nullable(),
   class_name: z.string().trim().min(2),
   schedule: z.coerce.number().int().min(2).max(4),
   schedule_paragraph: z.string().trim().optional().nullable(),
@@ -86,20 +87,16 @@ export async function POST(req: Request) {
       b.schedule_paragraph = b.schedule_paragraph || pp.schedule_paragraph;
     }
 
-    // Reuse an identical product definition if one exists (shared catalogue).
-    let { data: product } = await db
-      .from('cd_products')
-      .select('id')
-      .ilike('drug_name', b.drug_name)
-      .ilike('form', b.form)
-      .ilike('strength', b.strength)
-      .maybeSingle();
+    // Reuse an identical product definition if one exists (shared catalogue) — same brand too.
+    const brand = b.brand?.trim() || null;
+    const { data: candidates } = await db.from('cd_products').select('*').ilike('drug_name', b.drug_name).ilike('form', b.form).ilike('strength', b.strength).limit(20);
+    const hasBrandColumn = (candidates ?? []).some((c: any) => 'brand' in c);
+    let product: { id: string } | null = (candidates ?? []).find((c: any) =>
+      !hasBrandColumn || (brand ? (c.brand ?? '').toLowerCase() === brand.toLowerCase() : !c.brand)) ?? null;
     if (!product) {
-      const ins = await db
-        .from('cd_products')
-        .insert({ drug_name: b.drug_name, class_name: b.class_name, schedule: b.schedule, schedule_paragraph: b.schedule_paragraph || null, is_stereoisomer_of: parentProductId, form: b.form, strength: b.strength, unit: b.unit })
-        .select('id')
-        .single();
+      const row: Record<string, unknown> = { drug_name: b.drug_name, class_name: b.class_name, schedule: b.schedule, schedule_paragraph: b.schedule_paragraph || null, is_stereoisomer_of: parentProductId, form: b.form, strength: b.strength, unit: b.unit };
+      let ins = await db.from('cd_products').insert(brand ? { ...row, brand } : row).select('id').single();
+      if (ins.error && brand && /brand/i.test(ins.error.message)) ins = await db.from('cd_products').insert(row).select('id').single(); // before migration 0010
       if (ins.error) throw ins.error;
       product = ins.data;
     }
