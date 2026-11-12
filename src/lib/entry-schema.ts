@@ -29,9 +29,10 @@ export const EntrySchema = z.discriminatedUnion('entry_type', [
     prescription_ref: opt,
     collected_by: opt,
     collector_id_checked: z.boolean().optional().nullable(),
+    patient_id: z.string().uuid().optional().nullable(),
   }),
   z.object({ ...base, entry_type: z.literal('destruction'), quantity: qty, witness_name: s(2), witness_role: s(2), destruction_method: opt }),
-  z.object({ ...base, entry_type: z.literal('patient_return'), quantity: qty, recipient_name: s(2), recipient_address: opt }),
+  z.object({ ...base, entry_type: z.literal('patient_return'), quantity: qty, recipient_name: s(2), recipient_address: opt, patient_id: z.string().uuid().optional().nullable() }),
   z.object({ ...base, entry_type: z.literal('patient_return_destruction'), quantity: qty, witness_name: s(2), witness_role: s(2), destruction_method: opt, recipient_name: opt }),
   z.object({
     ...base,

@@ -3,6 +3,7 @@ import { requireStaff, errorResponse } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase/server';
 import { searchGms, GMS_LIST_DATE } from '@/lib/gms';
 import { KNOWN_SUPPLIERS } from '@/lib/invoice-rules';
+import { searchPatients, fullName } from '@/lib/patients';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,9 @@ export interface Suggestion {
   registration?: string | null;
   gms_number?: string | null;
   role?: string | null;
-  source: 'list' | 'register' | 'gms' | 'preset';
+  source: 'list' | 'register' | 'gms' | 'preset' | 'patient';
+  patient_id?: string;
+  dob?: string | null;
   detail?: string;
   usual_prescriber?: { name: string; address: string | null } | null; // patients: doctor on their latest supply
 }
@@ -35,6 +38,13 @@ export async function GET(req: Request) {
     const like = `%${q.replace(/[%_,()]/g, ' ')}%`;
     const db = createServiceClient();
     const out: Suggestion[] = [];
+
+    // Patients: structured records first (name, DOB, GMS no.), then names only in the register.
+    if (kind === 'patient') {
+      for (const p of await searchPatients(db, account.pharmacyId, q, 8)) {
+        out.push({ name: fullName(p), address: p.address, source: 'patient', patient_id: p.id, dob: p.date_of_birth, gms_number: p.gms_number, usual_prescriber: p.gp_name ? { name: p.gp_name, address: p.gp_address } : null });
+      }
+    }
 
     if (kind !== 'patient') {
       const { data } = await db

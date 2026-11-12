@@ -131,7 +131,7 @@ function ResultsTable({ results, title }: { results: any[]; title?: string }) {
 
 function PatientReport() {
   const [name, setName] = useState('');
-  const [patient, setPatient] = useState<{ name: string; address: string | null } | null>(null);
+  const [patient, setPatient] = useState<{ name: string; address: string | null; patient_id?: string } | null>(null);
   const [dates, setDates] = useState({ from: '', to: '' });
   const [data, setData] = useState<{ rows: any[]; totals: { label: string; unit: string; supplied: number; returned: number; count: number }[] } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -139,7 +139,8 @@ function PatientReport() {
 
   const qs = (extra: Record<string, string> = {}) => {
     const p = patient ?? { name, address: null };
-    return new URLSearchParams(Object.entries({ name: p.name, address: p.address ?? '', ...dates, ...extra }).filter(([, v]) => v) as [string, string][]).toString();
+    const who = p.patient_id ? { patient_id: p.patient_id } : { name: p.name, address: p.address ?? '' };
+    return new URLSearchParams(Object.entries({ ...who, ...dates, ...extra }).filter(([, v]) => v) as [string, string][]).toString();
   };
   async function run(e?: React.FormEvent) {
     e?.preventDefault();
@@ -155,7 +156,7 @@ function PatientReport() {
       <form onSubmit={run} className="card no-print mb-5 grid gap-3 sm:grid-cols-[2fr_1fr_1fr_auto]">
         <div>
           <label className="label">Patient</label>
-          <QuickFillInput kind="patient" required value={name} onChange={(v) => { setName(v); setPatient(null); }} onPick={(s) => { setName(s.name); setPatient({ name: s.name, address: s.address }); }} placeholder="Start typing a name" />
+          <QuickFillInput kind="patient" required value={name} onChange={(v) => { setName(v); setPatient(null); }} onPick={(s) => { setName(s.name); setPatient({ name: s.name, address: s.address, patient_id: s.patient_id }); }} placeholder="Start typing a name" />
           {patient?.address && <p className="mt-1 text-xs text-muted-foreground">{patient.address}</p>}
         </div>
         <div><label className="label">From</label><input type="date" className="input" value={dates.from} onChange={(e) => setDates({ ...dates, from: e.target.value })} /></div>

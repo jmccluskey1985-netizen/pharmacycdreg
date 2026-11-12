@@ -15,17 +15,28 @@ export async function GET(req: Request) {
   try {
     const { account, staff } = await requireStaff();
     const url = new URL(req.url);
-    const name = (url.searchParams.get('name') || '').trim();
-    const address = (url.searchParams.get('address') || '').trim();
+    let name = (url.searchParams.get('name') || '').trim();
+    let address = (url.searchParams.get('address') || '').trim();
+    const patientId = url.searchParams.get('patient_id');
     const from = url.searchParams.get('from');
     const to = url.searchParams.get('to');
-    if (name.length < 2) return NextResponse.json({ error: 'Choose a patient' }, { status: 400 });
     const db = createServiceClient();
+    // A patient record: lines linked to it, plus older lines with the same name (before linking existed).
+    let linkedIds: string[] = [];
+    if (patientId) {
+      const { data: pt } = await db.from('patients').select('first_name, surname').eq('id', patientId).eq('pharmacy_id', account.pharmacyId).maybeSingle();
+      if (!pt) return NextResponse.json({ error: 'Patient not found' }, { status: 404 });
+      name = `${pt.first_name} ${pt.surname}`.trim();
+      address = '';
+      const { data: linked } = await db.from('cd_entries').select('id').eq('patient_id', patientId).limit(2000);
+      linkedIds = (linked ?? []).map((x) => x.id);
+    }
+    if (name.length < 2) return NextResponse.json({ error: 'Choose a patient' }, { status: 400 });
     const { data: regs } = await db.from('cd_registers').select('id, product:cd_products(drug_name, strength, form, unit)').eq('pharmacy_id', account.pharmacyId);
     const regMap = new Map((regs ?? []).map((r: any) => [r.id, r.product]));
     if (!regMap.size) return NextResponse.json({ rows: [], totals: [] });
 
-    let q = db.from('cd_ledger').select('*').in('register_id', Array.from(regMap.keys())).in('entry_type', ['supply', 'patient_return', 'patient_return_destruction']).ilike('recipient_name', esc(name)).order('transaction_date', { ascending: true }).order('seq', { ascending: true }).limit(2000);
+    let q = db.from('cd_ledger').select('*').in('register_id', Array.from(regMap.keys())).in('entry_type', ['supply', 'patient_return', 'patient_return_destruction']).or(linkedIds.length ? `recipient_name.ilike.${esc(name).replace(/[,()]/g, ' ')},id.in.(${linkedIds.join(',')})` : `recipient_name.ilike.${esc(name).replace(/[,()]/g, ' ')}`).order('transaction_date', { ascending: true }).order('seq', { ascending: true }).limit(2000);
     if (address) q = q.ilike('recipient_address', esc(address));
     if (from) q = q.gte('transaction_date', from);
     if (to) q = q.lte('transaction_date', to);

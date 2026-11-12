@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { getRegisterForPharmacy, currentBalance } from '@/lib/registers';
 import { EntrySchema, STOCK_EFFECT } from '@/lib/entry-schema';
 import { can } from '@/lib/roles';
+import { findOrCreatePatient } from '@/lib/patients';
 
 // Make a register entry. Append-only: corrections are new rows (FR10/FR11). The audit
 // row is written by a database trigger, so it can't be skipped from here.
@@ -42,6 +43,18 @@ export async function POST(req: Request) {
     if (inbox_id) {
       const { data: ib } = await db.from('pmr_inbox').select('status').eq('id', inbox_id).eq('pharmacy_id', account.pharmacyId).maybeSingle();
       if (!ib || ib.status !== 'pending') return NextResponse.json({ error: 'This Halo item was already dealt with' }, { status: 409 });
+    }
+    // Patient record: use the one picked (must be this pharmacy's), else find/create one by
+    // name + address so every supplied patient builds up a record. Skipped before migration 0008.
+    if (fields.entry_type === 'supply' || fields.entry_type === 'patient_return') {
+      const f = fields as any;
+      if (f.patient_id) {
+        const { data: pt } = await db.from('patients').select('id').eq('id', f.patient_id).eq('pharmacy_id', account.pharmacyId).maybeSingle();
+        if (!pt) delete f.patient_id;
+      } else {
+        const id = await findOrCreatePatient(db, account.pharmacyId, f.recipient_name, f.recipient_address ?? null, f.entry_type === 'supply' ? { name: f.prescriber_name ?? null, address: f.prescriber_address ?? null } : undefined).catch(() => null);
+        if (id) f.patient_id = id; else delete f.patient_id;
+      }
     }
     const row: Record<string, unknown> = { ...fields, recorded_by_staff_id: staff.id, recorded_by_auth_user: account.authUserId, source: inbox_id ? 'pmr' : e.scan_id ? 'scan' : 'manual' };
     if (e.entry_type === 'correction') {

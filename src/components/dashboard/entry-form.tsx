@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react';
 import { Loader2, PackagePlus, PackageMinus, Flame, Undo2, PencilLine } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 import { QuickFillInput, type Suggestion } from './quickfill-input';
+import { PatientForm, type PatientRecord } from './patient-form';
+import { Modal } from '@/components/modal';
 
 export type EntryType = 'receipt' | 'supply' | 'destruction' | 'patient_return' | 'patient_return_destruction' | 'correction';
 
@@ -27,6 +29,7 @@ export interface EntryDraft {
   notes?: string | null;
   scan_id?: string | null;
   inbox_id?: string | null;
+  patient_id?: string | null;
   corrects_entry_id?: string;
   correction_reason?: string;
 }
@@ -71,6 +74,8 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
     ...initial,
   });
   const [reason, setReason] = useState('');
+  const [newPatient, setNewPatient] = useState<string | null>(null);
+  const fromRecord = (p: PatientRecord) => pickPatient({ name: `${p.first_name} ${p.surname}`.trim(), address: p.address, source: 'patient', patient_id: p.id, dob: p.date_of_birth, usual_prescriber: p.gp_name ? { name: p.gp_name, address: p.gp_address } : null });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof EntryDraft) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setD({ ...d, [k]: e.target.value });
@@ -82,6 +87,7 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
     const doc = p.usual_prescriber && x.entry_type === 'supply' && !x.prescriber_name ? p.usual_prescriber : null;
     return {
       ...x,
+      patient_id: p.patient_id ?? null,
       recipient_name: p.name,
       recipient_address: p.address ?? x.recipient_address,
       ...(doc ? { prescriber_name: doc.name, prescriber_address: doc.address ?? x.prescriber_address, authority_to_possess: x.authority_to_possess || `Prescription — ${doc.name}` } : {}),
@@ -126,6 +132,7 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
   }
 
   return (
+    <>
     <form onSubmit={submit} className="space-y-4">
       {!correcting && !lockType && (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -166,7 +173,7 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
       {type === 'supply' && (
         <>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Supplied to (name)"><QuickFillInput kind="patient" required value={d.recipient_name ?? ''} onChange={setVal('recipient_name')} onPick={pickPatient} placeholder="Start typing a name" /></Field>
+            <Field label="Supplied to (name)"><QuickFillInput kind="patient" required value={d.recipient_name ?? ''} onChange={(v) => setD((x) => ({ ...x, recipient_name: v, patient_id: null }))} onPick={pickPatient} onCreate={setNewPatient} createLabel="New patient" placeholder="Name, DOB (dd/mm/yyyy) or GMS no." /></Field>
             <Field label="Address"><input className="input" required value={d.recipient_address ?? ''} onChange={set('recipient_address')} /></Field>
             <Field label="Prescriber name"><QuickFillInput kind="prescriber" value={d.prescriber_name ?? ''} onChange={setVal('prescriber_name')} onPick={pickPrescriber} placeholder="Name, IMC or GMS no." /></Field>
             <Field label="Prescriber address"><input className="input" value={d.prescriber_address ?? ''} onChange={set('prescriber_address')} /></Field>
@@ -199,7 +206,7 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
 
       {type === 'patient_return' && (
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Returned by (patient name)"><QuickFillInput kind="patient" required value={d.recipient_name ?? ''} onChange={setVal('recipient_name')} onPick={pickPatient} /></Field>
+          <Field label="Returned by (patient name)"><QuickFillInput kind="patient" required value={d.recipient_name ?? ''} onChange={(v) => setD((x) => ({ ...x, recipient_name: v, patient_id: null }))} onPick={pickPatient} onCreate={setNewPatient} createLabel="New patient" /></Field>
           <Field label="Address"><input className="input" value={d.recipient_address ?? ''} onChange={set('recipient_address')} /></Field>
           <p className="text-xs text-muted-foreground sm:col-span-2">Patient returns are not pharmacy stock and do not change the balance. Record their destruction separately once witnessed.</p>
         </div>
@@ -222,5 +229,9 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
         <button className="btn-primary flex-1" disabled={busy}>{busy && <Loader2 className="h-4 w-4 animate-spin" />} {submitLabel ?? (correcting ? 'Record correction' : 'Sign & record entry')}</button>
       </div>
     </form>
+      <Modal open={newPatient !== null} onClose={() => setNewPatient(null)} title="New patient">
+        {newPatient !== null && <PatientForm typedName={newPatient} onSaved={(p) => { setNewPatient(null); fromRecord(p); }} />}
+      </Modal>
+    </>
   );
 }

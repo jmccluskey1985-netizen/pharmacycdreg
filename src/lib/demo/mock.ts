@@ -138,6 +138,28 @@ function ledger(regId: string): Json[] {
   });
 }
 const balance = (regId: string) => { const l = ledger(regId); return l.length ? Number(l[l.length - 1].running_balance) : 0; };
+
+const demoPatients = (): Json[] => {
+  const X: any = S;
+  if (!X.patients) {
+    X.patients = [];
+    const seen = new Set<string>();
+    for (const e of [...S.entries].sort((a, b) => b.recorded_at.localeCompare(a.recorded_at))) {
+      if (e.entry_type !== 'supply' || !e.recipient_name || seen.has(e.recipient_name.toLowerCase())) continue;
+      seen.add(e.recipient_name.toLowerCase());
+      const t = e.recipient_name.trim(); const i = t.lastIndexOf(' ');
+      X.patients.push({ id: uid(), first_name: i < 0 ? t : t.slice(0, i), surname: i < 0 ? '' : t.slice(i + 1), date_of_birth: null, address: e.recipient_address ?? null, phone: null, gms_number: null, ihi_number: null, gp_name: e.prescriber_name ?? null, gp_address: e.prescriber_address ?? null, notes: null, is_active: true });
+    }
+  }
+  return X.patients.filter((p: Json) => p.is_active !== false);
+};
+const patientMatch = (p: Json, q: string) => {
+  const t = q.trim().toLowerCase(); if (!t) return true;
+  const m = t.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/);
+  if (m) return p.date_of_birth === `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  if (/^\d{4,}/.test(t)) return (p.gms_number || '').startsWith(t);
+  return t.split(/\s+/).every((w) => `${p.first_name} ${p.surname}`.toLowerCase().includes(w));
+};
 const regList = () => S.registers.filter((r) => !r.closed_at).map((r) => ({ id: r.id, opened_at: r.opened_at, closed_at: null, product: productOf(r.id), balance: balance(r.id) }));
 const norm = (s: string) => s.toLowerCase().replace(/hydrochloride|sulfate|sulphate|[^a-z0-9]/g, '');
 
@@ -263,9 +285,26 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     return res({ check: c, balance: bal, diff });
   }
   if (path === '/api/audit/event') return res({ ok: true });
+  if (path === '/api/patients/import') return res({ added: 0 });
+  if (path === '/api/patients') {
+    if (needStaff()) return needStaff()!;
+    if (method === 'GET') return res({ patients: demoPatients().filter((p) => patientMatch(p, url.searchParams.get('q') || '')).sort((a, b) => (a.surname || '').localeCompare(b.surname || '')) });
+    const p = { ...body, id: uid(), is_active: true };
+    demoPatients(); (S as any).patients.push(p);
+    return res({ patient: p });
+  }
+  if (path.startsWith('/api/patients/')) {
+    if (needStaff()) return needStaff()!;
+    const p = demoPatients().find((x) => x.id === path.split('/')[3]);
+    if (!p) return fail(404, 'Patient not found');
+    if (method === 'PATCH') { if (body.archive) p.is_active = false; else Object.assign(p, body); }
+    return res({ patient: p });
+  }
   if (path === '/api/reports/patient') {
     if (needStaff()) return needStaff()!;
-    const name = (url.searchParams.get('name') || '').toLowerCase();
+    const pid = url.searchParams.get('patient_id');
+    const pp = pid ? demoPatients().find((x) => x.id === pid) : null;
+    const name = (pp ? `${pp.first_name} ${pp.surname}`.trim() : url.searchParams.get('name') || '').toLowerCase();
     const rows: Json[] = S.registers.flatMap((r) => ledger(r.id).map((e) => ({ ...e, product: productOf(r.id) }) as Json))
       .filter((e) => ['supply', 'patient_return', 'patient_return_destruction'].includes(e.entry_type) && (e.recipient_name || '').toLowerCase() === name)
       .sort((a, b) => a.transaction_date.localeCompare(b.transaction_date));
@@ -337,6 +376,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     const q = (url.searchParams.get('q') || '').toLowerCase();
     if (q.length < 2 && !(kind === 'supplier' && q === '')) return res({ suggestions: [] });
     const out: Json[] = [];
+    if (kind === 'patient') for (const p of demoPatients().filter((x) => patientMatch(x, q)).slice(0, 8)) out.push({ name: `${p.first_name} ${p.surname}`.trim(), address: p.address, source: 'patient', patient_id: p.id, dob: p.date_of_birth, gms_number: p.gms_number, usual_prescriber: p.gp_name ? { name: p.gp_name, address: p.gp_address } : null });
     if (kind !== 'patient') for (const c of (S as any).contacts) if (c.kind === kind && c.is_active !== false && [c.name, c.gms_number, c.registration].some((v: string) => v && v.toLowerCase().includes(q))) out.push({ ...c, source: 'list' });
     const cols: Record<string, [string, string]> = { patient: ['recipient_name', 'recipient_address'], prescriber: ['prescriber_name', 'prescriber_address'], supplier: ['supplier_name', 'supplier_address'], witness: ['witness_name', 'witness_role'] };
     const [n, a] = cols[kind] ?? cols.patient;

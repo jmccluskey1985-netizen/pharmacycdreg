@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser, Settings, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser, Settings, UserRound, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { NewEntryButton } from './new-entry';
 import { BillingBanner } from './billing-banner';
 import { Logo } from '@/components/logo';
@@ -17,6 +17,7 @@ const NAV = [
   { href: '/dashboard/scan', label: 'Scan', icon: ScanLine, show: can.scan, primary: true },
   { href: '/dashboard/inbox', label: 'To confirm', icon: Inbox, show: can.record, badge: true, halo: true },
   { href: '/dashboard/search', label: 'Search', icon: Search, show: () => true },
+  { href: '/dashboard/patients', label: 'Patients', icon: UserRound, show: can.record },
   { href: '/dashboard/destructions', label: 'Destructions', icon: Flame, show: () => true },
   { href: '/dashboard/audit', label: 'Audit trail', icon: History, show: can.viewAudit },
   { href: '/dashboard/contacts', label: 'Doctors & suppliers', icon: BookUser, show: can.record },
