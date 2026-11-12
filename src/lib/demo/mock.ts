@@ -48,7 +48,7 @@ function seedEntries() {
   add('r1', 'supply', 11, 28, 's2', { recipient_name: 'Mary Kelly', recipient_address: '14 Main St, Ennis, Co. Clare', prescriber_name: 'Dr A. Walsh', authority_to_possess: 'Prescription — Dr A. Walsh (Reg 012345)', prescription_ref: 'GMS 88213', collected_by: 'Patient', collector_id_checked: true });
   const wrong = add('r1', 'supply', 9, 56, 's2', { recipient_name: 'John Murphy', recipient_address: '3 Church Rd, Ennis, Co. Clare', prescriber_name: 'Dr K. Ryan', authority_to_possess: 'Prescription — Dr K. Ryan', prescription_ref: 'Rx 10233' });
   add('r1', 'correction', 9, 28, 's1', { corrects_entry_id: wrong.id, correction_reason: 'Entered 56 in error; 28 capsules dispensed (2 x 14)', recipient_name: 'John Murphy', recipient_address: '3 Church Rd, Ennis, Co. Clare', prescriber_name: 'Dr K. Ryan', authority_to_possess: 'Prescription — Dr K. Ryan', prescription_ref: 'Rx 10233' });
-  add('r1', 'destruction', 6, 4, 's1', { witness_name: 'P. Doyle', witness_role: 'Authorised officer (PSI)', destruction_method: 'Denaturing kit' });
+  add('r1', 'supply', 6, 14, 's1', { recipient_name: 'Patrick Hayes', recipient_address: '22 Abbey St, Ennis, Co. Clare', prescriber_name: 'Dr A. Walsh', authority_to_possess: 'Prescription — Dr A. Walsh (Reg 012345)', prescription_ref: 'GMS 88252', collected_by: 'Representative', collector_id_checked: true });
   add('r1', 'patient_return', 5, 10, 's2', { recipient_name: 'Mary Kelly', recipient_address: '14 Main St, Ennis, Co. Clare' });
   add('r1', 'supply', 2, 28, 's3', { recipient_name: "Seán O'Brien", recipient_address: '7 Quay St, Galway', prescriber_name: 'Dr L. Nolan', authority_to_possess: 'Prescription — Dr L. Nolan', prescription_ref: 'Rx 10261', source: 'pmr', notes: 'Halo HALO-8812-1' });
   // Oxycodone 10mg PR
@@ -92,7 +92,7 @@ function seed() {
 }
 type State = ReturnType<typeof seed>;
 
-const KEY = 'cdreg-demo-v4';
+const KEY = 'cdreg-demo-v5';
 let S: State;
 function load(): State {
   try {
