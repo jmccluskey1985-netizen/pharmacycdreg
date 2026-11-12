@@ -18,6 +18,21 @@ const Body = z.object({
 // Self sign-up: creates the pharmacy + its login. The client then signs in and is
 // sent to Stripe Checkout for the free month (card required, like PharmacyConsultation.ie).
 export async function POST(req: Request) {
+  try {
+    return await handle(req);
+  } catch (err) {
+    // Configuration problems (missing Supabase keys, tables not created) must say so,
+    // not fail silently with a blank 500.
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[signup] failed', msg);
+    const hint = /SUPABASE_SERVICE_ROLE_KEY|supabaseUrl|supabaseKey|Invalid URL/i.test(msg)
+      ? 'Server set-up problem: the Supabase keys are missing in Vercel (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY). Add them and redeploy.'
+      : `Server error: ${msg}`;
+    return NextResponse.json({ error: hint }, { status: 500 });
+  }
+}
+
+async function handle(req: Request) {
   const limit = checkRateLimit(`signup:${clientKey(req)}`, 3, 15 * 60_000);
   if (!limit.ok) return NextResponse.json({ error: 'Too many sign-up attempts. Try again later.' }, { status: 429 });
 
@@ -29,7 +44,8 @@ export async function POST(req: Request) {
   const { data: created, error: userErr } = await db.auth.admin.createUser({ email: b.email, password: b.password, email_confirm: true, user_metadata: { full_name: b.contact_name } });
   if (userErr || !created.user) {
     const exists = /already|registered|exists/i.test(userErr?.message ?? '');
-    return NextResponse.json({ error: exists ? 'An account with this email already exists — sign in instead.' : 'Could not create the account' }, { status: exists ? 409 : 500 });
+    console.error('[signup] createUser', userErr?.message);
+    return NextResponse.json({ error: exists ? 'An account with this email already exists — sign in instead.' : `Could not create the login: ${userErr?.message ?? 'unknown error'}` }, { status: exists ? 409 : 500 });
   }
 
   const { data: ph, error: phErr } = await db
@@ -39,7 +55,9 @@ export async function POST(req: Request) {
     .single();
   if (phErr || !ph) {
     await db.auth.admin.deleteUser(created.user.id);
-    return NextResponse.json({ error: 'Could not set up the pharmacy' }, { status: 500 });
+    console.error('[signup] pharmacy insert', phErr?.message);
+    const noTables = /relation .* does not exist|schema cache|Could not find the table/i.test(phErr?.message ?? '');
+    return NextResponse.json({ error: noTables ? 'Database not set up yet: run the 3 SQL files from supabase/migrations in the Supabase SQL Editor, then try again.' : `Could not set up the pharmacy: ${phErr?.message}` }, { status: 500 });
   }
   await db.from('pharmacy_accounts').insert({ auth_user_id: created.user.id, pharmacy_id: ph.id });
   await db.from('audit_log').insert({ pharmacy_id: ph.id, action: 'pharmacy.signed_up', auth_user_id: created.user.id, details: { pharmacy_name: b.pharmacy_name, contact_name: b.contact_name } });
