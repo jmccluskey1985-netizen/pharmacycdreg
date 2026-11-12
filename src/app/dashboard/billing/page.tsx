@@ -42,7 +42,12 @@ export default function BillingPage() {
   return (
     <div className="mx-auto max-w-4xl">
       <h1 className="mb-4 text-2xl font-bold">Billing</h1>
-      {!s ? (
+      {s === 'complimentary' ? (
+        <div className="card flex items-center gap-3">
+          <CreditCard className="h-6 w-6 text-brand" />
+          <div><p className="font-semibold">Permanent subscription</p><p className="text-sm text-muted-foreground">Full access with no charge and no end date. Nothing to manage here.</p></div>
+        </div>
+      ) : !s ? (
         <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
           <div className="card">
             <h2 className="text-lg font-semibold">Start your free month</h2>

@@ -4,6 +4,7 @@ import { createServerSupabaseClient, createServiceClient } from '@/lib/supabase/
 import { STAFF_COOKIE, decodeStaffSession, encodeStaffSession, cookieOptionsFor } from '@/lib/staff-session';
 import type { StaffRole } from '@/lib/roles';
 import { canWrite } from '@/lib/stripe';
+import { isSiteAdmin } from '@/lib/admin';
 
 export class HttpError extends Error {
   constructor(public status: number, message: string, public code?: string) {
@@ -67,7 +68,7 @@ export async function requireStaff(allowed?: (r: StaffRole) => boolean, opts: { 
   }
   if (opts.write) {
     const { data: ph } = await db.from('pharmacies').select('subscription_status').eq('id', account.pharmacyId).single();
-    if (!canWrite(ph?.subscription_status)) {
+    if (!canWrite(ph?.subscription_status) && !isSiteAdmin(account.email)) {
       throw new HttpError(402, ph?.subscription_status ? 'Your subscription has ended. The register is read-only until it is reactivated.' : 'Start your free month to begin recording entries.', 'READ_ONLY');
     }
   }

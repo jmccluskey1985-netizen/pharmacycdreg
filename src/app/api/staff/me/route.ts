@@ -14,7 +14,10 @@ export async function GET() {
     const { data: pharmacy } = await db.from('pharmacies').select('id, name, address, psi_premises_number, subscription_status, trial_ends_at, current_period_end, cancel_at_period_end').eq('id', account.pharmacyId).single();
     const st = await getSettings(db, account.pharmacyId);
     const halo = st.halo_enabled;
-    if (pharmacy) Object.assign(pharmacy, { is_site_admin: isSiteAdmin(account.email), halo_enabled: halo, lock_minutes: st.lock_minutes, locum_default_days: st.locum_default_days });
+    const owner = isSiteAdmin(account.email);
+    // The site owner's pharmacy is a permanent subscription: no trial, no billing prompts.
+    if (pharmacy && owner) Object.assign(pharmacy, { subscription_status: 'complimentary', trial_ends_at: null, cancel_at_period_end: false });
+    if (pharmacy) Object.assign(pharmacy, { is_site_admin: owner, halo_enabled: halo, lock_minutes: st.lock_minutes, locum_default_days: st.locum_default_days });
     const { count } = await db.from('staff').select('id', { count: 'exact', head: true }).eq('pharmacy_id', account.pharmacyId).eq('is_active', true).not('pin_hash', 'is', null);
     try {
       const { staff } = await requireStaff();

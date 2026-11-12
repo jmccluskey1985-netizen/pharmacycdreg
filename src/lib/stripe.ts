@@ -19,7 +19,8 @@ export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled'
  * must remain available for inspection and retained for 2 years.
  */
 export function canWrite(status: string | null | undefined): boolean {
-  return status === 'trialing' || status === 'active' || status === 'past_due';
+  // 'complimentary' = permanent free access (e.g. the site owner's own pharmacy); never billed.
+  return status === 'trialing' || status === 'active' || status === 'past_due' || status === 'complimentary';
 }
 
 export function mapStripeStatus(s: string): SubscriptionStatus {

@@ -65,7 +65,7 @@ export function BillingBanner() {
       </div>
     );
   }
-  if (s !== 'trialing' && s !== 'active') {
+  if (s !== 'trialing' && s !== 'active' && s !== 'complimentary') {
     return (
       <div className="no-print mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-muted px-4 py-3 text-sm">
         <Eye className="h-4 w-4" />
