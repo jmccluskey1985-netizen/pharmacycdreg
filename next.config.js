@@ -15,7 +15,9 @@ function cleanUrl(raw) {
   if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
   return u.replace(/\/(rest|auth)\/v1\/?$/, '').replace(/\/+$/, '');
 }
-const urlRaw = candidates.find((v) => !isKey(v) && /supabase\.(co|in)|^https?:\/\//i.test(v)) || '';
+// The project URL is public (every browser sees it), so a default is safe to keep here.
+const DEFAULT_SUPABASE_URL = 'https://uoqlsdryukxmobuqgqiq.supabase.co';
+const urlRaw = candidates.find((v) => !isKey(v) && /supabase\.(co|in)|^https?:\/\//i.test(v)) || DEFAULT_SUPABASE_URL;
 const supabaseUrl = urlRaw ? cleanUrl(urlRaw) : '';
 const supabaseAnon = candidates.find(isKey) || '';
 
