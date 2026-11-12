@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser, Settings, UserRound, ListOrdered, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser, Settings, UserRound, ListOrdered, Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { NewEntryButton } from './new-entry';
+import { Modal } from '@/components/modal';
 import { BillingBanner } from './billing-banner';
 import { Logo, LogoMark } from '@/components/logo';
 import { ROLE_LABELS, can } from '@/lib/roles';
@@ -32,6 +33,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const { loading, staff, locked, hasPins, pharmacy, lock, inboxCount } = useStaff();
   const path = usePathname();
   const [hidden, setHidden] = useState(false);
+  const [more, setMore] = useState(false);
   useEffect(() => { try { setHidden(localStorage.getItem('cdreg-sidebar') === 'hidden'); } catch {} }, []);
   const toggle = () => setHidden((h) => { try { localStorage.setItem('cdreg-sidebar', h ? 'shown' : 'hidden'); } catch {} return !h; });
 
@@ -99,22 +101,47 @@ export function Shell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      {/* Mobile bottom nav with a raised Scan button */}
-      <nav className="no-print fixed inset-x-0 bottom-0 z-30 grid border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" style={{ gridTemplateColumns: `repeat(${Math.min(items.length, 5)}, 1fr)` }}>
-        {items.slice(0, 5).map((n) =>
-          n.primary ? (
-            <Link key={n.href} href={n.href} className="flex flex-col items-center justify-end pb-2 text-xs font-medium">
-              <span className="-mt-6 mb-1 flex h-14 w-14 items-center justify-center rounded-full bg-brand text-white shadow-lg ring-4 ring-background"><n.icon className="h-7 w-7" /></span>
-              {n.label}
-            </Link>
-          ) : (
-            <Link key={n.href} href={n.href} className={`relative flex flex-col items-center gap-1 py-2.5 text-xs font-medium ${active(n.href) ? 'text-primary' : 'text-muted-foreground'}`}>
-              <n.icon className="h-5 w-5" /> {n.label}
-              {(n as any).badge && inboxCount > 0 && <span className="absolute right-[22%] top-1.5 rounded-full bg-brand px-1.5 text-[10px] font-bold text-white">{inboxCount}</span>}
-            </Link>
-          ),
-        )}
-      </nav>
+      {/* Mobile bottom nav: 4 main items + raised Scan Rx, everything else under More */}
+      {(() => {
+        const main = items.filter((n) => ['/dashboard', '/dashboard/scan', '/dashboard/inbox', '/dashboard/search', '/dashboard/patients'].includes(n.href.split('?')[0]));
+        const bar = [...main.slice(0, 4)];
+        const rest = items.filter((n) => !bar.includes(n));
+        const cols = bar.length + (rest.length ? 1 : 0);
+        return (
+          <>
+            <nav className="no-print fixed inset-x-0 bottom-0 z-30 grid border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+              {bar.map((n) =>
+                n.primary ? (
+                  <Link key={n.href} href={n.href} className="flex min-w-0 flex-col items-center justify-end pb-2 text-xs font-medium">
+                    <span className="-mt-6 mb-1 flex h-14 w-14 items-center justify-center rounded-full bg-brand text-white shadow-lg ring-4 ring-background"><n.icon className="h-7 w-7" /></span>
+                    <span className="truncate">{n.label}</span>
+                  </Link>
+                ) : (
+                  <Link key={n.href} href={n.href} className={`relative flex min-w-0 flex-col items-center gap-1 py-2.5 text-xs font-medium ${active(n.href) ? 'text-primary' : 'text-muted-foreground'}`}>
+                    <n.icon className="h-5 w-5" /> <span className="max-w-full truncate px-1">{n.label}</span>
+                    {(n as any).badge && inboxCount > 0 && <span className="absolute right-[22%] top-1.5 rounded-full bg-brand px-1.5 text-[10px] font-bold text-white">{inboxCount}</span>}
+                  </Link>
+                ),
+              )}
+              {rest.length > 0 && (
+                <button onClick={() => setMore(true)} className={`flex min-w-0 flex-col items-center gap-1 py-2.5 text-xs font-medium ${rest.some((n) => active(n.href)) ? 'text-primary' : 'text-muted-foreground'}`}>
+                  <Menu className="h-5 w-5" /> More
+                </button>
+              )}
+            </nav>
+            <Modal open={more} onClose={() => setMore(false)} title="Menu">
+              <div className="grid grid-cols-2 gap-2">
+                {rest.map((n) => (
+                  <Link key={n.href} href={n.href} onClick={() => setMore(false)} className={`flex items-center gap-3 rounded-xl border p-3 text-sm font-medium ${active(n.href) ? 'border-brand bg-brand/10' : 'border-border'}`}>
+                    <n.icon className="h-5 w-5 flex-shrink-0 text-brand" /> <span className="truncate">{n.label}</span>
+                  </Link>
+                ))}
+              </div>
+              <button onClick={() => { setMore(false); lock(); }} className="btn-secondary mt-3 w-full"><Lock className="h-4 w-4" /> Lock / switch user</button>
+            </Modal>
+          </>
+        );
+      })()}
     </div>
   );
 }

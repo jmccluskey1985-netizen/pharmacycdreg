@@ -58,10 +58,9 @@ export default function RegistersPage() {
           <p className="text-sm text-muted-foreground">{pharmacy?.name}</p>
           <h1 className="text-2xl font-bold">Controlled Drug Registers</h1>
         </div>
-        <div className="flex gap-2 whitespace-nowrap">
+        <div className="flex min-w-0 flex-wrap gap-2">
           <a href="/api/export" className="btn-secondary" title="Download every register as one file — keep a recent copy for business continuity"><Download className="h-4 w-4" /> <span className="hidden sm:inline">Export all</span></a>
-          {staff && can.manageStaff(staff.role) && <Link href="/dashboard/team" className="btn-secondary lg:hidden"><Users className="h-4 w-4" /> Team</Link>}
-          {writable && staff && can.scan(staff.role) && <Link href="/dashboard/scan" className="btn-brand"><ScanLine className="h-4 w-4" /> Scan<span className="hidden sm:inline"> invoice</span></Link>}
+          {writable && staff && can.scan(staff.role) && <Link href="/dashboard/scan?type=invoice" className="btn-secondary"><ScanLine className="h-4 w-4" /> Invoice</Link>}
           <div className="flex rounded-lg border border-border bg-card p-0.5" role="group" aria-label="View">
             <button onClick={() => pickView('shelf')} className={`rounded-md px-2.5 py-1.5 ${view === 'shelf' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`} title="Shelf view" aria-pressed={view === 'shelf'}><GalleryHorizontal className="h-4 w-4" /></button>
             <button onClick={() => pickView('table')} className={`rounded-md px-2.5 py-1.5 ${view === 'table' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`} title="Table view" aria-pressed={view === 'table'}><Table2 className="h-4 w-4" /></button>

@@ -83,7 +83,7 @@
 }
 
 /* ───────── Register book ───────── */
-.book-stage { perspective: 2200px; }
+.book-stage { perspective: 2200px; max-width: 100%; overflow-x: clip; } /* the 3D page layer must not widen the phone page */
 .book { position: relative; transform-style: preserve-3d; }
 .book-cover {
   position: absolute; inset: 0; z-index: 20;
