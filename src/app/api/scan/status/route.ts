@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireStaff, errorResponse } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getReaderConfig } from '@/lib/reader-config';
+import { isSiteAdmin } from '@/lib/admin';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,9 +10,9 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const { account } = await requireStaff();
-    const cfg = await getReaderConfig(createServiceClient(), account.pharmacyId);
+    const cfg = await getReaderConfig(createServiceClient());
     const configured = !!cfg || !!process.env.ANTHROPIC_API_KEY;
-    return NextResponse.json({ configured, source: cfg?.source ?? (process.env.ANTHROPIC_API_KEY ? 'anthropic' : null), missing: configured ? null : 'Settings → Document reading' });
+    return NextResponse.json({ configured, can_set_up: isSiteAdmin(account.email), missing: configured ? null : 'Settings → Document reading' });
   } catch (err) {
     return errorResponse(err);
   }

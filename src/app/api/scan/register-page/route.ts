@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     const docs = await Promise.all(files.map(async (f) => ({ base64: Buffer.from(await f.arrayBuffer()).toString('base64'), mediaType: f.type })));
     const db = createServiceClient();
     const { result: page, model } = await readDocument(docs, {
-      reader: await getReaderConfig(db, account.pharmacyId),
+      reader: await getReaderConfig(db),
       system: REGISTER_PAGE_SYSTEM,
       schema: REGISTER_PAGE_JSON_SCHEMA,
       name: 'cd_register_page',

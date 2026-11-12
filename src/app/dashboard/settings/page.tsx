@@ -48,7 +48,7 @@ function useSaver(onSaved: (s: Settings) => void) {
 }
 
 export default function SettingsPage() {
-  const { staff, refresh } = useStaff();
+  const { staff, refresh, pharmacy } = useStaff();
   const [s, setS] = useState<Settings | null>(null);
   const [regs, setRegs] = useState<Reg[]>([]);
   const load = useCallback(() => api('/api/settings').then((d) => { setS(d.settings); setRegs(d.registers); }), []);
@@ -72,7 +72,7 @@ export default function SettingsPage() {
 
       <PharmacyDetails s={s} onSaved={onSaved} />
       <Security s={s} onSaved={onSaved} />
-      <ReaderSettings />
+      {pharmacy?.is_site_admin && <ReaderSettings />}
       <StockChecks s={s} regs={regs} onSaved={(x) => { onSaved(x); load(); }} />
       <Data regs={regs} reload={load} />
 

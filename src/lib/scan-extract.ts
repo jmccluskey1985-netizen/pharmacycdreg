@@ -182,7 +182,7 @@ export async function extractFromDocument(files: DocFile[], hint: 'invoice' | 'p
 export async function readDocument<T>(files: DocFile[], cfg: ReadConfig<T>): Promise<{ result: T; model: string }> {
   if (cfg.reader?.apiKey || process.env.OPENROUTER_API_KEY) return extractViaOpenRouter(files, cfg);
   if (process.env.ANTHROPIC_API_KEY) return extractViaAnthropic(files, cfg);
-  throw new ScanError('Document reading isn’t set up yet. The supervising pharmacist can add the OpenRouter key in Settings → Document reading.');
+  throw new ScanError('Reading documents isn’t available right now. Please enter it by hand.');
 }
 
 /**
@@ -194,7 +194,7 @@ export async function readDocument<T>(files: DocFile[], cfg: ReadConfig<T>): Pro
 async function extractViaOpenRouter<T>(files: DocFile[], cfg: ReadConfig<T>): Promise<{ result: T; model: string }> {
   const models = cfg.reader?.models?.length ? cfg.reader.models : (process.env.OPENROUTER_MODELS || '').split(',').map((m) => m.trim()).filter(Boolean);
   const apiKey = cfg.reader?.apiKey || process.env.OPENROUTER_API_KEY;
-  if (!models.length) throw new ScanError('Choose the reading model in Settings → Document reading.');
+  if (!models.length) throw new ScanError('Reading documents isn’t available right now. Please enter it by hand.');
 
   const parts = files.map((f) =>
     f.mediaType === 'application/pdf'

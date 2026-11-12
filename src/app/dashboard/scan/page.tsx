@@ -50,7 +50,7 @@ export default function ScanPage() {
   const [camera, setCamera] = useState<'off' | 'starting' | 'on' | 'unavailable'>('off');
   const [flash, setFlash] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [status, setStatus] = useState<{ configured: boolean; missing: string | null } | null>(null);
+  const [status, setStatus] = useState<{ configured: boolean; can_set_up?: boolean } | null>(null);
   useEffect(() => { fetch('/api/scan/status').then((r) => r.json()).then((d) => d && typeof d.configured === 'boolean' && setStatus(d)).catch(() => {}); }, []);
 
   const stopCamera = useCallback(() => {
@@ -222,7 +222,9 @@ export default function ScanPage() {
 
       {status && !status.configured && (
         <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
-          <b>Scanning isn’t switched on yet.</b> The supervising pharmacist can add the OpenRouter key in <a href="/dashboard/settings" className="font-semibold underline">Settings → Document reading</a>. You can still enter it by hand from <b>New entry</b>.
+          {status.can_set_up
+            ? <><b>Scanning isn’t switched on yet.</b> Add the OpenRouter key in <a href="/dashboard/settings" className="font-semibold underline">Settings → Document reading</a> — it switches scanning on for every pharmacy.</>
+            : <><b>Reading documents isn’t available right now.</b> You can still make the entry by hand from <b>New entry</b>.</>}
         </div>
       )}
       {error && <p className="mb-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}

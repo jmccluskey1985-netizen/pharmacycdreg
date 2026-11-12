@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     const docs = await Promise.all(files.map(async (f) => ({ base64: Buffer.from(await f.arrayBuffer()).toString('base64'), mediaType: f.type })));
     const hint = form.get('hint') === 'prescription' ? 'prescription' : 'invoice';
     const db = createServiceClient();
-    const { extraction, model } = await extractFromDocument(docs, hint, await getReaderConfig(db, account.pharmacyId));
+    const { extraction, model } = await extractFromDocument(docs, hint, await getReaderConfig(db));
 
     const { data: scan, error } = await db
       .from('scans')

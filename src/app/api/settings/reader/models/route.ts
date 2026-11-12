@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
-import { requireStaff, errorResponse } from '@/lib/access';
-import { can } from '@/lib/roles';
+import { requireStaff, errorResponse, HttpError } from '@/lib/access';
+import { isSiteAdmin } from '@/lib/admin';
 
 export const dynamic = 'force-dynamic';
 
 // Models on OpenRouter that can read photos and return structured results — for the picker.
 export async function GET() {
   try {
-    await requireStaff(can.manageStaff);
+    const { account } = await requireStaff();
+    if (!isSiteAdmin(account.email)) throw new HttpError(404, 'Not found');
     const r = await fetch('https://openrouter.ai/api/v1/models', { signal: AbortSignal.timeout(15_000), next: { revalidate: 3600 } } as RequestInit);
     if (!r.ok) return NextResponse.json({ models: [], error: 'Couldn’t load the model list from OpenRouter' });
     const d = await r.json();

@@ -5,9 +5,9 @@ export interface ReaderConfig { apiKey: string; models: string[]; source: 'setti
 
 const parseModels = (s: string | null | undefined) => (s || '').split(',').map((m) => m.trim()).filter(Boolean);
 
-/** The pharmacy's own OpenRouter key/models from Settings, else the site-wide environment ones. */
-export async function getReaderConfig(db: SupabaseClient, pharmacyId: string): Promise<ReaderConfig | null> {
-  const { data, error } = await db.from('pharmacy_secrets').select('openrouter_key_enc, openrouter_models').eq('pharmacy_id', pharmacyId).maybeSingle();
+/** The site-wide OpenRouter key/models (set by the site owner in Settings), else the environment ones. */
+export async function getReaderConfig(db: SupabaseClient): Promise<ReaderConfig | null> {
+  const { data, error } = await db.from('site_secrets').select('openrouter_key_enc, openrouter_models').eq('id', 'reader').maybeSingle();
   if (!error && data?.openrouter_key_enc) {
     const apiKey = open(data.openrouter_key_enc);
     const models = parseModels(data.openrouter_models);

@@ -3,17 +3,24 @@ import { z } from 'zod';
 import { requireStaff, errorResponse, audit } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase/server';
 import { seal } from '@/lib/secret-box';
-import { can } from '@/lib/roles';
+import { isSiteAdmin } from '@/lib/admin';
+import { HttpError } from '@/lib/access';
 
 export const dynamic = 'force-dynamic';
+// Site owner only (ADMIN_EMAILS): one key for every pharmacy's scanning.
+async function owner() {
+  const ctx = await requireStaff();
+  if (!isSiteAdmin(ctx.account.email)) throw new HttpError(404, 'Not found');
+  return ctx;
+}
 const NEEDS_MIGRATION = 'Needs a one-off database update first (run migration 0009 in Supabase).';
 
 // Status only: the key itself is never returned.
 export async function GET() {
   try {
-    const { account } = await requireStaff(can.manageStaff);
+    const { account } = await owner();
     const db = createServiceClient();
-    const { data, error } = await db.from('pharmacy_secrets').select('openrouter_key_hint, openrouter_models, updated_at').eq('pharmacy_id', account.pharmacyId).maybeSingle();
+    const { data, error } = await db.from('site_secrets').select('openrouter_key_hint, openrouter_models, updated_at').eq('id', 'reader').maybeSingle();
     return NextResponse.json({
       needs_migration: !!error,
       has_key: !!data?.openrouter_key_hint,
@@ -46,21 +53,21 @@ async function checkKey(key: string): Promise<{ ok: boolean; label?: string; mes
 
 export async function PUT(req: Request) {
   try {
-    const { account, staff } = await requireStaff(can.manageStaff);
+    const { account, staff } = await owner();
     const parsed = Body.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) return NextResponse.json({ error: 'Paste the full key and choose at least one model' }, { status: 400 });
     const db = createServiceClient();
-    const row: Record<string, unknown> = { pharmacy_id: account.pharmacyId, openrouter_models: parsed.data.models.join(','), updated_at: new Date().toISOString() };
+    const row: Record<string, unknown> = { id: 'reader', openrouter_models: parsed.data.models.join(','), updated_at: new Date().toISOString() };
     if (parsed.data.api_key) {
       const check = await checkKey(parsed.data.api_key);
       if (!check.ok) return NextResponse.json({ error: check.message }, { status: 400 });
       row.openrouter_key_enc = seal(parsed.data.api_key);
       row.openrouter_key_hint = `…${parsed.data.api_key.slice(-4)}`;
     } else {
-      const { data: existing } = await db.from('pharmacy_secrets').select('openrouter_key_enc').eq('pharmacy_id', account.pharmacyId).maybeSingle();
+      const { data: existing } = await db.from('site_secrets').select('openrouter_key_enc').eq('id', 'reader').maybeSingle();
       if (!existing?.openrouter_key_enc) return NextResponse.json({ error: 'Paste your OpenRouter key' }, { status: 400 });
     }
-    const { error } = await db.from('pharmacy_secrets').upsert(row, { onConflict: 'pharmacy_id' });
+    const { error } = await db.from('site_secrets').upsert(row, { onConflict: 'id' });
     if (error) return NextResponse.json({ error: /relation|does not exist/i.test(error.message) ? NEEDS_MIGRATION : 'Could not save' }, { status: 409 });
     await audit(account.pharmacyId, 'settings.reader_updated', staff, account.authUserId, { key_changed: !!parsed.data.api_key, models: parsed.data.models });
     return NextResponse.json({ ok: true });
@@ -71,9 +78,9 @@ export async function PUT(req: Request) {
 
 export async function DELETE() {
   try {
-    const { account, staff } = await requireStaff(can.manageStaff);
+    const { account, staff } = await owner();
     const db = createServiceClient();
-    await db.from('pharmacy_secrets').update({ openrouter_key_enc: null, openrouter_key_hint: null, updated_at: new Date().toISOString() }).eq('pharmacy_id', account.pharmacyId);
+    await db.from('site_secrets').update({ openrouter_key_enc: null, openrouter_key_hint: null, updated_at: new Date().toISOString() }).eq('id', 'reader');
     await audit(account.pharmacyId, 'settings.reader_key_removed', staff, account.authUserId);
     return NextResponse.json({ ok: true });
   } catch (err) {

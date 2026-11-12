@@ -45,10 +45,10 @@ export function ReaderSettings() {
         <ScanText className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand" />
         <div>
           <h2 className="font-semibold">Document reading <span className={`ml-1 rounded-full px-2 py-0.5 text-xs ${st?.has_key && st.models.length ? 'bg-brand/15 text-brand' : 'bg-muted text-muted-foreground'}`}>{st?.has_key && st.models.length ? 'On' : 'Off'}</span></h2>
-          <p className="text-sm text-muted-foreground">Reads invoices, prescriptions and paper register pages using your OpenRouter account (the same one Halo uses). Only providers that keep no data are used. Your key is encrypted and never shown again.</p>
+          <p className="text-sm text-muted-foreground">Site owner only — one OpenRouter account (the same one Halo uses) reads invoices, prescriptions and paper register pages for <b>every pharmacy</b>. Other pharmacies never see this or need a key. Only providers that keep no data are used. The key is encrypted and never shown again.</p>
         </div>
       </div>
-      {st?.needs_migration && <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">Needs a one-off database update: run <code>supabase/migrations/0009_reader_settings.sql</code> in Supabase.</p>}
+      {st?.needs_migration && <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">Needs a one-off database update: run <code>supabase/migrations/0009_reader_settings.sql</code> (site_secrets) in Supabase.</p>}
 
       <form onSubmit={save} className="space-y-4">
         <div>
