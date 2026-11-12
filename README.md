@@ -39,6 +39,16 @@ Electronic Controlled Drug Register for Irish community pharmacies. It is a sist
 | NFR1–3 | Staff roles + PIN + `can.*` checks on every route |
 | NFR6–9, 15, 16 | Supabase (EU region) backups/PITR; no delete path in app. Document retention and backup arrangements in your Evidence Pack (DOC-002, DEC-001). |
 
+## Pre-launch: waitlist and hidden sign-in
+
+- The home page shows a **waitlist** form. Entries are saved in `waitlist` (`0004_waitlist.sql`) and emailed to `ADMIN_NOTIFY_EMAIL`. It is rate-limited and has a spam honeypot.
+- **Sign-in is hidden.** "Pharmacy access" (top right) asks for a code that is checked on the server against `SIGNIN_UNLOCK_CODE`. The code is never in the repo or the browser bundle. It only reveals the login form; the password and staff PIN still protect the register.
+- **Self sign-up is closed.** `/start` redirects home and `/api/signup` refuses requests until `SIGNUPS_OPEN=1`.
+- To create a pharmacy by hand, use `scripts/create-pharmacy.mjs`. Activate it with:
+  ```sql
+  update pharmacies set subscription_status='active' where billing_email='…';
+  ```
+
 ## Pricing & billing
 
 Mirrors PharmacyConsultation.ie, with prices set in `src/config/pricing.ts`:
@@ -57,7 +67,7 @@ Mirrors PharmacyConsultation.ie, with prices set in `src/config/pricing.ts`:
 
 ## Setup
 
-1. Create a Supabase project in an EU region and run `supabase/migrations/0001_cd_register.sql`, then `0002_billing.sql`, in its SQL editor.
+1. Create a Supabase project in an EU region and run the files in `supabase/migrations` in order (0001 → 0004) in its SQL editor.
 2. Copy `.env.example` to `.env.local` and fill it in. Generate `STAFF_SESSION_SECRET` with `openssl rand -hex 32`.
 3. `npm install && npm run dev`
 4. Pharmacies sign up themselves at `/start`. To set one up by hand instead, run:

@@ -1,128 +1,164 @@
 'use client';
 
-import { Suspense, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff, Loader2, ShieldCheck, ScanLine, BookOpen, Search } from 'lucide-react';
-import Link from 'next/link';
+import { Suspense, useEffect, useState } from 'react';
+import { ShieldCheck, ScanLine, BookOpen, Search, Loader2, CheckCircle2, Lock, X, Plug } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { PricingCard } from '@/components/pricing-card';
-import { PLAN, formatEuro } from '@/config/pricing';
-import { getSupabaseClient } from '@/lib/supabase/client';
+import { LoginCard } from '@/components/login-card';
 import { DEMO } from '@/lib/demo/flag';
-
-// Same normalisation as PharmacyConsultation.ie (googlemail → gmail, trim, lower).
-const normalizeEmail = (e: string) => e.toLowerCase().trim().replace(/@googlemail\.com$/, '@gmail.com');
-
-function LoginCard() {
-  const router = useRouter();
-  const params = useSearchParams();
-  const rawNext = params.get('next');
-  const next = rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/dashboard';
-
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [show, setShow] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setNotice(null);
-    if (DEMO) {
-      await fetch('/api/staff/lock', { method: 'POST' });
-      router.push('/dashboard');
-      return;
-    }
-    try {
-      const supabase = getSupabaseClient();
-      // Shared dispensary computers: drop any previous login and active staff member first.
-      await supabase.auth.signOut().catch(() => {});
-      await fetch('/api/staff/lock', { method: 'POST' }).catch(() => {});
-      const { error: authError } = await supabase.auth.signInWithPassword({ email: normalizeEmail(email), password });
-      if (authError) {
-        setError(authError.message === 'Invalid login credentials' ? 'Email or password is incorrect' : authError.message);
-        return;
-      }
-      router.push(next);
-      router.refresh();
-    } catch {
-      setError('Could not sign in. Check your connection and try again.');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function onForgot() {
-    if (!email) {
-      setError('Enter your email first, then tap “Forgot password?”');
-      return;
-    }
-    setError(null);
-    await getSupabaseClient().auth.resetPasswordForEmail(normalizeEmail(email), {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    setNotice('If that email has an account, a reset link is on its way.');
-  }
-
-  return (
-    <div className="card w-full max-w-md p-6 sm:p-8">
-      <h2 className="text-xl font-bold mb-1">Pharmacy sign in</h2>
-      <p className="text-sm text-muted-foreground mb-6">
-        Sign in with your pharmacy account. You&apos;ll then enter your personal PIN.
-      </p>
-      <form onSubmit={onSubmit} className="space-y-4">
-        {error && <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
-        {notice && <div className="rounded-lg border border-brand/40 bg-brand/10 p-3 text-sm">{notice}</div>}
-        <div>
-          <label htmlFor="email" className="label">Email</label>
-          <input id="email" type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@pharmacy.ie" autoComplete="email" inputMode="email" required />
-        </div>
-        <div>
-          <label htmlFor="password" className="label">Password</label>
-          <div className="relative">
-            <input id="password" type={show ? 'text' : 'password'} className="input pr-12" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
-            <button type="button" onClick={() => setShow((s) => !s)} className="absolute right-1 top-1/2 -translate-y-1/2 p-2.5 text-muted-foreground hover:text-foreground" aria-label={show ? 'Hide password' : 'Show password'}>
-              {show ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-            </button>
-          </div>
-        </div>
-        <button type="submit" disabled={loading} className="btn-primary w-full text-base">
-          {loading ? <><Loader2 className="h-5 w-5 animate-spin" /> Signing in…</> : 'Sign in'}
-        </button>
-        <button type="button" onClick={onForgot} className="w-full text-sm text-primary hover:underline">Forgot password?</button>
-      </form>
-      <div className="mt-6 border-t border-border pt-5 text-center">
-        <p className="text-sm text-muted-foreground">New to PharmacyCDReg?</p>
-        <Link href="/start" className="btn-brand mt-2 w-full">Start your free month</Link>
-        <p className="mt-2 text-xs text-muted-foreground">Then {formatEuro(PLAN.price)}/month{PLAN.originalPrice ? <> <s>{formatEuro(PLAN.originalPrice)}</s></> : null} · limited-time launch price</p>
-      </div>
-    </div>
-  );
-}
 
 const FEATURES = [
   { icon: BookOpen, title: 'Looks like the register you know', text: 'One page per drug, same columns as the paper book — with the balance worked out for you.' },
-  { icon: ScanLine, title: 'Snap the wholesaler invoice', text: 'Take a photo on your phone. CD lines and quantities are read for you to check and confirm.' },
+  { icon: ScanLine, title: 'Snap the wholesaler invoice', text: 'Take a photo on your phone. CD lines and pack quantities are read for you to check and confirm.' },
   { icon: ShieldCheck, title: 'Nothing is ever overwritten', text: 'Corrections sit alongside the original with who, when and why — a full audit trail.' },
   { icon: Search, title: 'Inspection ready', text: 'Search by drug, date, supplier, patient or prescriber, then print or export in seconds.' },
 ];
 
+const PREVIEWS = [
+  { src: '/previews/register-book.webp', alt: 'A register page laid out like the paper Controlled Drugs Register, with a correction struck through and footnoted', title: 'The register, page by page', text: 'Same columns as the paper register: date, name and address, authority, amount obtained or supplied, running balance, pharmacist. Corrections are struck through and footnoted — never hidden.' },
+  { src: '/previews/invoice-scan.webp', alt: 'Invoice scan result: 2 packs × 56 = 112 capsules matched to the oxycodone register', title: 'Invoices read for you', text: 'Photograph the wholesaler invoice. Controlled drug lines are picked out, packs × pack size worked out, matched to the right register — and Schedule 5 lines like Oramorph 10mg/5ml left out. You check and confirm each line.' },
+  { src: '/previews/halo-to-confirm.webp', alt: 'Dispensings sent from the dispensing system waiting for a pharmacist to sign', title: 'Supplies from your dispensing system', text: 'Controlled drug supplies can arrive straight from your dispensing system, ready to check and sign with your PIN. Anything unusual is flagged, never guessed.' },
+];
+
+function WaitlistForm() {
+  const [f, setF] = useState({ name: '', pharmacy_name: '', email: '', phone: '', dispensing_system: '', consent_contact: false, website: '' });
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      if (DEMO) { setDone(true); return; }
+      const res = await fetch('/api/waitlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(f) });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || 'Could not join the waitlist');
+      setDone(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not join the waitlist');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (done) {
+    return (
+      <div className="card w-full max-w-md p-6 text-center sm:p-8">
+        <CheckCircle2 className="mx-auto h-12 w-12 text-brand" />
+        <h2 className="mt-3 text-xl font-bold">You&apos;re on the list</h2>
+        <p className="mt-1 text-sm text-muted-foreground">We&apos;ll be in touch before launch with your first month free and the €19 launch price.</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="card w-full max-w-md space-y-3.5 p-6 sm:p-8">
+      <div>
+        <p className="inline-flex rounded-full bg-brand/15 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-primary">Launching soon</p>
+        <h2 className="mt-2 text-xl font-bold">Join the waitlist</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Be first in. Waitlist pharmacies get the first month free and lock in the €19 launch price.</p>
+      </div>
+      {error && <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+      <div className="grid gap-3.5 sm:grid-cols-2">
+        <div><label className="label" htmlFor="wl-name">Your name</label><input id="wl-name" className="input" required value={f.name} onChange={set('name')} autoComplete="name" /></div>
+        <div><label className="label" htmlFor="wl-ph">Phone <span className="font-normal text-muted-foreground">(optional)</span></label><input id="wl-ph" className="input" type="tel" value={f.phone} onChange={set('phone')} autoComplete="tel" /></div>
+      </div>
+      <div><label className="label" htmlFor="wl-pharm">Pharmacy</label><input id="wl-pharm" className="input" required value={f.pharmacy_name} onChange={set('pharmacy_name')} placeholder="Name and town" /></div>
+      <div><label className="label" htmlFor="wl-email">Email</label><input id="wl-email" className="input" required type="email" inputMode="email" value={f.email} onChange={set('email')} autoComplete="email" /></div>
+      <div><label className="label" htmlFor="wl-pmr">Dispensing system <span className="font-normal text-muted-foreground">(optional)</span></label><input id="wl-pmr" className="input" value={f.dispensing_system} onChange={set('dispensing_system')} placeholder="e.g. McLernons, Touchstore" /></div>
+      {/* honeypot */}
+      <input tabIndex={-1} autoComplete="off" aria-hidden className="hidden" value={f.website} onChange={set('website')} />
+      <label className="flex items-start gap-2 text-xs text-muted-foreground">
+        <input type="checkbox" required className="mt-0.5 h-4 w-4" checked={f.consent_contact} onChange={(e) => setF({ ...f, consent_contact: e.target.checked })} />
+        <span>I&apos;m happy to be contacted about PharmacyCDReg.ie. You can ask us to remove your details at any time.</span>
+      </label>
+      <button className="btn-brand w-full text-base" disabled={busy}>{busy && <Loader2 className="h-5 w-5 animate-spin" />} Join the waitlist</button>
+    </form>
+  );
+}
+
+/** Small "Pharmacy access" link → code box → reveals the sign-in card. */
+function AccessGate({ onUnlock }: { onUnlock: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [code, setCode] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function check(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      if (DEMO) { onUnlock(); return; }
+      const res = await fetch('/api/access', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+      const d = await res.json().catch(() => ({}));
+      if (d.ok) onUnlock();
+      else setError(d.error || 'Code not recognised');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
+        <Lock className="h-4 w-4" /> Pharmacy access
+      </button>
+    );
+  }
+  return (
+    <form onSubmit={check} className="flex items-center gap-2">
+      <input
+        className="input w-28 py-1.5 text-center font-mono tracking-widest"
+        type="password"
+        inputMode="numeric"
+        placeholder="Code"
+        autoFocus
+        value={code}
+        onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+        aria-label="Access code"
+      />
+      <button className="btn-primary px-3 py-1.5 text-sm" disabled={busy || !code}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Go'}</button>
+      <button type="button" onClick={() => { setOpen(false); setCode(''); setError(null); }} className="rounded p-1.5 text-muted-foreground hover:bg-muted" aria-label="Close"><X className="h-4 w-4" /></button>
+      {error && <span className="text-xs text-destructive">{error}</span>}
+    </form>
+  );
+}
+
 export default function LandingPage() {
+  const [unlocked, setUnlocked] = useState(false);
+
+  // Stay unlocked on this device after a correct code (and when sent back here from the dashboard).
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('cdreg-access') === '1' || new URLSearchParams(window.location.search).get('next')) setUnlocked(true);
+    } catch {}
+  }, []);
+  const unlock = () => {
+    setUnlocked(true);
+    try { localStorage.setItem('cdreg-access', '1'); } catch {}
+    setTimeout(() => document.getElementById('signin')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-secondary/60 to-background">
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
+      <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-5 sm:px-6">
         <Logo size="md" />
+        {!unlocked && <AccessGate onUnlock={unlock} />}
       </header>
 
-      <section className="mx-auto grid max-w-6xl items-start gap-8 px-4 pb-16 pt-4 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:gap-14 lg:pt-12">
-        {/* Login first on phones */}
-        <div className="order-1 flex justify-center lg:order-2 lg:justify-end">
-          <Suspense fallback={<div className="card h-96 w-full max-w-md" />}>
-            <LoginCard />
-          </Suspense>
+      <section className="mx-auto grid max-w-6xl items-start gap-8 px-4 pb-14 pt-4 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:gap-14 lg:pt-10">
+        <div className="order-1 flex flex-col items-center gap-6 lg:order-2 lg:items-end" id="signin">
+          {unlocked ? (
+            <Suspense fallback={<div className="card h-96 w-full max-w-md" />}>
+              <LoginCard />
+            </Suspense>
+          ) : (
+            <WaitlistForm />
+          )}
         </div>
 
         <div className="order-2 lg:order-1">
@@ -146,19 +182,54 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="pricing" className="border-t border-border bg-card/60">
+      {/* Previews */}
+      <section className="border-t border-border bg-card/60">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+          <p className="text-sm font-semibold uppercase tracking-widest text-brand">A look inside</p>
+          <h2 className="mt-2 text-3xl font-bold tracking-tight text-brand-dark dark:text-white">Built for the dispensary counter</h2>
+          <div className="mt-10 space-y-14">
+            {PREVIEWS.map((p, i) => (
+              <div key={p.src} className={`grid items-center gap-6 lg:gap-10 ${i % 2 ? 'lg:grid-cols-[1fr_1.6fr]' : 'lg:grid-cols-[1.6fr_1fr]'}`}>
+                <figure className={`overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border ${i % 2 ? 'lg:order-2' : ''}`}>
+                  <img src={p.src} alt={p.alt} loading="lazy" className="w-full" />
+                </figure>
+                <div className={i % 2 ? 'lg:order-1' : ''}>
+                  <h3 className="text-2xl font-bold">{p.title}</h3>
+                  <p className="mt-2 text-lg text-muted-foreground">{p.text}</p>
+                </div>
+              </div>
+            ))}
+            <div className="grid items-center gap-6 lg:grid-cols-[1fr_1.6fr] lg:gap-10">
+              <div>
+                <h3 className="text-2xl font-bold">Works on your phone</h3>
+                <p className="mt-2 text-lg text-muted-foreground">Check a balance or record an entry from anywhere in the pharmacy. Each person signs in with their own PIN.</p>
+              </div>
+              <figure className="mx-auto w-60 overflow-hidden rounded-[2.2rem] bg-black p-2 shadow-soft ring-1 ring-border sm:w-64">
+                <img src="/previews/phone.webp" alt="PharmacyCDReg on a phone: registers with balances" loading="lazy" className="w-full rounded-[1.8rem]" />
+              </figure>
+            </div>
+          </div>
+          <p className="mt-8 text-xs text-muted-foreground">Screens shown with sample data.</p>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section id="pricing" className="border-t border-border">
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-2">
           <div>
             <p className="text-sm font-semibold uppercase tracking-widest text-brand">Simple pricing</p>
             <h2 className="mt-2 text-3xl font-bold tracking-tight text-brand-dark dark:text-white">One price. Everything included.</h2>
             <p className="mt-3 text-lg text-muted-foreground">No bundles, no modules you won&apos;t use — just your Controlled Drugs Register, done properly. Unlimited staff, registers and invoice scans.</p>
             <ul className="mt-6 space-y-3 text-sm">
-              <li className="flex gap-3"><span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand/15 font-bold text-primary">1</span> Start your free month — set up in minutes, bring forward balances from your paper book.</li>
-              <li className="flex gap-3"><span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand/15 font-bold text-primary">2</span> Add your team, each with their own PIN.</li>
-              <li className="flex gap-3"><span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand/15 font-bold text-primary">3</span> Cancel any time. Your register stays readable and exportable — always.</li>
+              <li className="flex gap-3"><BookOpen className="h-5 w-5 flex-shrink-0 text-brand" /> Bring forward balances from your paper book on day one.</li>
+              <li className="flex gap-3"><Plug className="h-5 w-5 flex-shrink-0 text-brand" /> Works alongside your dispensing system.</li>
+              <li className="flex gap-3"><ShieldCheck className="h-5 w-5 flex-shrink-0 text-brand" /> Cancel any time — your register stays readable and exportable.</li>
             </ul>
           </div>
-          <PricingCard />
+          <PricingCard cta={false} />
+        </div>
+        <div className="pb-14 text-center">
+          <a href="#signin" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="btn-brand px-8 text-base">Join the waitlist</a>
         </div>
       </section>
 
