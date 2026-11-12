@@ -9,12 +9,31 @@ function withHeaders(response: NextResponse) {
   return response;
 }
 
+const CANONICAL_HOST = process.env.CANONICAL_HOST || 'pharmacycdreg.ie';
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  // One address, one login: www and the vercel.app address keep separate cookies, so
+  // send everyone to the main domain (production only; previews keep their own URL).
+  const host = (request.headers.get('host') || '').toLowerCase();
+  if (host === `www.${CANONICAL_HOST}` || (process.env.VERCEL_ENV === 'production' && host.endsWith('.vercel.app'))) {
+    const url = request.nextUrl.clone();
+    url.host = CANONICAL_HOST;
+    url.protocol = 'https';
+    url.port = '';
+    return NextResponse.redirect(url, 308);
+  }
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_DEMO_MODE === '1') return withHeaders(NextResponse.next());
 
   try {
     const { response, user, needsCode } = await updateSession(request);
+    // Already signed in? The home page goes straight to the register (add ?home=1 to see it).
+    if (pathname === '/' && user && !needsCode && !request.nextUrl.searchParams.has('home') && !request.nextUrl.searchParams.has('code')) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/dashboard';
+      url.search = '';
+      return NextResponse.redirect(url);
+    }
     if (pathname.startsWith('/dashboard') && user && needsCode) {
       const url = request.nextUrl.clone();
       url.pathname = '/';

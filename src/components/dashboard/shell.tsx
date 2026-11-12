@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser, Settings, UserRound, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser, Settings, UserRound, ListOrdered, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { NewEntryButton } from './new-entry';
 import { BillingBanner } from './billing-banner';
 import { Logo } from '@/components/logo';
@@ -25,6 +25,7 @@ const NAV = [
   { href: '/dashboard/integrations', label: 'Halo connection', icon: Plug, show: can.manageStaff, halo: true },
   { href: '/dashboard/billing', label: 'Billing', icon: CreditCard, show: can.manageStaff },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings, show: can.manageStaff },
+  { href: '/dashboard/waitlist', label: 'Waitlist', icon: ListOrdered, show: () => true, admin: true },
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -38,7 +39,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   if (!hasPins) return <FirstRun />;
   if (locked || !staff) return <PinPad />;
 
-  const items = NAV.filter((n) => n.show(staff.role) && (!(n as any).halo || pharmacy?.halo_enabled));
+  const items = NAV.filter((n) => n.show(staff.role) && (!(n as any).halo || pharmacy?.halo_enabled) && (!(n as any).admin || pharmacy?.is_site_admin));
   const active = (href: string) => (href === '/dashboard' ? path === href || path.startsWith('/dashboard/register') : path.startsWith(href));
 
   return (
