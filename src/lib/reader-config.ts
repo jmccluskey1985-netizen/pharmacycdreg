@@ -5,11 +5,11 @@ export interface ReaderConfig { apiKey: string; models: string[]; source: 'setti
 
 const parseModels = (s: string | null | undefined) => (s || '').split(',').map((m) => m.trim()).filter(Boolean);
 
-// Halo's chain (docs/RX_READER_SPEC.md §1). Gemini 3.8 Flash is always tried first; models picked in
-// Settings become back-ups; OpenRouter takes at most 3.
+// Fixed to Halo's chain (docs/RX_READER_SPEC.md §1) — not changeable in the app.
 export const PRIMARY_MODEL = 'google/gemini-3.8-flash';
 export const HALO_BACKUPS = ['qwen/qwen3-vl-235b-a22b-instruct', 'qwen/qwen2.5-vl-72b-instruct'];
-export const modelChain = (saved: string[]) => [...new Set([PRIMARY_MODEL, ...saved, ...HALO_BACKUPS])].slice(0, 3);
+export const MODEL_CHAIN = [PRIMARY_MODEL, ...HALO_BACKUPS];
+export const modelChain = (_saved?: string[]) => MODEL_CHAIN;
 
 /** The site-wide OpenRouter key/models (set by the site owner in Settings), else the environment ones. */
 export async function getReaderConfig(db: SupabaseClient): Promise<ReaderConfig | null> {

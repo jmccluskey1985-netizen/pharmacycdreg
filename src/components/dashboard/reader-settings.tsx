@@ -1,20 +1,16 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { ScanText, Loader2, Check, KeyRound, X, Search } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ScanText, Loader2, Check, KeyRound } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 
 interface Status { needs_migration: boolean; has_key: boolean; hint: string | null; models: string[]; updated_at: string | null; environment_fallback: boolean }
-interface Model { id: string; name: string; prompt_price: number }
 
 
 /** OpenRouter key + models for reading invoices, prescriptions and paper register pages. */
 export function ReaderSettings() {
   const [st, setSt] = useState<Status | null>(null);
   const [key, setKey] = useState('');
-  const [models, setModels] = useState<string[]>([]);
-  const [all, setAll] = useState<Model[] | null>(null);
-  const [q, setQ] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [testing, setTesting] = useState(false);
@@ -25,20 +21,15 @@ export function ReaderSettings() {
     finally { setTesting(false); }
   }
 
-  const [zdrOnly, setZdrOnly] = useState(false);
-  const load = () => api('/api/settings/reader').then((d: Status) => { setSt(d); setModels(d.models); });
-  useEffect(() => { load(); api('/api/settings/reader/models').then((d) => { setAll(d.models ?? []); setZdrOnly(!!d.zdr_filtered); }).catch(() => setAll([])); }, []);
+  const load = () => api('/api/settings/reader').then((d: Status) => setSt(d));
+  useEffect(() => { load(); }, []);
 
-  const matches = useMemo(() => {
-    const t = q.trim().toLowerCase();
-    return (all ?? []).filter((m) => !models.includes(m.id) && (!t || `${m.name} ${m.id}`.toLowerCase().includes(t))).slice(0, 12);
-  }, [all, q, models]);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true); setMsg(null);
     try {
-      await api('/api/settings/reader', { method: 'PUT', json: { api_key: key.trim() || undefined, models } });
+      await api('/api/settings/reader', { method: 'PUT', json: { api_key: key.trim() || undefined, models: [] } });
       setKey(''); setMsg({ ok: true, text: 'Saved — scanning is ready.' }); load();
     } catch (err) { setMsg({ ok: false, text: err instanceof ApiError ? err.message : 'Could not save' }); }
     finally { setBusy(false); }
@@ -74,39 +65,7 @@ export function ReaderSettings() {
           <p className="mt-1 text-xs text-muted-foreground">openrouter.ai → Keys. In OpenRouter → Settings → Privacy, keep “Zero data retention” on.</p>
         </div>
 
-        <div>
-          <p className="mb-2 rounded-lg bg-secondary px-3 py-2 text-sm"><b>Gemini 3.8 Flash</b> is always used first (Halo’s choice). Back-ups: anything below, then Halo’s Qwen models.</p>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <label className="label mb-0">Extra back-up models <span className="font-normal text-muted-foreground">(optional)</span></label>
-            <button type="button" onClick={() => setModels([])} className="btn-ghost py-1 text-xs">Clear</button>
-          </div>
-          {models.length > 0 && (
-            <ol className="mb-2 flex flex-wrap gap-1.5">
-              {models.map((m, i) => (
-                <li key={m} className="flex items-center gap-1 rounded-full border border-brand bg-brand/10 px-2.5 py-1 text-xs font-semibold">
-                  <span className="text-muted-foreground">{i + 1}.</span> {all?.find((x) => x.id === m)?.name ?? m}
-                  <button type="button" onClick={() => setModels(models.filter((x) => x !== m))} aria-label={`Remove ${m}`}><X className="h-3.5 w-3.5" /></button>
-                </li>
-              ))}
-            </ol>
-          )}
-          {models.length < 4 && (
-            <div className="rounded-lg border border-border">
-              <div className="relative border-b border-border"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input className="w-full rounded-t-lg bg-transparent py-2 pl-9 pr-3 text-sm outline-none" value={q} onChange={(e) => setQ(e.target.value)} placeholder={all === null ? 'Loading models…' : 'Search models that can read photos, e.g. claude, gemini, gpt'} /></div>
-              <ul className="max-h-48 overflow-y-auto text-sm">
-                {all !== null && matches.length === 0 && <li className="px-3 py-2 text-muted-foreground">{all.length ? 'No match' : 'Couldn’t load the list — type a model id and press Add'}</li>}
-                {matches.map((m) => (
-                  <li key={m.id}><button type="button" onClick={() => { setModels([...models, m.id]); setQ(''); }} className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-muted">
-                    <span><b>{m.name}</b> <span className="text-xs text-muted-foreground">{m.id}</span></span>
-                    {m.prompt_price > 0 && <span className="text-xs text-muted-foreground">${m.prompt_price.toFixed(2)}/M in</span>}
-                  </button></li>
-                ))}
-                {all?.length === 0 && q.trim() && <li><button type="button" onClick={() => { setModels([...models, q.trim()]); setQ(''); }} className="w-full px-3 py-2 text-left font-semibold text-primary hover:bg-muted">Add “{q.trim()}”</button></li>}
-              </ul>
-            </div>
-          )}
-          <p className="mt-1 text-xs text-muted-foreground">{zdrOnly ? 'Only models with a zero-data-retention provider are listed. ' : ''}Leave this empty to use Halo’s set-up as it is.</p>
-        </div>
+        <p className="rounded-lg bg-secondary px-3 py-2 text-sm">Reads with <b>Gemini 3.8 Flash</b>, with Halo’s two Qwen models as back-ups — the same set-up as Halo.</p>
 
         <div className="flex flex-wrap items-center gap-3">
           <button className="btn-primary" disabled={busy || (!st?.has_key && key.trim().length < 20)}>{busy && <Loader2 className="h-4 w-4 animate-spin" />} Save</button>
