@@ -4,6 +4,7 @@ import { requireStaff, errorResponse, audit } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase/server';
 import { balancesFor } from '@/lib/registers';
 import { can } from '@/lib/roles';
+import { getSettings, FREQ_DAYS } from '@/lib/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,13 +15,32 @@ export async function GET() {
     const db = createServiceClient();
     const { data } = await db
       .from('cd_registers')
-      .select('id, opened_at, closed_at, product:cd_products(id, drug_name, schedule, schedule_paragraph, class_name, form, strength, unit, is_stereoisomer_of, parent:is_stereoisomer_of(drug_name))')
+      .select('*, product:cd_products(id, drug_name, schedule, schedule_paragraph, class_name, form, strength, unit, is_stereoisomer_of, parent:is_stereoisomer_of(drug_name))')
       .eq('pharmacy_id', account.pharmacyId)
       .is('closed_at', null);
     const regs = (data ?? []) as any[];
     const balances = await balancesFor(regs.map((r) => r.id));
     regs.sort((a, b) => a.product.schedule - b.product.schedule || (a.product.schedule_paragraph ?? '').localeCompare(b.product.schedule_paragraph ?? '') || a.product.class_name.localeCompare(b.product.class_name) || Number(!!a.product.is_stereoisomer_of) - Number(!!b.product.is_stereoisomer_of) || a.product.strength.localeCompare(b.product.strength));
-    return NextResponse.json({ registers: regs.map((r) => ({ ...r, balance: balances[r.id] ?? 0 })) });
+    // Stock-check due + low stock (Settings). Quietly skipped until migration 0007 is run.
+    const settings = await getSettings(db, account.pharmacyId);
+    const lastCheck: Record<string, string> = {};
+    if (regs.length) {
+      const { data: checks } = await db.from('stock_checks').select('register_id, checked_at').eq('pharmacy_id', account.pharmacyId).order('checked_at', { ascending: false }).limit(2000);
+      for (const c of checks ?? []) if (!lastCheck[c.register_id]) lastCheck[c.register_id] = c.checked_at;
+    }
+    const days = FREQ_DAYS[settings.stock_check_frequency];
+    const due = (r: any) => {
+      if (!days || !settings.migrated) return false;
+      const since = lastCheck[r.id] ?? r.opened_at;
+      return Date.now() - new Date(since).getTime() > days * 864e5;
+    };
+    return NextResponse.json({
+      registers: regs.map((r) => {
+        const balance = balances[r.id] ?? 0;
+        const { low_stock_level, ...rest } = r;
+        return { ...rest, balance, low_stock_level: low_stock_level ?? null, low_stock: low_stock_level != null && balance <= Number(low_stock_level), last_checked_at: lastCheck[r.id] ?? null, check_due: due(r) };
+      }),
+    });
   } catch (err) {
     return errorResponse(err);
   }

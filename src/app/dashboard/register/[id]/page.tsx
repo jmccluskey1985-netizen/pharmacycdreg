@@ -10,6 +10,7 @@ import { LogoMark } from '@/components/logo';
 import { Modal } from '@/components/modal';
 import { useStaff } from '@/components/dashboard/staff-context';
 import { EntryForm, type EntryType } from '@/components/dashboard/entry-form';
+import { StockCheckButton } from '@/components/dashboard/stock-check';
 
 const LINES_PER_PAGE = 16;
 
@@ -136,6 +137,7 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
         <div className="flex flex-wrap gap-2">
           <a href={`/api/registers/${params.id}/export`} className="btn-secondary"><Download className="h-4 w-4" /> <span className="hidden sm:inline">Export</span> CSV</a>
           <button onClick={() => window.print()} className="btn-secondary"><Printer className="h-4 w-4" /> Print</button>
+          <StockCheckButton registerId={params.id} unit={p.unit} balance={Number(balance)} canRecord={!!mayRecord} />
           {mayRecord && <button onClick={() => setAdding(true)} className="btn-primary"><Plus className="h-4 w-4" /> New entry</button>}
         </div>
       </div>

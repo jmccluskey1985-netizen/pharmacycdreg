@@ -7,7 +7,7 @@ import type { StaffRole } from '@/lib/roles';
 export interface ActiveStaff { id: string; full_name: string; role: StaffRole; psi_number: string | null }
 export interface Pharmacy {
   id: string; name: string; address: string; psi_premises_number: string | null;
-  subscription_status: string | null; trial_ends_at: string | null; current_period_end: string | null; cancel_at_period_end: boolean; halo_enabled?: boolean;
+  subscription_status: string | null; trial_ends_at: string | null; current_period_end: string | null; cancel_at_period_end: boolean; halo_enabled?: boolean; lock_minutes?: number; locum_default_days?: number;
 }
 
 interface Ctx {
@@ -47,15 +47,16 @@ export function StaffProvider({ children }: { children: React.ReactNode }) {
     return () => { off(); };
   }, [refresh]);
 
-  // Mirror the server's 15-minute idle lock so a walked-away screen locks itself.
+  // Mirror the server's idle lock (Settings → Security) so a walked-away screen locks itself.
+  const idleMs = (state.pharmacy?.lock_minutes ?? 15) * 60 * 1000;
   useEffect(() => {
     if (state.locked) return;
-    let timer = setTimeout(lock, 15 * 60 * 1000);
-    const bump = () => { clearTimeout(timer); timer = setTimeout(lock, 15 * 60 * 1000); };
+    let timer = setTimeout(lock, idleMs);
+    const bump = () => { clearTimeout(timer); timer = setTimeout(lock, idleMs); };
     const events = ['pointerdown', 'keydown'];
     events.forEach((e) => window.addEventListener(e, bump));
     return () => { clearTimeout(timer); events.forEach((e) => window.removeEventListener(e, bump)); };
-  }, [state.locked, lock]);
+  }, [state.locked, lock, idleMs]);
 
   return (
     <StaffContext.Provider value={{ ...state, refresh, lock, setStaff: (s) => setState((st) => ({ ...st, staff: s, locked: false })) }}>

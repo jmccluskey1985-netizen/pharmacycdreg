@@ -77,7 +77,16 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
   const type = d.entry_type;
   const setVal = (k: keyof EntryDraft) => (v: string) => setD((x) => ({ ...x, [k]: v }));
   const pickSupplier = (p: Suggestion) => setD((x) => ({ ...x, supplier_name: p.name, supplier_address: p.address ?? x.supplier_address }));
-  const pickPatient = (p: Suggestion) => setD((x) => ({ ...x, recipient_name: p.name, recipient_address: p.address ?? x.recipient_address }));
+  // Picking a known patient also fills their usual doctor (from their latest supply), if not set yet.
+  const pickPatient = (p: Suggestion) => setD((x) => {
+    const doc = p.usual_prescriber && x.entry_type === 'supply' && !x.prescriber_name ? p.usual_prescriber : null;
+    return {
+      ...x,
+      recipient_name: p.name,
+      recipient_address: p.address ?? x.recipient_address,
+      ...(doc ? { prescriber_name: doc.name, prescriber_address: doc.address ?? x.prescriber_address, authority_to_possess: x.authority_to_possess || `Prescription — ${doc.name}` } : {}),
+    };
+  });
   const pickWitness = (p: Suggestion) => setD((x) => ({ ...x, witness_name: p.name, witness_role: p.role ?? x.witness_role }));
   const pickPrescriber = (p: Suggestion) =>
     setD((x) => ({
@@ -163,7 +172,14 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
             <Field label="Prescriber address"><input className="input" value={d.prescriber_address ?? ''} onChange={set('prescriber_address')} /></Field>
             <Field label="Authority to be in possession" hint="Prescription / requisition reference"><input className="input" value={d.authority_to_possess ?? ''} onChange={set('authority_to_possess')} placeholder="e.g. Prescription — Dr A. Byrne" /></Field>
             <Field label="Rx / reference no."><input className="input" value={d.prescription_ref ?? ''} onChange={set('prescription_ref')} /></Field>
-            <Field label="Collected by"><input className="input" value={d.collected_by ?? ''} onChange={set('collected_by')} placeholder="Patient / representative" /></Field>
+            <Field label="Collected by">
+              <input className="input" value={d.collected_by ?? ''} onChange={set('collected_by')} placeholder="Patient / representative" />
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {['Patient', 'Representative', 'Delivered'].map((c) => (
+                  <button key={c} type="button" onClick={() => setD((x) => ({ ...x, collected_by: c }))} className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${d.collected_by === c ? 'border-brand bg-brand text-white' : 'border-border hover:border-brand'}`}>{c}</button>
+                ))}
+              </div>
+            </Field>
           </div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" className="h-5 w-5 accent-[#54BD50]" checked={!!d.collector_id_checked} onChange={(e) => setD({ ...d, collector_id_checked: e.target.checked })} />

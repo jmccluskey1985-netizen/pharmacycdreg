@@ -1,4 +1,5 @@
 'use client';
+import { useStaff } from '@/components/dashboard/staff-context';
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -52,6 +53,7 @@ export default function TeamPage() {
 }
 
 function StaffForm({ initial, onDone }: { initial: Partial<Member>; onDone: () => void }) {
+  const { pharmacy } = useStaff();
   const [f, setF] = useState({
     full_name: initial.full_name ?? '',
     role: (initial.role ?? 'pharmacist') as StaffRole,
@@ -93,7 +95,13 @@ function StaffForm({ initial, onDone }: { initial: Partial<Member>; onDone: () =
     <form onSubmit={save} className="space-y-4">
       <div><label className="label">Full name</label><input className="input" required value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></div>
       <div><label className="label">Role</label>
-        <select className="input" value={f.role} onChange={(e) => setF({ ...f, role: e.target.value as StaffRole })}>
+        <select className="input" value={f.role} onChange={(e) => {
+          const role = e.target.value as StaffRole;
+          // Locums get a default end date from Settings → Security.
+          const days = pharmacy?.locum_default_days ?? 14;
+          const until = role === 'locum_pharmacist' && !f.access_expires_at ? new Date(Date.now() + days * 864e5).toISOString().slice(0, 10) : f.access_expires_at;
+          setF({ ...f, role, access_expires_at: until });
+        }}>
           {Object.entries(ROLE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
       </div>

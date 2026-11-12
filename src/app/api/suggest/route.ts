@@ -14,6 +14,7 @@ export interface Suggestion {
   role?: string | null;
   source: 'list' | 'register' | 'gms' | 'preset';
   detail?: string;
+  usual_prescriber?: { name: string; address: string | null } | null; // patients: doctor on their latest supply
 }
 
 const KINDS = ['patient', 'prescriber', 'supplier', 'witness'] as const;
@@ -53,7 +54,7 @@ export async function GET(req: Request) {
       const cols = { patient: ['recipient_name', 'recipient_address'], prescriber: ['prescriber_name', 'prescriber_address'], supplier: ['supplier_name', 'supplier_address'], witness: ['witness_name', 'witness_role'] }[kind];
       const { data } = await db
         .from('cd_entries')
-        .select(`${cols[0]}, ${cols[1]}, recorded_at`)
+        .select(kind === 'patient' ? `${cols[0]}, ${cols[1]}, prescriber_name, prescriber_address, recorded_at` : `${cols[0]}, ${cols[1]}, recorded_at`)
         .in('register_id', ids)
         .ilike(cols[0], like)
         .order('recorded_at', { ascending: false })
@@ -63,7 +64,9 @@ export async function GET(req: Request) {
         const name = r[cols[0]];
         if (!name || seen.has(name.toLowerCase())) continue; // latest entry per name wins
         seen.add(name.toLowerCase());
-        out.push(kind === 'witness' ? { name, address: null, role: r[cols[1]], source: 'register' } : { name, address: r[cols[1]] ?? null, source: 'register' });
+        if (kind === 'witness') out.push({ name, address: null, role: r[cols[1]], source: 'register' });
+        else if (kind === 'patient') out.push({ name, address: r[cols[1]] ?? null, source: 'register', usual_prescriber: r.prescriber_name ? { name: r.prescriber_name, address: r.prescriber_address ?? null } : null, detail: r.prescriber_name ? `Last prescriber: ${r.prescriber_name}` : undefined });
+        else out.push({ name, address: r[cols[1]] ?? null, source: 'register' });
         if (out.length >= 10) break;
       }
     }

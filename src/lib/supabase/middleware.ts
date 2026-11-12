@@ -19,5 +19,11 @@ export async function updateSession(request: NextRequest) {
     },
   });
   const { data: { user } } = await supabase.auth.getUser();
-  return { response, user };
+  // Two-step sign-in: a login with an authenticator set up must complete the code step (aal2).
+  let needsCode = false;
+  if (user) {
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    needsCode = !!aal && aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2';
+  }
+  return { response, user, needsCode };
 }

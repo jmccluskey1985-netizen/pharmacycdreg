@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ShieldCheck } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { DEMO } from '@/lib/demo/flag';
 
@@ -21,6 +21,41 @@ export function LoginCard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Two-step sign-in: the verified authenticator to challenge, once the password is accepted.
+  const [factorId, setFactorId] = useState<string | null>(null);
+  const [code, setCode] = useState('');
+
+  const needCode = async () => {
+    const supabase = getSupabaseClient();
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (!aal || aal.nextLevel !== 'aal2' || aal.currentLevel === 'aal2') return false;
+    const { data } = await supabase.auth.mfa.listFactors();
+    const f = data?.totp?.find((x) => x.status === 'verified');
+    if (!f) return false;
+    setFactorId(f.id);
+    return true;
+  };
+
+  // Sent back here mid-sign-in (e.g. opened the dashboard before entering the code).
+  useEffect(() => {
+    if (!DEMO && params.get('code') === '1') needCode().catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function onCode(e: React.FormEvent) {
+    e.preventDefault();
+    if (!factorId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const { error: vErr } = await getSupabaseClient().auth.mfa.challengeAndVerify({ factorId, code: code.replace(/\s/g, '') });
+      if (vErr) { setError('That code didn’t work. Check the time on your phone and try the newest code.'); return; }
+      router.push(next);
+      router.refresh();
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,6 +77,7 @@ export function LoginCard() {
         setError(authError.message === 'Invalid login credentials' ? 'Email or password is incorrect' : authError.message);
         return;
       }
+      if (await needCode()) return;
       router.push(next);
       router.refresh();
     } catch {
@@ -61,6 +97,22 @@ export function LoginCard() {
       redirectTo: `${window.location.origin}/reset-password`,
     });
     setNotice('If that email has an account, a reset link is on its way.');
+  }
+
+  if (factorId) {
+    return (
+      <div className="card w-full max-w-md p-6 sm:p-8">
+        <ShieldCheck className="mb-3 h-8 w-8 text-brand" />
+        <h2 className="mb-1 text-xl font-bold">Two-step sign-in</h2>
+        <p className="mb-6 text-sm text-muted-foreground">Enter the 6-digit code from your authenticator app.</p>
+        <form onSubmit={onCode} className="space-y-4">
+          {error && <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
+          <input className="input text-center text-2xl font-semibold tracking-[0.4em]" inputMode="numeric" autoComplete="one-time-code" maxLength={7} autoFocus required value={code} onChange={(e) => setCode(e.target.value)} placeholder="000000" />
+          <button className="btn-primary w-full" disabled={loading || code.replace(/\s/g, '').length < 6}>{loading && <Loader2 className="h-4 w-4 animate-spin" />} Verify</button>
+          <button type="button" onClick={async () => { await getSupabaseClient().auth.signOut().catch(() => {}); setFactorId(null); setCode(''); }} className="btn-ghost w-full text-sm">Use a different account</button>
+        </form>
+      </div>
+    );
   }
 
   return (

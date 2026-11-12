@@ -11,6 +11,7 @@ export interface Suggestion {
   role?: string | null;
   source: 'list' | 'register' | 'gms' | 'preset';
   detail?: string;
+  usual_prescriber?: { name: string; address: string | null } | null;
 }
 
 type Kind = 'patient' | 'prescriber' | 'supplier' | 'witness';
@@ -102,6 +103,7 @@ export function QuickFillInput({ kind, value, onChange, onPick, required, placeh
                 <span className="min-w-0">
                   <span className="block font-medium">{s.name}{s.registration ? <span className="font-normal text-muted-foreground"> · IMC {s.registration}</span> : null}{s.gms_number ? <span className="font-normal text-muted-foreground"> · GMS {s.gms_number}</span> : null}</span>
                   {(s.address || s.role) && <span className="block truncate text-xs text-muted-foreground">{s.address || s.role}</span>}
+                  {s.usual_prescriber && <span className="block truncate text-xs text-brand">Usually {s.usual_prescriber.name}</span>}
                   {s.source === 'gms' && <span className="block text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-400">HSE GMS list</span>}
                 </span>
               </button>

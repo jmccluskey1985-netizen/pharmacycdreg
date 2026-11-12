@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAccount, requireStaff, errorResponse, HttpError } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase/server';
-import { haloEnabled } from '@/lib/features';
+import { getSettings } from '@/lib/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,8 +11,9 @@ export async function GET() {
     const account = await requireAccount();
     const db = createServiceClient();
     const { data: pharmacy } = await db.from('pharmacies').select('id, name, address, psi_premises_number, subscription_status, trial_ends_at, current_period_end, cancel_at_period_end').eq('id', account.pharmacyId).single();
-    const halo = await haloEnabled(db, account.pharmacyId);
-    if (pharmacy) (pharmacy as any).halo_enabled = halo;
+    const st = await getSettings(db, account.pharmacyId);
+    const halo = st.halo_enabled;
+    if (pharmacy) Object.assign(pharmacy, { halo_enabled: halo, lock_minutes: st.lock_minutes, locum_default_days: st.locum_default_days });
     const { count } = await db.from('staff').select('id', { count: 'exact', head: true }).eq('pharmacy_id', account.pharmacyId).eq('is_active', true).not('pin_hash', 'is', null);
     try {
       const { staff } = await requireStaff();

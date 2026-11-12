@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser, Settings, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { NewEntryButton } from './new-entry';
 import { BillingBanner } from './billing-banner';
 import { Logo } from '@/components/logo';
@@ -23,6 +23,7 @@ const NAV = [
   { href: '/dashboard/team', label: 'Team', icon: Users, show: can.manageStaff },
   { href: '/dashboard/integrations', label: 'Halo connection', icon: Plug, show: can.manageStaff, halo: true },
   { href: '/dashboard/billing', label: 'Billing', icon: CreditCard, show: can.manageStaff },
+  { href: '/dashboard/settings', label: 'Settings', icon: Settings, show: can.manageStaff },
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {

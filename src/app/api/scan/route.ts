@@ -5,6 +5,7 @@ import { extractFromDocument, ScanError } from '@/lib/scan-extract';
 import { balancesFor } from '@/lib/registers';
 import { liveRegisters, matchRegister } from '@/lib/match';
 import { decideQuantity } from '@/lib/quantity';
+import { getSettings } from '@/lib/settings';
 import { identifySupplier, looksLikeOwnPharmacy, checkReference } from '@/lib/invoice-rules';
 import { registerExemption } from '@/lib/cd-catalogue';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -53,8 +54,9 @@ export async function POST(req: Request) {
     // Invoice clean-up: right supplier (never our own ship-to block), invoice number check.
     const docFlags: string[] = [];
     if (isInvoice) {
-      const { data: ph } = await db.from('pharmacies').select('name, address').eq('id', account.pharmacyId).single();
-      if (ph && looksLikeOwnPharmacy(extraction.supplier_name, extraction.supplier_address, ph)) {
+      const st = await getSettings(db, account.pharmacyId);
+      const ph = { name: `${st.name} ${st.invoice_names ?? ''}`, address: st.address };
+      if (looksLikeOwnPharmacy(extraction.supplier_name, extraction.supplier_address, ph)) {
         extraction.supplier_name = null;
         extraction.supplier_address = null;
       }

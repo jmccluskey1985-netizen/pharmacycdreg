@@ -26,6 +26,9 @@ export async function GET(req: Request) {
     let query = db.from('cd_ledger').select('*').in('register_id', Array.from(regMap.keys())).order('transaction_date', { ascending: sort }).order('seq', { ascending: sort }).limit(500);
     if (from) query = query.gte('transaction_date', from);
     if (to) query = query.lte('transaction_date', to);
+    // Picked from the drug dropdown: one or more registers (e.g. every strength of OxyContin).
+    const ids = (url.searchParams.get('register_ids') || '').split(',').filter((x) => regMap.has(x));
+    if (ids.length) query = query.in('register_id', ids);
     if (type) query = query.eq('entry_type', type);
     if (q) {
       const like = `%${q.replace(/[%_,()]/g, ' ')}%`;

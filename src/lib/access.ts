@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceClient } from '@/lib/supabase/server';
-import { STAFF_COOKIE, decodeStaffSession, encodeStaffSession, staffCookieOptions } from '@/lib/staff-session';
+import { STAFF_COOKIE, decodeStaffSession, encodeStaffSession, cookieOptionsFor } from '@/lib/staff-session';
 import type { StaffRole } from '@/lib/roles';
 import { canWrite } from '@/lib/stripe';
 
@@ -30,6 +30,8 @@ export async function requireAccount(): Promise<Account> {
   const supabase = createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new HttpError(401, 'Not signed in', 'NO_ACCOUNT');
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (aal && aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') throw new HttpError(401, 'Enter the code from your authenticator app', 'NEEDS_CODE');
   const db = createServiceClient();
   const { data } = await db.from('pharmacy_accounts').select('pharmacy_id').eq('auth_user_id', user.id).maybeSingle();
   if (!data) throw new HttpError(403, 'This login is not linked to a pharmacy', 'NO_PHARMACY');
@@ -71,7 +73,8 @@ export async function requireStaff(allowed?: (r: StaffRole) => boolean, opts: { 
   }
   // Sliding idle timeout: any authenticated activity extends the lock timer.
   try {
-    cookies().set(STAFF_COOKIE, encodeStaffSession(session), staffCookieOptions);
+    const { exp: _exp, ...keep } = session;
+    cookies().set(STAFF_COOKIE, encodeStaffSession(keep), cookieOptionsFor(session.idle));
   } catch {
     /* read-only context */
   }

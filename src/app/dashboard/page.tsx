@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Plus, ScanLine, Users, Download, Camera, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Plus, ScanLine, Users, Download, Camera, Loader2, AlertTriangle, CheckCircle2, LayoutGrid, Table2, ListChecks, ChevronRight } from 'lucide-react';
+import { SetupFromList } from '@/components/dashboard/setup-from-list';
 import { api, ApiError } from '@/lib/api';
 import { can } from '@/lib/roles';
 import { useStaff } from '@/components/dashboard/staff-context';
@@ -12,6 +13,9 @@ import { canWrite } from '@/lib/stripe';
 interface Reg {
   id: string;
   balance: number;
+  low_stock?: boolean;
+  check_due?: boolean;
+  last_checked_at?: string | null;
   product: { drug_name: string; schedule: number; schedule_paragraph: string | null; class_name: string; form: string; strength: string; unit: string; is_stereoisomer_of: string | null; parent: { drug_name: string } | null };
 }
 
@@ -21,6 +25,10 @@ export default function RegistersPage() {
   const writable = canWrite(pharmacy?.subscription_status);
   const [regs, setRegs] = useState<Reg[] | null>(null);
   const [open, setOpen] = useState(false);
+  const [fromList, setFromList] = useState(false);
+  const [view, setView] = useState<'cards' | 'table'>('cards');
+  useEffect(() => { try { if (localStorage.getItem('cdreg-view') === 'table') setView('table'); } catch {} }, []);
+  const pickView = (v: 'cards' | 'table') => { setView(v); try { localStorage.setItem('cdreg-view', v); } catch {} };
 
   const load = useCallback(() => api('/api/registers').then((d) => setRegs(d.registers)), []);
   useEffect(() => { load(); }, [load]);
@@ -42,6 +50,11 @@ export default function RegistersPage() {
           <a href="/api/export" className="btn-secondary" title="Download every register as one file — keep a recent copy for business continuity"><Download className="h-4 w-4" /> <span className="hidden sm:inline">Export all</span></a>
           {staff && can.manageStaff(staff.role) && <Link href="/dashboard/team" className="btn-secondary lg:hidden"><Users className="h-4 w-4" /> Team</Link>}
           {writable && staff && can.scan(staff.role) && <Link href="/dashboard/scan" className="btn-brand"><ScanLine className="h-4 w-4" /> Scan<span className="hidden sm:inline"> invoice</span></Link>}
+          <div className="flex rounded-lg border border-border bg-card p-0.5" role="group" aria-label="View">
+            <button onClick={() => pickView('cards')} className={`rounded-md px-2.5 py-1.5 ${view === 'cards' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`} title="Book view" aria-pressed={view === 'cards'}><LayoutGrid className="h-4 w-4" /></button>
+            <button onClick={() => pickView('table')} className={`rounded-md px-2.5 py-1.5 ${view === 'table' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`} title="Table view" aria-pressed={view === 'table'}><Table2 className="h-4 w-4" /></button>
+          </div>
+          {writable && staff && can.openRegister(staff.role) && <button onClick={() => setFromList(true)} className="btn-secondary"><ListChecks className="h-4 w-4" /> <span className="hidden sm:inline">From CD list</span></button>}
           {writable && staff && can.openRegister(staff.role) && <button onClick={() => setOpen(true)} className="btn-primary"><Plus className="h-4 w-4" /> New<span className="hidden sm:inline"> register</span></button>}
         </div>
       </div>
@@ -58,7 +71,7 @@ export default function RegistersPage() {
         {Object.entries(groups).map(([group, items]) => (
           <section key={group}>
             <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">{group}</h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {view === 'table' ? <TypeTable items={items} /> : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {items.map((r) => (
                 <Link key={r.id} href={`/dashboard/register/${r.id}`} className="group relative overflow-hidden rounded-r-xl rounded-l-md bg-gradient-to-br from-brand-dark to-brand-deep p-4 pl-6 text-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-lg">
                   <span className="absolute inset-y-0 left-0 w-2.5 bg-black/25" aria-hidden />
@@ -67,17 +80,26 @@ export default function RegistersPage() {
                   <p className="mt-2 text-lg font-bold leading-tight">{r.product.drug_name}</p>
                   <p className="text-sm text-white/80">{r.product.strength} · {r.product.form}</p>
                   {r.product.parent && <p className="mt-1 text-xs text-white/70">Stereoisomer of {r.product.parent.drug_name}</p>}
+                  {(r.low_stock || r.check_due) && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {r.low_stock && <span className="rounded-full bg-amber-300 px-2 py-0.5 text-[11px] font-bold text-amber-950">Low stock</span>}
+                      {r.check_due && <span className="rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-bold text-brand-deep">Stock check due</span>}
+                    </div>
+                  )}
                   <div className="mt-4 flex items-end justify-between">
                     <span className="text-xs text-white/60">Balance</span>
                     <span className="text-2xl font-bold tabular-nums">{r.balance}<span className="ml-1 text-sm font-normal text-white/70">{r.product.unit}</span></span>
                   </div>
                 </Link>
               ))}
-            </div>
+            </div>}
           </section>
         ))}
       </div>
 
+      <Modal open={fromList} onClose={() => setFromList(false)} title="Set up registers from the CD list" wide>
+        <SetupFromList registers={regs ?? []} onDone={() => { setFromList(false); load(); }} />
+      </Modal>
       <Modal open={open} onClose={() => setOpen(false)} title="Open a new register">
         <NewRegisterForm registers={regs ?? []} onDone={() => { setOpen(false); load(); }} />
       </Modal>
@@ -216,6 +238,32 @@ function PaperResult({ d, chosen, onChoose }: { d: any; chosen: string; onChoose
       {d.existing && (
         <p className="text-xs">You already have a register for {d.existing.label} (balance {d.existing.balance}). <Link href={`/dashboard/register/${d.existing.id}`} className="font-semibold underline">Open it</Link> instead — a second live register for the same product isn’t allowed.</p>
       )}
+    </div>
+  );
+}
+
+/** One table per drug type: every strength/form with its balance. */
+function TypeTable({ items }: { items: Reg[] }) {
+  return (
+    <div className="overflow-x-auto rounded-xl border border-border bg-card">
+      <table className="w-full text-sm">
+        <thead className="bg-muted/60 text-left text-xs uppercase tracking-wide text-muted-foreground">
+          <tr><th className="px-4 py-2.5">Product</th><th className="px-4 py-2.5">Form</th><th className="px-4 py-2.5 text-right">Balance</th><th className="hidden px-4 py-2.5 sm:table-cell">Last stock check</th><th className="px-4 py-2.5" /></tr>
+        </thead>
+        <tbody className="divide-y divide-border">
+          {items.map((r) => (
+            <tr key={r.id} className="hover:bg-muted/40">
+              <td className="px-4 py-2.5 font-medium"><Link href={`/dashboard/register/${r.id}`} className="hover:underline">{r.product.drug_name} {r.product.strength}</Link>
+                {r.low_stock && <span className="ml-2 rounded-full bg-amber-200 px-2 py-0.5 text-[11px] font-bold text-amber-950">Low</span>}
+                {r.check_due && <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-bold text-secondary-foreground">Check due</span>}</td>
+              <td className="px-4 py-2.5 text-muted-foreground">{r.product.form}</td>
+              <td className="px-4 py-2.5 text-right font-semibold tabular-nums">{r.balance} <span className="font-normal text-muted-foreground">{r.product.unit}</span></td>
+              <td className="hidden px-4 py-2.5 text-muted-foreground sm:table-cell">{r.last_checked_at ? new Date(r.last_checked_at).toLocaleDateString('en-IE') : '—'}</td>
+              <td className="px-2 py-2.5 text-right"><Link href={`/dashboard/register/${r.id}`} className="inline-flex rounded-md p-1 text-muted-foreground hover:bg-muted" aria-label="Open register"><ChevronRight className="h-4 w-4" /></Link></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

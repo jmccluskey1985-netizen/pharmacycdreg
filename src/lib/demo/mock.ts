@@ -239,9 +239,39 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     if (from) out = out.filter((e) => e.transaction_date >= from);
     if (to) out = out.filter((e) => e.transaction_date <= to);
     if (type) out = out.filter((e) => e.entry_type === type);
+    const ids = (url.searchParams.get('register_ids') || '').split(',').filter(Boolean);
+    if (ids.length) out = out.filter((e) => ids.includes(e.register_id));
     if (q) out = out.filter((e) => [e.product.drug_name, e.product.class_name, e.supplier_name, e.supplier_address, e.recipient_name, e.recipient_address, e.prescriber_name, e.authority_to_possess, e.prescription_ref, e.witness_name].some((v) => v && String(v).toLowerCase().includes(q)));
     out.sort((a, b) => (asc ? 1 : -1) * (a.transaction_date.localeCompare(b.transaction_date) || a.seq - b.seq));
     return res({ results: out });
+  }
+  if (path === '/api/settings') {
+    if (needStaff()) return needStaff()!;
+    const X = ((S as any).settings ||= { name: 'Quayside Pharmacy (demo)', address: '1 Quay St, Ennis, Co. Clare', psi_premises_number: '1234', invoice_names: null, lock_minutes: 15, locum_default_days: 14, stock_check_frequency: 'monthly', halo_enabled: true, migrated: true });
+    if (method === 'PATCH') { const { low_stock, ...f } = body; Object.assign(X, f); for (const l of low_stock ?? []) ((S as any).lowStock ||= {})[l.register_id] = l.level; }
+    return res({ settings: X, registers: regList().map((r: Json) => ({ id: r.id, label: `${r.product.drug_name} ${r.product.strength} ${r.product.form}`, unit: r.product.unit, balance: r.balance, low_stock_level: (S as any).lowStock?.[r.id] ?? null })) });
+  }
+  if (path === '/api/stock-checks') {
+    if (needStaff()) return needStaff()!;
+    const list: Json[] = ((S as any).checks ||= []);
+    if (method === 'GET') return res({ checks: list.filter((c) => c.register_id === url.searchParams.get('register_id')).reverse() });
+    const bal = regList().find((r: Json) => r.id === body.register_id)?.balance ?? 0;
+    const diff = Number(body.counted) - bal;
+    if (diff !== 0 && !body.notes) return fail(400, 'The count doesn’t match the register — add a note on what you found');
+    const c = { id: uid(), register_id: body.register_id, counted: Number(body.counted), register_balance: bal, notes: body.notes, checked_by_name: st!.full_name, checked_at: new Date().toISOString() };
+    list.push(c);
+    return res({ check: c, balance: bal, diff });
+  }
+  if (path === '/api/audit/event') return res({ ok: true });
+  if (path === '/api/reports/patient') {
+    if (needStaff()) return needStaff()!;
+    const name = (url.searchParams.get('name') || '').toLowerCase();
+    const rows: Json[] = S.registers.flatMap((r) => ledger(r.id).map((e) => ({ ...e, product: productOf(r.id) }) as Json))
+      .filter((e) => ['supply', 'patient_return', 'patient_return_destruction'].includes(e.entry_type) && (e.recipient_name || '').toLowerCase() === name)
+      .sort((a, b) => a.transaction_date.localeCompare(b.transaction_date));
+    const totals: Record<string, Json> = {};
+    for (const r of rows) { const t = (totals[r.register_id] ||= { label: `${r.product.drug_name} ${r.product.strength} ${r.product.form}`, unit: r.product.unit, supplied: 0, returned: 0, count: 0 }); if (r.entry_type === 'supply') { t.supplied += Number(r.quantity); t.count++; } else if (r.entry_type === 'patient_return') t.returned += Number(r.quantity); }
+    return res({ rows, totals: Object.values(totals) });
   }
   if (path === '/api/audit') {
     if (needStaff()) return needStaff()!;
@@ -314,7 +344,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     for (const e of [...S.entries].sort((x, y) => y.recorded_at.localeCompare(x.recorded_at))) {
       const name = e[n]; if (!name || !name.toLowerCase().includes(q) || seen.has(name.toLowerCase()) || name === 'Balance brought forward') continue;
       seen.add(name.toLowerCase());
-      out.push(kind === 'witness' ? { name, address: null, role: e[a], source: 'register' } : { name, address: e[a] ?? null, source: 'register' });
+      out.push(kind === 'witness' ? { name, address: null, role: e[a], source: 'register' } : kind === 'patient' ? { name, address: e[a] ?? null, source: 'register', usual_prescriber: e.prescriber_name ? { name: e.prescriber_name, address: e.prescriber_address ?? null } : null } : { name, address: e[a] ?? null, source: 'register' });
     }
     if (kind === 'supplier') {
       const { KNOWN_SUPPLIERS } = await import('@/lib/invoice-rules');

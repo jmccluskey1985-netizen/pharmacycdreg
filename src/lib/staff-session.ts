@@ -17,6 +17,7 @@ export interface StaffSession {
   pharmacyId: string;
   authUserId: string;
   exp: number; // unix seconds
+  idle?: number; // this pharmacy's auto-lock, seconds (Settings → Security)
 }
 
 function secret() {
@@ -30,7 +31,8 @@ function sign(payload: string) {
 }
 
 export function encodeStaffSession(s: Omit<StaffSession, 'exp'>): string {
-  const body: StaffSession = { ...s, exp: Math.floor(Date.now() / 1000) + STAFF_IDLE_SECONDS };
+  const idle = s.idle && s.idle >= 120 && s.idle <= 7200 ? s.idle : STAFF_IDLE_SECONDS;
+  const body: StaffSession = { ...s, idle, exp: Math.floor(Date.now() / 1000) + idle };
   const payload = Buffer.from(JSON.stringify(body)).toString('base64url');
   return `${payload}.${sign(payload)}`;
 }
@@ -50,6 +52,8 @@ export function decodeStaffSession(token: string | undefined | null): StaffSessi
     return null;
   }
 }
+
+export const cookieOptionsFor = (idle?: number) => ({ ...staffCookieOptions, maxAge: idle && idle >= 120 && idle <= 7200 ? idle : STAFF_IDLE_SECONDS });
 
 export const staffCookieOptions = {
   httpOnly: true,

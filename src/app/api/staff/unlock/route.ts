@@ -1,10 +1,11 @@
+import { getSettings } from '@/lib/settings';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { requireAccount, errorResponse, audit } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase/server';
 import { verifyPin, PIN_PATTERN } from '@/lib/pin';
 import { checkRateLimit, clientKey } from '@/lib/rate-limit';
-import { STAFF_COOKIE, encodeStaffSession, staffCookieOptions } from '@/lib/staff-session';
+import { STAFF_COOKIE, encodeStaffSession, cookieOptionsFor } from '@/lib/staff-session';
 
 // Enter sign-in number (staff PIN) → becomes the active staff member.
 export async function POST(req: Request) {
@@ -41,10 +42,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Your temporary access has expired. Ask the supervising pharmacist.' }, { status: 403 });
     }
 
+    const { lock_minutes } = await getSettings(createServiceClient(), account.pharmacyId);
+    const idle = lock_minutes * 60;
     cookies().set(
       STAFF_COOKIE,
-      encodeStaffSession({ staffId: match.id, pharmacyId: account.pharmacyId, authUserId: account.authUserId }),
-      staffCookieOptions,
+      encodeStaffSession({ staffId: match.id, pharmacyId: account.pharmacyId, authUserId: account.authUserId, idle }),
+      cookieOptionsFor(idle),
     );
     await audit(account.pharmacyId, 'staff.signed_in', match, account.authUserId, { via: 'pin' });
 
