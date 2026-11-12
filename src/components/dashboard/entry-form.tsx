@@ -30,6 +30,7 @@ export interface EntryDraft {
   scan_id?: string | null;
   inbox_id?: string | null;
   patient_id?: string | null;
+  patient_dob?: string | null;
   corrects_entry_id?: string;
   correction_reason?: string;
 }

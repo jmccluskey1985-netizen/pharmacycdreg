@@ -46,13 +46,15 @@ export async function POST(req: Request) {
     }
     // Patient record: use the one picked (must be this pharmacy's), else find/create one by
     // name + address so every supplied patient builds up a record. Skipped before migration 0008.
+    const dob = (fields as any).patient_dob ?? null;
+    delete (fields as any).patient_dob; // not a register column
     if (fields.entry_type === 'supply' || fields.entry_type === 'patient_return') {
       const f = fields as any;
       if (f.patient_id) {
         const { data: pt } = await db.from('patients').select('id').eq('id', f.patient_id).eq('pharmacy_id', account.pharmacyId).maybeSingle();
         if (!pt) delete f.patient_id;
       } else {
-        const id = await findOrCreatePatient(db, account.pharmacyId, f.recipient_name, f.recipient_address ?? null, f.entry_type === 'supply' ? { name: f.prescriber_name ?? null, address: f.prescriber_address ?? null } : undefined).catch(() => null);
+        const id = await findOrCreatePatient(db, account.pharmacyId, f.recipient_name, f.recipient_address ?? null, f.entry_type === 'supply' ? { name: f.prescriber_name ?? null, address: f.prescriber_address ?? null } : undefined, dob).catch(() => null);
         if (id) f.patient_id = id; else delete f.patient_id;
       }
     }

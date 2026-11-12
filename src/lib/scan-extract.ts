@@ -29,6 +29,7 @@ const ItemSchema = z.object({
   duration_text: z.string().nullable(),
   is_credit: z.boolean(),
   line_text: z.string().nullable().optional(),
+  units_per_dose: z.number().nullable().optional(),
   handwritten_qty: z.string().nullable().optional(),
 });
 
@@ -42,6 +43,7 @@ export const ExtractionSchema = z.object({
   supplier_address: z.string().nullable(),
   patient_name: z.string().nullable(),
   patient_address: z.string().nullable(),
+  patient_dob: z.string().nullable().optional(),
   prescriber_name: z.string().nullable(),
   prescriber_address: z.string().nullable(),
   prescriber_registration: z.string().nullable(),
@@ -54,7 +56,7 @@ const nullableString = { type: ['string', 'null'] };
 const JSON_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['document_type', 'document_date', 'reference', 'reference_label', 'supplier_evidence', 'supplier_name', 'supplier_address', 'patient_name', 'patient_address', 'prescriber_name', 'prescriber_address', 'prescriber_registration', 'items', 'warnings'],
+  required: ['document_type', 'document_date', 'reference', 'reference_label', 'supplier_evidence', 'supplier_name', 'supplier_address', 'patient_name', 'patient_address', 'patient_dob', 'prescriber_name', 'prescriber_address', 'prescriber_registration', 'items', 'warnings'],
   properties: {
     document_type: { type: 'string', enum: ['prescription', 'invoice', 'other'] },
     document_date: { ...nullableString, description: 'Date on the document as YYYY-MM-DD' },
@@ -65,6 +67,7 @@ const JSON_SCHEMA = {
     supplier_address: nullableString,
     patient_name: { ...nullableString, description: 'Patient (prescriptions only)' },
     patient_address: nullableString,
+    patient_dob: { ...nullableString, description: 'Patient date of birth as YYYY-MM-DD (prescriptions), else null' },
     prescriber_name: nullableString,
     prescriber_address: nullableString,
     prescriber_registration: { ...nullableString, description: 'Medical Council / registration number if shown' },
@@ -73,7 +76,7 @@ const JSON_SCHEMA = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['drug_name', 'strength', 'form', 'quantity', 'quantity_unit', 'pack_description', 'is_controlled_drug', 'likely_schedule', 'confidence', 'notes', 'brand', 'packs', 'pack_size', 'quantity_figures', 'quantity_words', 'duration_text', 'is_credit', 'line_text', 'handwritten_qty'],
+        required: ['drug_name', 'strength', 'form', 'quantity', 'quantity_unit', 'pack_description', 'is_controlled_drug', 'likely_schedule', 'confidence', 'notes', 'brand', 'packs', 'pack_size', 'quantity_figures', 'quantity_words', 'duration_text', 'is_credit', 'line_text', 'handwritten_qty', 'units_per_dose'],
         properties: {
           drug_name: { type: 'string', description: 'Generic (INN) name, e.g. "Oxycodone hydrochloride". Put any brand in notes.' },
           strength: { type: 'string', description: 'e.g. "10mg", "10mg/5ml"' },
@@ -93,6 +96,7 @@ const JSON_SCHEMA = {
           duration_text: { type: ['string', 'null'], description: 'Duration if written (e.g. "5/7", "28 days"), else null. Never convert it into a quantity.' },
           is_credit: { type: 'boolean', description: 'True for a credit, return or negative line' },
           line_text: { type: ['string', 'null'], description: 'The whole printed line exactly as on the page, all columns left to right (e.g. "2  OXYNORM 5MG CAPSULES  56  6.52")' },
+          units_per_dose: { type: ['number', 'null'], description: 'Prescriptions where the total is in DOSES: tablets/capsules/ml per dose (e.g. "5mg" dose of a 5mg capsule = 1; 10mg dose of 5mg = 2), else null' },
           handwritten_qty: { type: ['string', 'null'], description: 'Any HANDWRITTEN number or mark written by the qty on this line (e.g. a ticked-in "5" or "0"), exactly as seen, else null' },
         },
       },
@@ -119,6 +123,8 @@ Invoices and delivery dockets:
 
 Prescriptions:
 - Controlled drug prescriptions must state the TOTAL quantity in both words and figures. Copy them exactly into quantity_words and quantity_figures. Put the total in quantity only if it is written; never work a quantity out from a dose and duration (put any duration in duration_text instead).
+- Hospital and discharge prescriptions often state the total as a number of DOSES (e.g. "total to dispense eighteen doses"). Copy it as written (quantity_words "eighteen doses"), set quantity_unit to "doses", and set units_per_dose from the dose and the product strength (5 mg dose of 5 mg capsules = 1). Use the handwritten CD section as the legal wording when present.
+- The prescriber is the person who signed (name and registration number near the signature), not the consultant in the header, unless they are the same.
 - Add a warning if words and figures disagree, either is missing, or the script looks altered.
 
 Rules for everything:

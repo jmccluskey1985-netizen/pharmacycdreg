@@ -49,6 +49,9 @@ export default function ScanPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [camera, setCamera] = useState<'off' | 'starting' | 'on' | 'unavailable'>('off');
   const [flash, setFlash] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [status, setStatus] = useState<{ configured: boolean; missing: string | null } | null>(null);
+  useEffect(() => { fetch('/api/scan/status').then((r) => r.json()).then((d) => d && typeof d.configured === 'boolean' && setStatus(d)).catch(() => {}); }, []);
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -94,7 +97,11 @@ export default function ScanPage() {
     if ('vibrate' in navigator) navigator.vibrate?.(30);
     const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b!), 'image/jpeg', 0.92));
     const file = await compress(blob, `page-${pages.length + 1}.jpg`);
-    setPages((p) => [...p, { file, url: URL.createObjectURL(file) }]);
+    setPages((p) => {
+      setToast(`Page ${p.length + 1} captured — tap Read, or snap the next page`);
+      return [...p, { file, url: URL.createObjectURL(file) }];
+    });
+    setTimeout(() => setToast(null), 3500);
   }
 
   async function addFiles(list: FileList | null) {
@@ -213,6 +220,11 @@ export default function ScanPage() {
         ))}
       </div>
 
+      {status && !status.configured && (
+        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
+          <b>Scanning isn’t switched on yet.</b> Photos can’t be read until the document reader is set up (Vercel → Settings → Environment Variables: <code>{status.missing}</code>, then redeploy). You can still enter it by hand from <b>New entry</b>.
+        </div>
+      )}
       {error && <p className="mb-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
 
       {/* Live viewfinder (phones) */}
@@ -235,6 +247,7 @@ export default function ScanPage() {
           </div>
           {camera === 'starting' && <div className="absolute inset-0 flex items-center justify-center text-white"><Loader2 className="h-8 w-8 animate-spin" /></div>}
           {flash && <div className="absolute inset-0 bg-white/80" />}
+          {toast && <div className="absolute inset-x-0 top-14 flex justify-center px-4"><p className="rounded-full bg-brand px-4 py-2 text-center text-sm font-semibold text-white shadow-lg">{toast}</p></div>}
 
           {/* Controls */}
           <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/80 to-transparent px-6 pb-5 pt-10">
@@ -242,14 +255,12 @@ export default function ScanPage() {
             <button onClick={snap} disabled={camera !== 'on' || pages.length >= 10} className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-white/20 transition active:scale-90 disabled:opacity-50" aria-label="Take photo">
               <span className="h-14 w-14 rounded-full bg-white" />
             </button>
-            <div className="relative h-12 w-12">
-              {pages.length > 0 ? (
-                <>
-                  <img src={pages[pages.length - 1].url} alt="" className="h-12 w-12 rounded-lg border-2 border-white object-cover" />
-                  <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">{pages.length}</span>
-                </>
-              ) : <span className="block h-12 w-12" />}
-            </div>
+            {pages.length > 0 ? (
+              <button onClick={read} className="relative flex h-14 items-center gap-1.5 rounded-full bg-brand px-4 text-sm font-bold text-white shadow-lg" aria-label="Read the document">
+                <Sparkles className="h-5 w-5" /> Read
+                <span className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs font-bold text-brand">{pages.length}</span>
+              </button>
+            ) : <span className="block h-12 w-12" />}
           </div>
           <style>{`@keyframes sweep{0%,100%{top:4%}50%{top:94%}}`}</style>
         </div>

@@ -109,6 +109,7 @@ export async function POST(req: Request) {
           supplier_address: extraction.supplier_address,
           recipient_name: extraction.patient_name,
           recipient_address: extraction.patient_address,
+          patient_dob: extraction.patient_dob ?? null,
           prescriber_name: extraction.prescriber_name,
           prescriber_address: extraction.prescriber_address,
           authority_to_possess: !isInvoice && extraction.prescriber_name ? `Prescription — ${extraction.prescriber_name}${extraction.prescriber_registration ? ` (Reg ${extraction.prescriber_registration})` : ''}` : null,

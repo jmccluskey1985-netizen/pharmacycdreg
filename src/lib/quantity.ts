@@ -7,7 +7,7 @@
  */
 import { packSizeFromText } from './invoice-rules';
 
-export type QtySource = 'packs_x_size' | 'invoice_quantity' | 'words_and_figures' | 'figures_only' | 'none';
+export type QtySource = 'packs_x_size' | 'invoice_quantity' | 'words_and_figures' | 'figures_only' | 'words_only' | 'none';
 
 export interface QtyDecision {
   quantity: number | null;
@@ -57,6 +57,7 @@ export interface RawItem {
   confidence: 'high' | 'medium' | 'low';
   line_text?: string | null;
   handwritten_qty?: string | null;
+  units_per_dose?: number | null;
 }
 
 export function decideQuantity(item: RawItem, kind: 'invoice' | 'prescription' | 'other'): QtyDecision {
@@ -94,16 +95,35 @@ export function decideQuantity(item: RawItem, kind: 'invoice' | 'prescription' |
 
   if (kind === 'prescription') {
     const fig = figure(item.quantity_figures);
-    const words = wordsToNumber(item.quantity_words);
+    const words = wordsToNumber((item.quantity_words || '').replace(/\bdoses?\b/gi, ' '));
+    let total: number | null = null;
+    let source: QtySource = 'none';
+    let label = '';
     if (fig != null && words != null) {
       if (fig !== words) return { quantity: null, source: 'none', label: `Figures ${fig} ≠ words ${words}`, flags: [...flags, 'Words and figures disagree — the prescription is not valid for supply as written'], blocking: true };
-      return { quantity: fig, source: 'words_and_figures', label: `${fig} (words and figures agree)`, flags, blocking: false };
+      total = fig; source = 'words_and_figures'; label = `${fig} (words and figures agree)`;
+    } else if (fig != null) {
+      total = fig; source = 'figures_only'; label = `${fig} (figures only)`;
+      flags.push('Total not written in words — a CD prescription needs words and figures');
+    } else if (words != null) {
+      total = words; source = 'words_only'; label = `${words} (“${item.quantity_words}”, words only)`;
+      flags.push('Total written in words only, no figures — check it meets CD prescription requirements');
     }
-    if (fig != null) {
-      return { quantity: fig, source: 'figures_only', label: `${fig} (figures only)`, flags: [...flags, 'Total not written in words — a CD prescription needs words and figures'], blocking: false };
+    if (total == null) {
+      if (item.duration_text) flags.push(`Only a duration (“${item.duration_text}”) — total quantity must be written; not calculated`);
+      return { quantity: null, source: 'none', label: 'No total quantity written', flags: [...flags, 'No total in words and figures — check the prescription before supplying'], blocking: true };
     }
-    if (item.duration_text) flags.push(`Only a duration (“${item.duration_text}”) — total quantity must be written; not calculated`);
-    return { quantity: null, source: 'none', label: 'No total quantity written', flags: [...flags, 'No total in words and figures — check the prescription before supplying'], blocking: true };
+    // Total given as a number of doses: convert only with a stated units-per-dose.
+    const inDoses = /dose/i.test(`${item.quantity_unit} ${item.quantity_words ?? ''} ${item.quantity_figures ?? ''}`);
+    if (inDoses) {
+      if (item.units_per_dose && item.units_per_dose > 0) {
+        const q = total * item.units_per_dose;
+        flags.push(`Total written as ${total} doses — ${item.units_per_dose} per dose; check against the dose and strength`);
+        return { quantity: q, source, label: `${total} doses × ${item.units_per_dose} = ${q}`, flags, blocking: false };
+      }
+      return { quantity: null, source: 'none', label: `${total} doses`, flags: [...flags, 'Total is in doses — enter the number of tablets/capsules/ml'], blocking: true };
+    }
+    return { quantity: total, source, label, flags, blocking: false };
   }
 
   return { quantity: item.quantity || null, source: item.quantity ? 'invoice_quantity' : 'none', label: `${item.quantity ?? '?'} ${item.quantity_unit}`, flags: [...flags, 'Not recognised as an invoice or prescription'], blocking: true };

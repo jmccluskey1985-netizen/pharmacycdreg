@@ -43,14 +43,14 @@ export async function searchPatients(db: SupabaseClient, pharmacyId: string, q: 
 }
 
 /** Find this patient by name+address, or create them (used when a supply is saved without picking a record). */
-export async function findOrCreatePatient(db: SupabaseClient, pharmacyId: string, name: string, address: string | null, gp?: { name: string | null; address: string | null }): Promise<string | null> {
+export async function findOrCreatePatient(db: SupabaseClient, pharmacyId: string, name: string, address: string | null, gp?: { name: string | null; address: string | null }, dob?: string | null): Promise<string | null> {
   const { first_name, surname } = splitName(name);
   let q = db.from('patients').select('id').eq('pharmacy_id', pharmacyId).eq('is_active', true).ilike('first_name', esc(first_name)).ilike('surname', esc(surname)).limit(1);
   if (address) q = q.ilike('address', esc(address));
   const { data, error } = await q;
   if (error) return null; // table not created yet
   if (data?.length) return data[0].id;
-  const ins = await db.from('patients').insert({ pharmacy_id: pharmacyId, first_name, surname, address, gp_name: gp?.name ?? null, gp_address: gp?.address ?? null }).select('id').single();
+  const ins = await db.from('patients').insert({ pharmacy_id: pharmacyId, first_name, surname, address, date_of_birth: dob ?? null, gp_name: gp?.name ?? null, gp_address: gp?.address ?? null }).select('id').single();
   return ins.data?.id ?? null;
 }
 
