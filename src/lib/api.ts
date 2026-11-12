@@ -25,7 +25,9 @@ export async function api<T = any>(path: string, init?: RequestInit & { json?: u
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     if (res.status === 423) listeners.forEach((l) => l());
-    if (res.status === 401) window.location.href = '/';
+    // Only a lost pharmacy login goes back to the sign-in page (never a wrong PIN or other check).
+    if (res.status === 401 && data.code === 'NO_ACCOUNT') window.location.href = '/';
+    if (res.status === 401 && data.code === 'NEEDS_CODE') window.location.href = '/?code=1';
     throw new ApiError(res.status, data.error || 'Something went wrong', data.code, data.issues);
   }
   return data as T;

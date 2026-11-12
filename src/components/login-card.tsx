@@ -36,6 +36,9 @@ export function LoginCard() {
     return true;
   };
 
+  // Remember the pharmacy email on this device (the browser's password manager keeps the password).
+  useEffect(() => { try { const e = localStorage.getItem('cdreg-email'); if (e) setEmail(e); } catch {} }, []);
+
   // Sent back here mid-sign-in (e.g. opened the dashboard before entering the code).
   useEffect(() => {
     if (!DEMO && params.get('code') === '1') needCode().catch(() => {});
@@ -77,6 +80,7 @@ export function LoginCard() {
         setError(authError.message === 'Invalid login credentials' ? 'Email or password is incorrect' : authError.message);
         return;
       }
+      try { localStorage.setItem('cdreg-email', normalizeEmail(email)); } catch {}
       if (await needCode()) return;
       router.push(next);
       router.refresh();
@@ -126,12 +130,12 @@ export function LoginCard() {
         {notice && <div className="rounded-lg border border-brand/40 bg-brand/10 p-3 text-sm">{notice}</div>}
         <div>
           <label htmlFor="email" className="label">Email</label>
-          <input id="email" type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@pharmacy.ie" autoComplete="email" inputMode="email" required />
+          <input id="email" name="email" type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@pharmacy.ie" autoComplete="username" inputMode="email" required />
         </div>
         <div>
           <label htmlFor="password" className="label">Password</label>
           <div className="relative">
-            <input id="password" type={show ? 'text' : 'password'} className="input pr-12" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
+            <input id="password" name="password" type={show ? 'text' : 'password'} className="input pr-12" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
             <button type="button" onClick={() => setShow((s) => !s)} className="absolute right-1 top-1/2 -translate-y-1/2 p-2.5 text-muted-foreground hover:text-foreground" aria-label={show ? 'Hide password' : 'Show password'}>
               {show ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>

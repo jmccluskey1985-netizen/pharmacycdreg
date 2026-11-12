@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 
     if (!match) {
       await audit(account.pharmacyId, 'staff.pin_failed', null, account.authUserId);
-      return NextResponse.json({ error: 'PIN not recognised for this pharmacy' }, { status: 401 });
+      return NextResponse.json({ error: 'PIN not recognised — try again', code: 'BAD_PIN' }, { status: 400 }); // not 401: a wrong PIN must not sign the pharmacy out
     }
     if (match.access_expires_at && new Date(match.access_expires_at) < new Date()) {
       return NextResponse.json({ error: 'Your temporary access has expired. Ask the supervising pharmacist.' }, { status: 403 });
