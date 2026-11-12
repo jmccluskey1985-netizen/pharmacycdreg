@@ -6,6 +6,8 @@ import { api, ApiError } from '@/lib/api';
 
 interface Status { needs_migration: boolean; has_key: boolean; hint: string | null; models: string[]; updated_at: string | null; environment_fallback: boolean }
 interface Model { id: string; name: string; prompt_price: number }
+// Halo's chain (docs/RX_READER_SPEC.md §1): won Halo's test on real Irish prescriptions; all have zero-data providers.
+const HALO_MODELS = ['google/gemini-3.8-flash', 'qwen/qwen3-vl-235b-a22b-instruct', 'qwen/qwen2.5-vl-72b-instruct'];
 
 /** OpenRouter key + models for reading invoices, prescriptions and paper register pages. */
 export function ReaderSettings() {
@@ -24,8 +26,9 @@ export function ReaderSettings() {
     finally { setTesting(false); }
   }
 
+  const [zdrOnly, setZdrOnly] = useState(false);
   const load = () => api('/api/settings/reader').then((d: Status) => { setSt(d); setModels(d.models); });
-  useEffect(() => { load(); api('/api/settings/reader/models').then((d) => setAll(d.models ?? [])).catch(() => setAll([])); }, []);
+  useEffect(() => { load(); api('/api/settings/reader/models').then((d) => { setAll(d.models ?? []); setZdrOnly(!!d.zdr_filtered); }).catch(() => setAll([])); }, []);
 
   const matches = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -73,7 +76,10 @@ export function ReaderSettings() {
         </div>
 
         <div>
-          <label className="label">Models <span className="font-normal text-muted-foreground">(first is used; the others are back-ups)</span></label>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <label className="label mb-0">Models <span className="font-normal text-muted-foreground">(first is used; the others are back-ups)</span></label>
+            <button type="button" onClick={() => setModels(HALO_MODELS)} className="btn-secondary py-1.5 text-sm">Use Halo’s models</button>
+          </div>
           {models.length > 0 && (
             <ol className="mb-2 flex flex-wrap gap-1.5">
               {models.map((m, i) => (
@@ -99,7 +105,7 @@ export function ReaderSettings() {
               </ul>
             </div>
           )}
-          <p className="mt-1 text-xs text-muted-foreground">Tip: use the same model Halo uses for prescriptions.</p>
+          <p className="mt-1 text-xs text-muted-foreground">{zdrOnly ? 'Only models with a zero-data-retention provider are listed. ' : ''}Tip: “Use Halo’s models” sets Gemini 3.8 Flash with two Qwen back-ups — then Save and Test.</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">

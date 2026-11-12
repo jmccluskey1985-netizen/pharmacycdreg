@@ -221,12 +221,18 @@ async function extractViaOpenRouter<T>(files: DocFile[], cfg: ReadConfig<T>): Pr
   const loose = { response_format: { type: 'json_object' }, system: `${cfg.system}\n\nReply with ONLY one JSON object (no prose, no code fences) that matches this JSON Schema exactly, using null where something isn't on the document:\n${JSON.stringify(cfg.schema)}` };
 
   let last: OpenRouterFailure | null = null;
+  let chain = [...models];
   for (const mode of [strict, loose]) {
-    const r = await callOpenRouter(apiKey!, models, mode.system, userContent, mode.response_format);
+    let r = await callOpenRouter(apiKey!, chain, mode.system, userContent, mode.response_format);
+    // A model with no zero-data provider: drop it and go on with the back-ups (never relax zero-data).
+    while (!r.ok && /no endpoints|data policy|zero data retention/i.test(r.message) && chain.length > 1) {
+      chain = chain.slice(1);
+      r = await callOpenRouter(apiKey!, chain, mode.system, userContent, mode.response_format);
+    }
     if (r.ok) {
       const choice = r.data.choices?.[0];
       if (choice?.finish_reason === 'length') throw new ScanError('The document was too long to read in one go. Try one page at a time.');
-      return { result: cfg.parse(choice?.message?.content), model: `openrouter:${r.data.model ?? models[0]}${mode === loose ? ' (json mode)' : ''}` };
+      return { result: cfg.parse(choice?.message?.content), model: `openrouter:${r.data.model ?? chain[0]}${mode === loose ? ' (json mode)' : ''}` };
     }
     last = r;
     if (r.status === 402) throw new ScanError('The document reader account is out of credit. Top up OpenRouter, or enter the entry manually.');
