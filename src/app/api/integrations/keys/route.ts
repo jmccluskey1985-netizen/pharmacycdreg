@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireStaff, errorResponse, audit } from '@/lib/access';
+import { requireStaff, errorResponse, audit, HttpError } from '@/lib/access';
+import { haloEnabled } from '@/lib/features';
 import { createServiceClient } from '@/lib/supabase/server';
 import { newIntegrationKey, hashKey } from '@/lib/integration-keys';
 import { can } from '@/lib/roles';
@@ -10,6 +11,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const { account } = await requireStaff(can.manageStaff);
+    if (!(await haloEnabled(createServiceClient(), account.pharmacyId))) throw new HttpError(404, 'Not available');
     const db = createServiceClient();
     const { data } = await db.from('integration_keys').select('id, name, key_prefix, auto_post, created_at, last_used_at, revoked_at').eq('pharmacy_id', account.pharmacyId).order('created_at', { ascending: false });
     return NextResponse.json({ keys: data ?? [] });
@@ -25,6 +27,7 @@ const Update = z.object({ id: z.string().uuid(), auto_post: z.boolean().optional
 export async function POST(req: Request) {
   try {
     const { account, staff } = await requireStaff(can.manageStaff);
+    if (!(await haloEnabled(createServiceClient(), account.pharmacyId))) throw new HttpError(404, 'Not available');
     const body = await req.json().catch(() => ({}));
     const db = createServiceClient();
 

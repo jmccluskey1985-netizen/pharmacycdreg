@@ -17,7 +17,6 @@ const FEATURES = [
 const PREVIEWS = [
   { src: '/previews/register-book.webp', alt: 'A register page laid out like the paper Controlled Drugs Register, with a correction struck through and footnoted', title: 'The register, page by page', text: 'Same columns as the paper register: date, name and address, authority, amount obtained or supplied, running balance, pharmacist. Corrections are struck through and footnoted — never hidden.' },
   { src: '/previews/invoice-scan.webp', alt: 'Invoice scan result: 2 packs × 56 = 112 capsules matched to the oxycodone register', title: 'Invoices read for you', text: 'Photograph the wholesaler invoice. Controlled drug lines are picked out, packs × pack size worked out, matched to the right register — and Schedule 5 lines like Oramorph 10mg/5ml left out. You check and confirm each line.' },
-  { src: '/previews/halo-to-confirm.webp', alt: 'Dispensings sent from the dispensing system waiting for a pharmacist to sign', title: 'Supplies from your dispensing system', text: 'Controlled drug supplies can arrive straight from your dispensing system, ready to check and sign with your PIN. Anything unusual is flagged, never guessed.' },
 ];
 
 function WaitlistForm() {

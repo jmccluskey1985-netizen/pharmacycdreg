@@ -11,7 +11,7 @@ function withHeaders(response: NextResponse) {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) return withHeaders(NextResponse.next());
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_DEMO_MODE === '1') return withHeaders(NextResponse.next());
 
   try {
     const { response, user } = await updateSession(request);

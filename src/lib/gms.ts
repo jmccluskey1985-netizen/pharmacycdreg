@@ -23,3 +23,17 @@ export function searchGms(q: string, limit = 8): GmsGp[] {
   hits.sort((a, b) => Number(!words.every((w) => b.name.includes(w))) - Number(!words.every((w) => a.name.includes(w))));
   return hits.slice(0, limit).map((h) => h.x);
 }
+
+/** Browse/search the whole list for the Doctors page: A–Z by surname, paged. */
+export function browseGms(q: string, offset = 0, limit = 50): { total: number; items: GmsGp[] } {
+  const words = norm(q.replace(/^dr\.?\s*/i, '')).split(' ').filter(Boolean);
+  let hits: GmsGp[];
+  if (!words.length) hits = SORTED;
+  else if (/^\d{3,}$/.test(words[0])) hits = SORTED.filter((x) => x.g.startsWith(words[0]));
+  else hits = INDEX.filter((i) => words.every((w) => i.key.includes(w))).map((i) => i.x).sort(bySurname);
+  return { total: hits.length, items: hits.slice(offset, offset + limit) };
+}
+const surname = (n: string) => norm(n.replace(/^dr\.?\s*/i, '')).split(' ').slice(-1)[0] ?? '';
+const bySurname = (a: GmsGp, b: GmsGp) => surname(a.n).localeCompare(surname(b.n)) || a.n.localeCompare(b.n);
+const SORTED = [...LIST].sort(bySurname);
+export const GMS_COUNT = LIST.length;

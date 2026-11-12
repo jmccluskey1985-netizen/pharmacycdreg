@@ -3,6 +3,7 @@ import { requireStaff, errorResponse } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase/server';
 import { liveRegisters, matchRegister } from '@/lib/match';
 import { balancesFor } from '@/lib/registers';
+import { haloEnabled } from '@/lib/features';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +12,7 @@ export async function GET() {
   try {
     const { account } = await requireStaff();
     const db = createServiceClient();
+    if (!(await haloEnabled(db, account.pharmacyId))) return NextResponse.json({ items: [], registers: [] });
     const { data } = await db.from('pmr_inbox').select('*').eq('pharmacy_id', account.pharmacyId).eq('status', 'pending').order('received_at', { ascending: true }).limit(200);
     const regs = await liveRegisters(account.pharmacyId);
     const balances = await balancesFor(regs.map((r) => r.id));

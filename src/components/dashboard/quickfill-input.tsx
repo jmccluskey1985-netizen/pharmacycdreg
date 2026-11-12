@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { BookUser, History, Stethoscope } from 'lucide-react';
+import { BookUser, History, Stethoscope, Truck } from 'lucide-react';
 
 export interface Suggestion {
   name: string;
@@ -9,7 +9,7 @@ export interface Suggestion {
   registration?: string | null;
   gms_number?: string | null;
   role?: string | null;
-  source: 'list' | 'register' | 'gms';
+  source: 'list' | 'register' | 'gms' | 'preset';
   detail?: string;
 }
 
@@ -35,18 +35,21 @@ export function QuickFillInput({ kind, value, onChange, onPick, required, placeh
   const typed = useRef(false);
   const box = useRef<HTMLDivElement>(null);
 
+  const load = async (q: string) => {
+    try {
+      const res = await fetch(`/api/suggest?kind=${kind}&q=${encodeURIComponent(q)}`, { cache: 'no-store' });
+      const d = await res.json();
+      setItems(d.suggestions ?? []);
+      setOpen(true);
+      setActive(0);
+    } catch { setItems([]); }
+  };
+
   useEffect(() => {
-    if (!typed.current || value.trim().length < 2) { setItems([]); return; }
-    const t = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/suggest?kind=${kind}&q=${encodeURIComponent(value.trim())}`, { cache: 'no-store' });
-        const d = await res.json();
-        setItems(d.suggestions ?? []);
-        setOpen(true);
-        setActive(0);
-      } catch { setItems([]); }
-    }, 180);
+    if (!typed.current || value.trim().length < 2) { if (typed.current) setItems([]); return; }
+    const t = setTimeout(() => load(value.trim()), 180);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, kind]);
 
   useEffect(() => {
@@ -70,7 +73,11 @@ export function QuickFillInput({ kind, value, onChange, onPick, required, placeh
         aria-expanded={open && items.length > 0}
         aria-autocomplete="list"
         onChange={(e) => { typed.current = true; onChange(e.target.value); }}
-        onFocus={() => items.length && setOpen(true)}
+        onFocus={() => {
+          // Suppliers: show your usual ones (and the main Irish wholesalers) straight away.
+          if (kind === 'supplier' && !value.trim()) load('');
+          else if (items.length) setOpen(true);
+        }}
         onKeyDown={(e) => {
           if (!open || !items.length) return;
           if (e.key === 'ArrowDown') { e.preventDefault(); setActive((a) => Math.min(a + 1, items.length - 1)); }
@@ -91,7 +98,7 @@ export function QuickFillInput({ kind, value, onChange, onPick, required, placeh
                 title={s.detail}
                 className={`flex w-full items-start gap-2 px-3 py-2 text-left text-sm ${i === active ? 'bg-secondary' : ''}`}
               >
-                {s.source === 'list' ? <BookUser className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand" /> : s.source === 'gms' ? <Stethoscope className="mt-0.5 h-4 w-4 flex-shrink-0 text-sky-600" /> : <History className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />}
+                {s.source === 'list' ? <BookUser className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand" /> : s.source === 'gms' ? <Stethoscope className="mt-0.5 h-4 w-4 flex-shrink-0 text-sky-600" /> : s.source === 'preset' ? <Truck className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand" /> : <History className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />}
                 <span className="min-w-0">
                   <span className="block font-medium">{s.name}{s.registration ? <span className="font-normal text-muted-foreground"> · IMC {s.registration}</span> : null}{s.gms_number ? <span className="font-normal text-muted-foreground"> · GMS {s.gms_number}</span> : null}</span>
                   {(s.address || s.role) && <span className="block truncate text-xs text-muted-foreground">{s.address || s.role}</span>}

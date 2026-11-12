@@ -1,8 +1,10 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser } from 'lucide-react';
+import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { NewEntryButton } from './new-entry';
 import { BillingBanner } from './billing-banner';
 import { Logo } from '@/components/logo';
 import { ROLE_LABELS, can } from '@/lib/roles';
@@ -13,32 +15,38 @@ import { FirstRun } from './first-run';
 const NAV = [
   { href: '/dashboard', label: 'Registers', icon: BookOpen, show: () => true },
   { href: '/dashboard/scan', label: 'Scan', icon: ScanLine, show: can.scan, primary: true },
-  { href: '/dashboard/inbox', label: 'To confirm', icon: Inbox, show: can.record, badge: true },
+  { href: '/dashboard/inbox', label: 'To confirm', icon: Inbox, show: can.record, badge: true, halo: true },
   { href: '/dashboard/search', label: 'Search', icon: Search, show: () => true },
   { href: '/dashboard/destructions', label: 'Destructions', icon: Flame, show: () => true },
   { href: '/dashboard/audit', label: 'Audit trail', icon: History, show: can.viewAudit },
   { href: '/dashboard/contacts', label: 'Doctors & suppliers', icon: BookUser, show: can.record },
   { href: '/dashboard/team', label: 'Team', icon: Users, show: can.manageStaff },
-  { href: '/dashboard/integrations', label: 'Halo connection', icon: Plug, show: can.manageStaff },
+  { href: '/dashboard/integrations', label: 'Halo connection', icon: Plug, show: can.manageStaff, halo: true },
   { href: '/dashboard/billing', label: 'Billing', icon: CreditCard, show: can.manageStaff },
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const { loading, staff, locked, hasPins, pharmacy, lock, inboxCount } = useStaff();
   const path = usePathname();
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => { try { setHidden(localStorage.getItem('cdreg-sidebar') === 'hidden'); } catch {} }, []);
+  const toggle = () => setHidden((h) => { try { localStorage.setItem('cdreg-sidebar', h ? 'shown' : 'hidden'); } catch {} return !h; });
 
   if (loading) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading…</div>;
   if (!hasPins) return <FirstRun />;
   if (locked || !staff) return <PinPad />;
 
-  const items = NAV.filter((n) => n.show(staff.role));
+  const items = NAV.filter((n) => n.show(staff.role) && (!(n as any).halo || pharmacy?.halo_enabled));
   const active = (href: string) => (href === '/dashboard' ? path === href || path.startsWith('/dashboard/register') : path.startsWith(href));
 
   return (
-    <div className="min-h-screen pb-24 lg:pb-0 lg:pl-64">
-      {/* Desktop sidebar */}
-      <aside className="no-print fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-border bg-card lg:flex">
-        <div className="px-5 py-5"><Logo size="sm" /></div>
+    <div className={`min-h-screen pb-24 transition-[padding] lg:pb-0 ${hidden ? '' : 'lg:pl-64'}`}>
+      {/* Desktop sidebar (can be hidden; remembered on this device) */}
+      <aside className={`no-print fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-border bg-card ${hidden ? '' : 'lg:flex'}`}>
+        <div className="flex items-center justify-between px-5 py-5">
+          <Logo size="sm" />
+          <button onClick={toggle} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Hide sidebar" title="Hide sidebar"><PanelLeftClose className="h-5 w-5" /></button>
+        </div>
         <nav className="flex-1 space-y-1 px-3">
           {items.map((n) => (
             <Link key={n.href} href={n.href} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${active(n.href) ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
@@ -63,7 +71,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </button>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:py-8">
+      <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:py-6">
+        {/* Top-left: show sidebar + New entry */}
+        <div className="no-print mb-4 flex items-center gap-2">
+          {hidden && <button onClick={toggle} className="hidden rounded-lg border border-border bg-card p-2 text-muted-foreground hover:text-foreground lg:inline-flex" aria-label="Show sidebar" title="Show sidebar"><PanelLeftOpen className="h-5 w-5" /></button>}
+          {can.record(staff.role) && <NewEntryButton />}
+        </div>
         <BillingBanner />
         {children}
       </main>

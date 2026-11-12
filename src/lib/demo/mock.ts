@@ -67,7 +67,7 @@ function seedEntries() {
 
 function seed() {
   return {
-    pharmacy: { id: 'demo', name: 'Quayside Pharmacy (demo)', address: '1 Quay St, Ennis, Co. Clare', psi_premises_number: '1234', subscription_status: 'trialing', trial_ends_at: new Date(Date.now() + 21 * 864e5).toISOString(), current_period_end: new Date(Date.now() + 21 * 864e5).toISOString(), cancel_at_period_end: false },
+    pharmacy: { id: 'demo', name: 'Quayside Pharmacy (demo)', address: '1 Quay St, Ennis, Co. Clare', psi_premises_number: '1234', subscription_status: 'trialing', trial_ends_at: new Date(Date.now() + 21 * 864e5).toISOString(), current_period_end: new Date(Date.now() + 21 * 864e5).toISOString(), cancel_at_period_end: false, halo_enabled: true },
     staff: STAFF,
     products: PRODUCTS,
     registers: PRODUCTS.map((p, i) => ({ id: `r${i + 1}`, product_id: p.id, opened_at: daysAgo(20), closed_at: null })),
@@ -305,7 +305,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     if (needStaff()) return needStaff()!;
     const kind = url.searchParams.get('kind') || '';
     const q = (url.searchParams.get('q') || '').toLowerCase();
-    if (q.length < 2) return res({ suggestions: [] });
+    if (q.length < 2 && !(kind === 'supplier' && q === '')) return res({ suggestions: [] });
     const out: Json[] = [];
     if (kind !== 'patient') for (const c of (S as any).contacts) if (c.kind === kind && c.is_active !== false && [c.name, c.gms_number, c.registration].some((v: string) => v && v.toLowerCase().includes(q))) out.push({ ...c, source: 'list' });
     const cols: Record<string, [string, string]> = { patient: ['recipient_name', 'recipient_address'], prescriber: ['prescriber_name', 'prescriber_address'], supplier: ['supplier_name', 'supplier_address'], witness: ['witness_name', 'witness_role'] };
@@ -316,11 +316,21 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
       seen.add(name.toLowerCase());
       out.push(kind === 'witness' ? { name, address: null, role: e[a], source: 'register' } : { name, address: e[a] ?? null, source: 'register' });
     }
+    if (kind === 'supplier') {
+      const { KNOWN_SUPPLIERS } = await import('@/lib/invoice-rules');
+      for (const k of KNOWN_SUPPLIERS) if ((k.name.toLowerCase().includes(q) || k.match.test(q)) && ![...seen].some((x) => k.match.test(x))) out.push({ name: k.name, address: k.address, source: 'preset' });
+    }
     if (kind === 'prescriber' && out.length < 10) {
       const { searchGms, GMS_LIST_DATE } = await import('@/lib/gms');
       for (const g of searchGms(q, 10 - out.length)) if (!seen.has(g.n.toLowerCase())) out.push({ name: g.n, address: g.a, gms_number: g.g, source: 'gms', detail: `HSE GMS list (${GMS_LIST_DATE}): ${g.raw}` });
     }
     return res({ suggestions: out.slice(0, 10) });
+  }
+  if (path === '/api/gms') {
+    if (needStaff()) return needStaff()!;
+    const { browseGms, GMS_LIST_DATE } = await import('@/lib/gms');
+    const r = browseGms(url.searchParams.get('q') || '', Number(url.searchParams.get('offset')) || 0, 50);
+    return res({ ...r, list_date: GMS_LIST_DATE });
   }
   if (path.startsWith('/api/billing/')) return res({ error: 'Billing opens Stripe in the live version — not available in the demo.' }, 400);
   return fail(404, 'Not available in the demo');

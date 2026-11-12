@@ -55,6 +55,15 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
   const [opened, setOpened] = useState(false);
   const [page, setPage] = useState(0);
   const [adding, setAdding] = useState(false);
+  const [addType, setAddType] = useState<EntryType | undefined>(undefined);
+  useEffect(() => {
+    const n = new URLSearchParams(window.location.search).get('new') as EntryType | null;
+    if (n && ['receipt', 'supply', 'destruction', 'patient_return'].includes(n)) {
+      setAddType(n);
+      setAdding(true);
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
   const [correcting, setCorrecting] = useState<Raw | null>(null);
 
   const load = useCallback(async () => {
@@ -251,7 +260,7 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
       )}
 
       <Modal open={adding} onClose={() => setAdding(false)} title={`New entry — ${p.drug_name} ${p.strength}`}>
-        <EntryForm registerId={params.id} unit={p.unit} balance={balance} onCancel={() => setAdding(false)} onSaved={async () => { setAdding(false); await load(); }} />
+        <EntryForm registerId={params.id} unit={p.unit} balance={balance} initial={addType ? { entry_type: addType } : undefined} onCancel={() => setAdding(false)} onSaved={async () => { setAdding(false); await load(); }} />
       </Modal>
       <Modal open={!!correcting} onClose={() => setCorrecting(null)} title="Correct a register entry">
         {correcting && (

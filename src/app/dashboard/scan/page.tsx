@@ -35,6 +35,10 @@ async function compress(blob: Blob, name: string): Promise<File> {
 export default function ScanPage() {
   const { staff } = useStaff();
   const [docType, setDocType] = useState<'invoice' | 'prescription'>('invoice');
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('type');
+    if (t === 'prescription' || t === 'invoice') setDocType(t);
+  }, []);
   const [stage, setStage] = useState<Stage>('capture');
   const [pages, setPages] = useState<Page[]>([]);
   const [error, setError] = useState<string | null>(null);

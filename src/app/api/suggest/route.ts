@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireStaff, errorResponse } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase/server';
 import { searchGms, GMS_LIST_DATE } from '@/lib/gms';
+import { KNOWN_SUPPLIERS } from '@/lib/invoice-rules';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,7 +12,7 @@ export interface Suggestion {
   registration?: string | null;
   gms_number?: string | null;
   role?: string | null;
-  source: 'list' | 'register' | 'gms';
+  source: 'list' | 'register' | 'gms' | 'preset';
   detail?: string;
 }
 
@@ -29,7 +30,7 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const kind = url.searchParams.get('kind') as Kind;
     const q = (url.searchParams.get('q') || '').trim();
-    if (!KINDS.includes(kind) || q.length < 2) return NextResponse.json({ suggestions: [] });
+    if (!KINDS.includes(kind) || (q.length < 2 && !(kind === 'supplier' && q === ''))) return NextResponse.json({ suggestions: [] });
     const like = `%${q.replace(/[%_,()]/g, ' ')}%`;
     const db = createServiceClient();
     const out: Suggestion[] = [];
@@ -64,6 +65,16 @@ export async function GET(req: Request) {
         seen.add(name.toLowerCase());
         out.push(kind === 'witness' ? { name, address: null, role: r[cols[1]], source: 'register' } : { name, address: r[cols[1]] ?? null, source: 'register' });
         if (out.length >= 10) break;
+      }
+    }
+    // Irish CD wholesalers, after the pharmacy's own saved/used ones.
+    if (kind === 'supplier') {
+      const seen = new Set(out.map((s) => s.name.toLowerCase()));
+      const ql = q.toLowerCase();
+      for (const k of KNOWN_SUPPLIERS) {
+        if (!k.name.toLowerCase().includes(ql) && !k.match.test(q)) continue;
+        if ([...seen].some((n) => k.match.test(n))) continue; // already known under this pharmacy's spelling
+        out.push({ name: k.name, address: k.address, source: 'preset', detail: k.address ? undefined : 'Add the address once — it’s remembered' });
       }
     }
     // National fallback for doctors: the HSE GMS GP list.

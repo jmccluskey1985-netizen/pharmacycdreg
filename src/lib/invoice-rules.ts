@@ -12,12 +12,16 @@
  *    Reference are not the invoice; pack size at the end of the description ("TABS 56").
  */
 
-export interface KnownSupplier { key: string; name: string; address: string; match: RegExp }
+export interface KnownSupplier { key: string; name: string; address: string | null; match: RegExp }
 
-// Only addresses printed on the suppliers' own paperwork.
+// Irish CD suppliers offered in quick-fill. Addresses only where confirmed from the
+// supplier's own paperwork; otherwise the pharmacy types it once and it's remembered.
 export const KNOWN_SUPPLIERS: KnownSupplier[] = [
   { key: 'uniphar', name: 'Uniphar Wholesale', address: '4045 Kingswood Road, Citywest Business Park, Co. Dublin', match: /uniphar/i },
+  { key: 'united', name: 'United Drug', address: null, match: /united drug/i },
   { key: 'pco', name: 'PCO Manufacturing Ltd', address: 'Unit 10 Ashbourne Business Park, Rath, Ashbourne, Co. Meath, A84 WR60', match: /\bpco\b|pco\.ie|pco manufacturing/i },
+  { key: 'imed', name: 'IMED Healthcare', address: null, match: /\bimed\b/i },
+  { key: 'pluripharm', name: 'Pluripharm', address: null, match: /pluri ?pharm/i },
 ];
 
 export function identifySupplier(...texts: (string | null | undefined)[]): KnownSupplier | null {

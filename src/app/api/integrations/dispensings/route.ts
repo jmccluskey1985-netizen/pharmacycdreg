@@ -1,3 +1,4 @@
+import { haloEnabled } from '@/lib/features';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createServiceClient } from '@/lib/supabase/server';
@@ -51,6 +52,7 @@ export async function POST(req: Request) {
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: 'Invalid dispensing', issues: parsed.error.flatten() }, { status: 400 });
   const d = parsed.data;
+  if (!(await haloEnabled(db, k.pharmacy_id))) return NextResponse.json({ error: 'Integration not enabled for this pharmacy' }, { status: 403 });
   await db.from('integration_keys').update({ last_used_at: new Date().toISOString() }).eq('id', k.id);
 
   // Idempotency: same external_id + action → return what happened first time.

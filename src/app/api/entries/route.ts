@@ -56,6 +56,16 @@ export async function POST(req: Request) {
       if (error.code === '23514') return NextResponse.json({ error: 'A mandatory register field is missing' }, { status: 400 });
       throw error;
     }
+    // Remember the supplier (and its address) for quick-fill next time.
+    if (row.entry_type === 'receipt' && typeof row.supplier_name === 'string' && row.supplier_name.trim().length >= 2 && row.supplier_name !== 'Balance brought forward') {
+      try {
+        const name = (row.supplier_name as string).trim();
+        const address = typeof row.supplier_address === 'string' && row.supplier_address.trim() ? row.supplier_address.trim() : null;
+        const { data: c } = await db.from('contacts').select('id, address').eq('pharmacy_id', account.pharmacyId).eq('kind', 'supplier').eq('is_active', true).ilike('name', name).limit(1);
+        if (!c?.length) await db.from('contacts').insert({ pharmacy_id: account.pharmacyId, kind: 'supplier', name, address });
+        else if (address && c[0].address !== address) await db.from('contacts').update({ address, updated_at: new Date().toISOString() }).eq('id', c[0].id);
+      } catch { /* quick-fill only; never block a register entry */ }
+    }
     if (inbox_id) {
       await db.from('pmr_inbox').update({ status: 'posted', entry_id: data.id, register_id: reg.id, resolved_by_staff_id: staff.id, resolved_at: new Date().toISOString() }).eq('id', inbox_id);
     }
