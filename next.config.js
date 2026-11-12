@@ -4,13 +4,20 @@
 // accepts SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY (or SUPABASE_ANON_KEY) and exposes
 // them to the browser here at build time. The URL and publishable/anon key are public
 // by design; the secret key is never exposed.
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
-const supabaseAnon =
+function cleanUrl(raw) {
+  let u = (raw || '').trim().replace(/^["']|["']$/g, '');
+  if (!u) return '';
+  if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+  return u.replace(/\/(rest|auth)\/v1\/?$/, '').replace(/\/+$/, '');
+}
+const supabaseUrl = cleanUrl(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL);
+const supabaseAnon = (
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
   process.env.SUPABASE_PUBLISHABLE_KEY ||
   process.env.SUPABASE_ANON_KEY ||
-  '';
+  ''
+).trim();
 
 module.exports = {
   reactStrictMode: true,
