@@ -2,8 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Plus, ScanLine, Users, Download, Camera, Loader2, AlertTriangle, CheckCircle2, LayoutGrid, Table2, ListChecks, ChevronRight } from 'lucide-react';
+import { Plus, ScanLine, Users, Download, Camera, Loader2, AlertTriangle, CheckCircle2, GalleryHorizontal, Table2, ListChecks, ChevronRight, Search, X } from 'lucide-react';
 import { SetupFromList } from '@/components/dashboard/setup-from-list';
+import { SnapPaperRegisters } from '@/components/dashboard/snap-paper-registers';
+import { Shelf } from '@/components/dashboard/shelf';
+import { filterRegisters } from '@/lib/register-filter';
 import { api, ApiError } from '@/lib/api';
 import { can } from '@/lib/roles';
 import { useStaff } from '@/components/dashboard/staff-context';
@@ -26,14 +29,17 @@ export default function RegistersPage() {
   const [regs, setRegs] = useState<Reg[] | null>(null);
   const [open, setOpen] = useState(false);
   const [fromList, setFromList] = useState(false);
-  const [view, setView] = useState<'cards' | 'table'>('cards');
+  const [snap, setSnap] = useState(false);
+  const [q, setQ] = useState('');
+  const [view, setView] = useState<'shelf' | 'table'>('shelf');
   useEffect(() => { try { if (localStorage.getItem('cdreg-view') === 'table') setView('table'); } catch {} }, []);
-  const pickView = (v: 'cards' | 'table') => { setView(v); try { localStorage.setItem('cdreg-view', v); } catch {} };
+  const pickView = (v: 'shelf' | 'table') => { setView(v); try { localStorage.setItem('cdreg-view', v); } catch {} };
 
   const load = useCallback(() => api('/api/registers').then((d) => setRegs(d.registers)), []);
   useEffect(() => { load(); }, [load]);
 
-  const groups = (regs ?? []).reduce<Record<string, Reg[]>>((acc, r) => {
+  const shown = filterRegisters(regs ?? [], q);
+  const groups = shown.reduce<Record<string, Reg[]>>((acc, r) => {
     const k = `Schedule ${r.product.schedule}${r.product.schedule_paragraph ? ` (${r.product.schedule_paragraph})` : ''} · ${r.product.class_name}`;
     (acc[k] ||= []).push(r);
     return acc;
@@ -51,14 +57,23 @@ export default function RegistersPage() {
           {staff && can.manageStaff(staff.role) && <Link href="/dashboard/team" className="btn-secondary lg:hidden"><Users className="h-4 w-4" /> Team</Link>}
           {writable && staff && can.scan(staff.role) && <Link href="/dashboard/scan" className="btn-brand"><ScanLine className="h-4 w-4" /> Scan<span className="hidden sm:inline"> invoice</span></Link>}
           <div className="flex rounded-lg border border-border bg-card p-0.5" role="group" aria-label="View">
-            <button onClick={() => pickView('cards')} className={`rounded-md px-2.5 py-1.5 ${view === 'cards' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`} title="Book view" aria-pressed={view === 'cards'}><LayoutGrid className="h-4 w-4" /></button>
+            <button onClick={() => pickView('shelf')} className={`rounded-md px-2.5 py-1.5 ${view === 'shelf' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`} title="Shelf view" aria-pressed={view === 'shelf'}><GalleryHorizontal className="h-4 w-4" /></button>
             <button onClick={() => pickView('table')} className={`rounded-md px-2.5 py-1.5 ${view === 'table' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`} title="Table view" aria-pressed={view === 'table'}><Table2 className="h-4 w-4" /></button>
           </div>
+          {writable && staff && can.openRegister(staff.role) && <button onClick={() => setSnap(true)} className="btn-secondary" title="Photograph your paper register to start registers with their balance"><Camera className="h-4 w-4" /> <span className="hidden sm:inline">Snap paper register</span></button>}
           {writable && staff && can.openRegister(staff.role) && <button onClick={() => setFromList(true)} className="btn-secondary"><ListChecks className="h-4 w-4" /> <span className="hidden sm:inline">From CD list</span></button>}
           {writable && staff && can.openRegister(staff.role) && <button onClick={() => setOpen(true)} className="btn-primary"><Plus className="h-4 w-4" /> New<span className="hidden sm:inline"> register</span></button>}
         </div>
       </div>
 
+      {regs && regs.length > 0 && (
+        <div className="relative mb-6 max-w-xl">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input className="input pl-9 pr-9" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find a register — e.g. OxyContin, MST 30, fentanyl, Concerta" />
+          {q && <button onClick={() => setQ('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label="Clear"><X className="h-4 w-4" /></button>}
+        </div>
+      )}
+      {regs && regs.length > 0 && shown.length === 0 && <p className="text-muted-foreground">No register matches “{q}”.</p>}
       {regs === null && <p className="text-muted-foreground">Loading…</p>}
       {regs?.length === 0 && (
         <div className="card text-center">
@@ -67,36 +82,20 @@ export default function RegistersPage() {
         </div>
       )}
 
-      <div className="space-y-8">
-        {Object.entries(groups).map(([group, items]) => (
-          <section key={group}>
-            <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">{group}</h2>
-            {view === 'table' ? <TypeTable items={items} /> : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {items.map((r) => (
-                <Link key={r.id} href={`/dashboard/register/${r.id}`} className="group relative overflow-hidden rounded-r-xl rounded-l-md bg-gradient-to-br from-brand-dark to-brand-deep p-4 pl-6 text-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-lg">
-                  <span className="absolute inset-y-0 left-0 w-2.5 bg-black/25" aria-hidden />
-                  <span className="absolute inset-y-0 left-2.5 w-px bg-white/20" aria-hidden />
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-white/60">Register of controlled drugs</p>
-                  <p className="mt-2 text-lg font-bold leading-tight">{r.product.drug_name}</p>
-                  <p className="text-sm text-white/80">{r.product.strength} · {r.product.form}</p>
-                  {r.product.parent && <p className="mt-1 text-xs text-white/70">Stereoisomer of {r.product.parent.drug_name}</p>}
-                  {(r.low_stock || r.check_due) && (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {r.low_stock && <span className="rounded-full bg-amber-300 px-2 py-0.5 text-[11px] font-bold text-amber-950">Low stock</span>}
-                      {r.check_due && <span className="rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-bold text-brand-deep">Stock check due</span>}
-                    </div>
-                  )}
-                  <div className="mt-4 flex items-end justify-between">
-                    <span className="text-xs text-white/60">Balance</span>
-                    <span className="text-2xl font-bold tabular-nums">{r.balance}<span className="ml-1 text-sm font-normal text-white/70">{r.product.unit}</span></span>
-                  </div>
-                </Link>
-              ))}
-            </div>}
-          </section>
-        ))}
-      </div>
+      {view === 'shelf' ? <Shelf regs={shown} /> : (
+        <div className="space-y-8">
+          {Object.entries(groups).map(([group, items]) => (
+            <section key={group}>
+              <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">{group}</h2>
+              <TypeTable items={items} />
+            </section>
+          ))}
+        </div>
+      )}
 
+      <Modal open={snap} onClose={() => setSnap(false)} title="Snap your paper register" wide>
+        <SnapPaperRegisters onChanged={load} />
+      </Modal>
       <Modal open={fromList} onClose={() => setFromList(false)} title="Set up registers from the CD list" wide>
         <SetupFromList registers={regs ?? []} onDone={() => { setFromList(false); load(); }} />
       </Modal>

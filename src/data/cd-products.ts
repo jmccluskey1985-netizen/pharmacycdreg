@@ -72,3 +72,18 @@ export function searchCdProducts(q: string): CdProduct[] {
     return words.every((w) => hay.includes(w));
   });
 }
+
+const formKey = (f: string) => f.toLowerCase().replace(/s$/, '').replace(/\s+/g, ' ').trim();
+const genKey = (g: string) => g.toLowerCase().replace(/\b(hydrochloride|sulfate|sulphate|hcl|tartrate|citrate|dimesylate)\b/g, '').replace(/[^a-z/]/g, '');
+
+/** The catalogue product for a register (generic + form), e.g. oxycodone + capsule → OxyNorm capsules. */
+export function productFor(drugName: string, form: string): CdProduct | null {
+  const g = genKey(drugName), f = formKey(form);
+  return CD_PRODUCTS.find((p) => genKey(p.generic) === g && formKey(p.form) === f) ?? null;
+}
+
+/** Type label used to group a drug's registers: "OxyNorm · capsule", "OxyContin · prolonged-release tablet". */
+export function typeLabel(drugName: string, form: string): string {
+  const p = productFor(drugName, form);
+  return p ? `${p.brands[0]} · ${p.form}` : form;
+}
