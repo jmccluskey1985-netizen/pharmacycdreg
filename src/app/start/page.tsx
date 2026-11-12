@@ -39,7 +39,8 @@ export default function StartPage() {
       }
       window.location.href = cd.url;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      const msg = err instanceof Error ? err.message : 'Something went wrong';
+      setError(/failed to fetch|network/i.test(msg) ? 'Could not reach the login server. The site\'s Supabase address (SUPABASE_URL in Vercel) is missing or wrong.' : msg);
       setBusy(false);
     }
   }
