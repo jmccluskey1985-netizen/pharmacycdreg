@@ -6,6 +6,7 @@ import { balancesFor } from '@/lib/registers';
 import { liveRegisters, matchRegister } from '@/lib/match';
 import { decideQuantity } from '@/lib/quantity';
 import { getSettings } from '@/lib/settings';
+import { getReaderConfig } from '@/lib/reader-config';
 import { identifySupplier, looksLikeOwnPharmacy, checkReference } from '@/lib/invoice-rules';
 import { registerExemption } from '@/lib/cd-catalogue';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -35,9 +36,9 @@ export async function POST(req: Request) {
 
     const docs = await Promise.all(files.map(async (f) => ({ base64: Buffer.from(await f.arrayBuffer()).toString('base64'), mediaType: f.type })));
     const hint = form.get('hint') === 'prescription' ? 'prescription' : 'invoice';
-    const { extraction, model } = await extractFromDocument(docs, hint);
-
     const db = createServiceClient();
+    const { extraction, model } = await extractFromDocument(docs, hint, await getReaderConfig(db, account.pharmacyId));
+
     const { data: scan, error } = await db
       .from('scans')
       .insert({ pharmacy_id: account.pharmacyId, document_type: extraction.document_type, extracted: extraction, model, scanned_by_staff_id: staff.id })

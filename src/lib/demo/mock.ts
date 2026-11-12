@@ -273,6 +273,13 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     if (method === 'PATCH') { const { low_stock, ...f } = body; Object.assign(X, f); for (const l of low_stock ?? []) ((S as any).lowStock ||= {})[l.register_id] = l.level; }
     return res({ settings: X, registers: regList().map((r: Json) => ({ id: r.id, label: `${r.product.drug_name} ${r.product.strength} ${r.product.form}`, unit: r.product.unit, balance: r.balance, low_stock_level: (S as any).lowStock?.[r.id] ?? null })) });
   }
+  if (path === '/api/settings/reader/models') return res({ models: [{ id: 'example/vision-model-a', name: 'Example vision model A', prompt_price: 1 }, { id: 'example/vision-model-b', name: 'Example vision model B', prompt_price: 0.5 }] });
+  if (path === '/api/settings/reader') {
+    const R = ((S as any).reader ||= { needs_migration: false, has_key: false, hint: null, models: [], updated_at: null, environment_fallback: false });
+    if (method === 'PUT') { if (body.api_key) { R.has_key = true; R.hint = `…${String(body.api_key).slice(-4)}`; } R.models = body.models; }
+    if (method === 'DELETE') { R.has_key = false; R.hint = null; }
+    return res(R);
+  }
   if (path === '/api/stock-checks') {
     if (needStaff()) return needStaff()!;
     const list: Json[] = ((S as any).checks ||= []);

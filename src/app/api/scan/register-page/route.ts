@@ -7,6 +7,7 @@ import { balancesFor } from '@/lib/registers';
 import { liveRegisters, matchRegister } from '@/lib/match';
 import { registerExemption } from '@/lib/cd-catalogue';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { getReaderConfig } from '@/lib/reader-config';
 import { can } from '@/lib/roles';
 
 export const maxDuration = 120;
@@ -29,7 +30,9 @@ export async function POST(req: Request) {
     if (files.reduce((n, f) => n + f.size, 0) > MAX_BYTES) return NextResponse.json({ error: 'Files are too large (max 15 MB total)' }, { status: 400 });
 
     const docs = await Promise.all(files.map(async (f) => ({ base64: Buffer.from(await f.arrayBuffer()).toString('base64'), mediaType: f.type })));
+    const db = createServiceClient();
     const { result: page, model } = await readDocument(docs, {
+      reader: await getReaderConfig(db, account.pharmacyId),
       system: REGISTER_PAGE_SYSTEM,
       schema: REGISTER_PAGE_JSON_SCHEMA,
       name: 'cd_register_page',
@@ -38,7 +41,6 @@ export async function POST(req: Request) {
     });
     const opening = decideOpening(page);
 
-    const db = createServiceClient();
     // Only dates and amounts are kept (no names were read).
     const { data: scan } = await db.from('scans').insert({ pharmacy_id: account.pharmacyId, document_type: 'other', extracted: { kind: 'register_page', page, opening }, model, scanned_by_staff_id: staff.id }).select('id').single();
     await audit(account.pharmacyId, 'scan.register_page', staff, account.authUserId, { product: page.product_written, balance: opening.balance, date: opening.date }, scan ? { table: 'scans', id: scan.id } : undefined);

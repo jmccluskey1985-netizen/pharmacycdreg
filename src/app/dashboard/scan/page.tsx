@@ -222,7 +222,7 @@ export default function ScanPage() {
 
       {status && !status.configured && (
         <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
-          <b>Scanning isn’t switched on yet.</b> Photos can’t be read until the document reader is set up (Vercel → Settings → Environment Variables: <code>{status.missing}</code>, then redeploy). You can still enter it by hand from <b>New entry</b>.
+          <b>Scanning isn’t switched on yet.</b> The supervising pharmacist can add the OpenRouter key in <a href="/dashboard/settings" className="font-semibold underline">Settings → Document reading</a>. You can still enter it by hand from <b>New entry</b>.
         </div>
       )}
       {error && <p className="mb-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}

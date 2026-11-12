@@ -141,7 +141,7 @@ export type DocFile = { base64: string; mediaType: string };
 const userText = (n: number, hint: string) =>
   `${n > 1 ? `These ${n} images are pages of one document. ` : ''}The pharmacist says this is a ${hint}. Extract the controlled-drug lines.`;
 
-export interface ReadConfig<T> { system: string; schema: object; name: string; prompt: string; parse: (raw: string | null | undefined) => T }
+export interface ReadConfig<T> { system: string; schema: object; name: string; prompt: string; parse: (raw: string | null | undefined) => T; reader?: { apiKey: string; models: string[] } | null }
 
 export function parseJsonWith<T>(schema: z.ZodType<T>) {
   return (raw: string | null | undefined): T => {
@@ -173,16 +173,16 @@ function parseResult(raw: string | null | undefined): Extraction {
  * Which reader to use. OpenRouter (same account and privacy settings as Halo) when
  * OPENROUTER_API_KEY is set; otherwise Claude directly via ANTHROPIC_API_KEY.
  */
-export async function extractFromDocument(files: DocFile[], hint: 'invoice' | 'prescription' = 'invoice'): Promise<{ extraction: Extraction; model: string }> {
-  const { result, model } = await readDocument(files, { system: SYSTEM, schema: JSON_SCHEMA, name: 'cd_extraction', prompt: userText(files.length, hint), parse: parseResult });
+export async function extractFromDocument(files: DocFile[], hint: 'invoice' | 'prescription' = 'invoice', reader?: { apiKey: string; models: string[] } | null): Promise<{ extraction: Extraction; model: string }> {
+  const { result, model } = await readDocument(files, { system: SYSTEM, schema: JSON_SCHEMA, name: 'cd_extraction', prompt: userText(files.length, hint), parse: parseResult, reader });
   return { extraction: result, model };
 }
 
 /** Read a document with any prompt + JSON schema, using the configured reader. */
 export async function readDocument<T>(files: DocFile[], cfg: ReadConfig<T>): Promise<{ result: T; model: string }> {
-  if (process.env.OPENROUTER_API_KEY) return extractViaOpenRouter(files, cfg);
+  if (cfg.reader?.apiKey || process.env.OPENROUTER_API_KEY) return extractViaOpenRouter(files, cfg);
   if (process.env.ANTHROPIC_API_KEY) return extractViaAnthropic(files, cfg);
-  throw new ScanError('Document reading is not configured (set OPENROUTER_API_KEY or ANTHROPIC_API_KEY)');
+  throw new ScanError('Document reading isn’t set up yet. The supervising pharmacist can add the OpenRouter key in Settings → Document reading.');
 }
 
 /**
@@ -192,8 +192,9 @@ export async function readDocument<T>(files: DocFile[], cfg: ReadConfig<T>): Pro
  * used. Structured JSON output is required of the provider.
  */
 async function extractViaOpenRouter<T>(files: DocFile[], cfg: ReadConfig<T>): Promise<{ result: T; model: string }> {
-  const models = (process.env.OPENROUTER_MODELS || '').split(',').map((m) => m.trim()).filter(Boolean);
-  if (!models.length) throw new ScanError('Document reading is not configured (OPENROUTER_MODELS missing)');
+  const models = cfg.reader?.models?.length ? cfg.reader.models : (process.env.OPENROUTER_MODELS || '').split(',').map((m) => m.trim()).filter(Boolean);
+  const apiKey = cfg.reader?.apiKey || process.env.OPENROUTER_API_KEY;
+  if (!models.length) throw new ScanError('Choose the reading model in Settings → Document reading.');
 
   const parts = files.map((f) =>
     f.mediaType === 'application/pdf'
@@ -206,7 +207,7 @@ async function extractViaOpenRouter<T>(files: DocFile[], cfg: ReadConfig<T>): Pr
     res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         'X-Title': 'PharmacyCDReg',
       },

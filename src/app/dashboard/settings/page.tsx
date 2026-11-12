@@ -7,6 +7,7 @@ import { api, ApiError } from '@/lib/api';
 import { useStaff } from '@/components/dashboard/staff-context';
 import { can } from '@/lib/roles';
 import { TwoStepSettings } from '@/components/dashboard/two-step';
+import { ReaderSettings } from '@/components/dashboard/reader-settings';
 
 interface Settings { name: string; address: string; psi_premises_number: string | null; invoice_names: string | null; lock_minutes: number; locum_default_days: number; stock_check_frequency: string; halo_enabled: boolean; migrated: boolean }
 interface Reg { id: string; label: string; unit: string; balance: number; low_stock_level: number | null }
@@ -71,6 +72,7 @@ export default function SettingsPage() {
 
       <PharmacyDetails s={s} onSaved={onSaved} />
       <Security s={s} onSaved={onSaved} />
+      <ReaderSettings />
       <StockChecks s={s} regs={regs} onSaved={(x) => { onSaved(x); load(); }} />
       <Data regs={regs} reload={load} />
 
