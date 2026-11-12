@@ -29,7 +29,7 @@ export function createServerSupabaseClient() {
  * and the PIN-identified staff member.
  */
 export function createServiceClient() {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
   if (!key) throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set');
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, key, {
     auth: { autoRefreshToken: false, persistSession: false },
