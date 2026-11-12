@@ -8,26 +8,30 @@
  */
 import { z } from 'zod';
 
+const strN = z.preprocess((v) => (v == null || v === '' ? null : String(v)), z.string().nullable());
+const numN = z.preprocess((v) => (v == null || v === '' ? null : typeof v === 'string' ? Number(v.replace(/[^\d.]/g, '')) : v), z.number().nullable().catch(null));
+const bool = (d: boolean) => z.preprocess((v) => (typeof v === 'string' ? v.toLowerCase() === 'true' : v ?? d), z.boolean().catch(d));
+
 const Row = z.object({
-  date: z.string().nullable(),
-  date_written: z.string().nullable(),
-  obtained: z.number().nullable(),
-  supplied: z.number().nullable(),
-  balance: z.number().nullable(),
-  balance_unclear: z.boolean(),
+  date: strN,
+  date_written: strN,
+  obtained: numN,
+  supplied: numN,
+  balance: numN,
+  balance_unclear: bool(false),
 });
 export const RegisterPageSchema = z.object({
-  is_cd_register_page: z.boolean(),
-  product_written: z.string().nullable(),
-  drug_name: z.string().nullable(),
-  brand: z.string().nullable(),
-  strength: z.string().nullable(),
-  form: z.string().nullable(),
-  unit: z.enum(['tablets', 'capsules', 'ml', 'patches', 'ampoules', 'vials', 'units']).nullable(),
-  likely_schedule: z.number().int().nullable(),
-  balance_transferred: z.number().nullable(),
-  rows: z.array(Row),
-  warnings: z.array(z.string()),
+  is_cd_register_page: bool(true),
+  product_written: strN,
+  drug_name: strN,
+  brand: strN,
+  strength: strN,
+  form: strN,
+  unit: z.enum(['tablets', 'capsules', 'ml', 'patches', 'ampoules', 'vials', 'units']).nullable().catch(null),
+  likely_schedule: numN,
+  balance_transferred: numN,
+  rows: z.array(Row).catch([]),
+  warnings: z.array(z.string()).catch([]),
 });
 export type RegisterPage = z.infer<typeof RegisterPageSchema>;
 

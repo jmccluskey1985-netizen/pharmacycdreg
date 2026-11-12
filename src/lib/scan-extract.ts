@@ -8,47 +8,55 @@ import { z } from 'zod';
 
 export const SCAN_MODEL = 'claude-opus-5-5';
 
+// Tolerant of how different models answer (missing keys, numbers as text), but every
+// value still has the right type before the quantity rules see it.
+const str = z.preprocess((v) => (v == null ? '' : String(v)), z.string());
+const strN = z.preprocess((v) => (v == null || v === '' ? null : String(v)), z.string().nullable());
+const num = z.preprocess((v) => (typeof v === 'string' ? Number(v.replace(/[^\d.]/g, '')) : v ?? 0), z.number().catch(0));
+const numN = z.preprocess((v) => (v == null || v === '' ? null : typeof v === 'string' ? Number(v.replace(/[^\d.]/g, '')) : v), z.number().nullable().catch(null));
+const bool = (d: boolean) => z.preprocess((v) => (typeof v === 'string' ? v.toLowerCase() === 'true' : v ?? d), z.boolean().catch(d));
+
 const ItemSchema = z.object({
-  drug_name: z.string(),
-  strength: z.string(),
-  form: z.string(),
-  quantity: z.number(),
-  quantity_unit: z.string(),
-  pack_description: z.string(),
-  is_controlled_drug: z.boolean(),
-  likely_schedule: z.number().int().nullable(),
-  confidence: z.enum(['high', 'medium', 'low']),
-  notes: z.string(),
+  drug_name: str,
+  strength: str,
+  form: str,
+  quantity: num,
+  quantity_unit: str,
+  pack_description: str,
+  is_controlled_drug: bool(false),
+  likely_schedule: numN,
+  confidence: z.enum(['high', 'medium', 'low']).catch('low'),
+  notes: str,
   // Raw fields: what is literally on the page. Rules in lib/quantity.ts decide the
   // register quantity from these (Halo's "the model reads, the rules decide").
-  brand: z.string().nullable(),
-  packs: z.number().nullable(),
-  pack_size: z.number().nullable(),
-  quantity_figures: z.string().nullable(),
-  quantity_words: z.string().nullable(),
-  duration_text: z.string().nullable(),
-  is_credit: z.boolean(),
-  line_text: z.string().nullable().optional(),
-  units_per_dose: z.number().nullable().optional(),
-  handwritten_qty: z.string().nullable().optional(),
+  brand: strN,
+  packs: numN,
+  pack_size: numN,
+  quantity_figures: strN,
+  quantity_words: strN,
+  duration_text: strN,
+  is_credit: bool(false),
+  line_text: strN.optional(),
+  units_per_dose: numN.optional(),
+  handwritten_qty: strN.optional(),
 });
 
 export const ExtractionSchema = z.object({
-  document_type: z.enum(['prescription', 'invoice', 'other']),
-  document_date: z.string().nullable(),
-  reference: z.string().nullable(),
-  reference_label: z.string().nullable().optional(),
-  supplier_evidence: z.string().nullable().optional(),
-  supplier_name: z.string().nullable(),
-  supplier_address: z.string().nullable(),
-  patient_name: z.string().nullable(),
-  patient_address: z.string().nullable(),
-  patient_dob: z.string().nullable().optional(),
-  prescriber_name: z.string().nullable(),
-  prescriber_address: z.string().nullable(),
-  prescriber_registration: z.string().nullable(),
-  items: z.array(ItemSchema),
-  warnings: z.array(z.string()),
+  document_type: z.enum(['prescription', 'invoice', 'other']).catch('other'),
+  document_date: strN,
+  reference: strN,
+  reference_label: strN.optional(),
+  supplier_evidence: strN.optional(),
+  supplier_name: strN,
+  supplier_address: strN,
+  patient_name: strN,
+  patient_address: strN,
+  patient_dob: strN.optional(),
+  prescriber_name: strN,
+  prescriber_address: strN,
+  prescriber_registration: strN,
+  items: z.array(ItemSchema).catch([]),
+  warnings: z.array(z.string()).catch([]),
 });
 export type Extraction = z.infer<typeof ExtractionSchema>;
 
@@ -143,12 +151,16 @@ const userText = (n: number, hint: string) =>
 
 export interface ReadConfig<T> { system: string; schema: object; name: string; prompt: string; parse: (raw: string | null | undefined) => T; reader?: { apiKey: string; models: string[] } | null }
 
-export function parseJsonWith<T>(schema: z.ZodType<T>) {
-  return (raw: string | null | undefined): T => {
+export function parseJsonWith<S extends z.ZodTypeAny>(schema: S) {
+  return (raw: string | null | undefined): z.output<S> => {
     if (!raw) throw new ScanError('No result returned. Try a clearer photo.');
     const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
     let json: unknown;
-    try { json = JSON.parse(cleaned); } catch { throw new ScanError('Could not understand the result. Try a clearer photo.'); }
+    try { json = JSON.parse(cleaned); }
+    catch {
+      const i = cleaned.indexOf('{'), j = cleaned.lastIndexOf('}');
+      try { json = JSON.parse(cleaned.slice(i, j + 1)); } catch { throw new ScanError('Could not understand the result. Try a clearer photo.'); }
+    }
     const parsed = schema.safeParse(json);
     if (!parsed.success) throw new ScanError('Could not understand the result. Try a clearer photo.');
     return parsed.data;
@@ -202,23 +214,43 @@ async function extractViaOpenRouter<T>(files: DocFile[], cfg: ReadConfig<T>): Pr
       : { type: 'image_url', image_url: { url: `data:${f.mediaType};base64,${f.base64}` } },
   );
 
+  const userContent = [...parts, { type: 'text', text: cfg.prompt }];
+  const strict = { response_format: { type: 'json_schema', json_schema: { name: cfg.name, strict: true, schema: cfg.schema } }, system: cfg.system };
+  // Some models (e.g. Gemini) refuse parts of a strict schema. Fall back to plain JSON mode
+  // with the schema in the instructions; the reply is still validated before use.
+  const loose = { response_format: { type: 'json_object' }, system: `${cfg.system}\n\nReply with ONLY one JSON object (no prose, no code fences) that matches this JSON Schema exactly, using null where something isn't on the document:\n${JSON.stringify(cfg.schema)}` };
+
+  let last: OpenRouterFailure | null = null;
+  for (const mode of [strict, loose]) {
+    const r = await callOpenRouter(apiKey!, models, mode.system, userContent, mode.response_format);
+    if (r.ok) {
+      const choice = r.data.choices?.[0];
+      if (choice?.finish_reason === 'length') throw new ScanError('The document was too long to read in one go. Try one page at a time.');
+      return { result: cfg.parse(choice?.message?.content), model: `openrouter:${r.data.model ?? models[0]}${mode === loose ? ' (json mode)' : ''}` };
+    }
+    last = r;
+    if (r.status === 402) throw new ScanError('The document reader account is out of credit. Top up OpenRouter, or enter the entry manually.');
+    if (r.status === 429) throw new ScanError('The document reader is busy. Wait a moment and try again.');
+    if (r.status === 401 || r.status === 403) throw new ScanError('OpenRouter didn’t accept the key. The site owner can check it in Settings → Document reading.');
+    if (!r.retryable) break;
+  }
+  throw new ScanError(explainOpenRouter(last!, models));
+}
+
+interface OpenRouterFailure { ok: false; status: number; message: string; retryable: boolean }
+type OpenRouterResult = { ok: true; data: any } | OpenRouterFailure;
+
+async function callOpenRouter(apiKey: string, models: string[], system: string, userContent: unknown[], responseFormat: object): Promise<OpenRouterResult> {
   let res: Response;
   try {
     res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'X-Title': 'PharmacyCDReg',
-      },
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'X-Title': 'PharmacyCDReg' },
       body: JSON.stringify({
         model: models[0],
         ...(models.length > 1 ? { models } : {}),
-        messages: [
-          { role: 'system', content: cfg.system },
-          { role: 'user', content: [...parts, { type: 'text', text: cfg.prompt }] },
-        ],
-        response_format: { type: 'json_schema', json_schema: { name: cfg.name, strict: true, schema: cfg.schema } },
+        messages: [{ role: 'system', content: system }, { role: 'user', content: userContent }],
+        response_format: responseFormat,
         provider: { zdr: true, data_collection: 'deny', require_parameters: true },
         temperature: 0,
         max_tokens: 8000,
@@ -228,19 +260,26 @@ async function extractViaOpenRouter<T>(files: DocFile[], cfg: ReadConfig<T>): Pr
   } catch {
     throw new ScanError('Could not reach the document reader. Check the connection and try again.');
   }
-
   const data: any = await res.json().catch(() => ({}));
-  if (!res.ok || data.error) {
-    const msg: string = data?.error?.message || `HTTP ${res.status}`;
-    console.error('[scan] openrouter error', res.status, msg);
-    // Same distinctions Halo learned the hard way: a full provider vs an account that can't pay.
-    if (res.status === 402) throw new ScanError('The document reader account is out of credit. Top up OpenRouter, or enter the entry manually.');
-    if (res.status === 429) throw new ScanError('The document reader is busy. Wait a moment and try again.');
-    throw new ScanError('The document could not be read. Please enter the entry manually.');
+  if (res.ok && !data.error) return { ok: true, data };
+  const status = res.ok ? Number(data?.error?.code) || 500 : res.status;
+  const raw = data?.error?.metadata?.raw;
+  const message = [data?.error?.message, typeof raw === 'string' ? raw : raw ? JSON.stringify(raw) : ''].filter(Boolean).join(' — ').slice(0, 400) || `HTTP ${res.status}`;
+  console.error('[scan] openrouter error', status, message);
+  // Schema/format problems and "no endpoint supports these parameters" are worth one retry in JSON mode.
+  const retryable = [400, 404, 422, 500, 502].includes(status) || /schema|response_format|structured|json|parameter|endpoint/i.test(message);
+  return { ok: false, status, message, retryable };
+}
+
+/** Plain-English reason, including what OpenRouter said, so it can be fixed in Settings. */
+function explainOpenRouter(f: OpenRouterFailure, models: string[]): string {
+  const said = f.message ? ` (OpenRouter: “${f.message.slice(0, 220)}”)` : '';
+  if (/no endpoints|data policy|zero data retention|zdr|data_collection/i.test(f.message)) {
+    return `The chosen model (${models[0]}) has no provider on OpenRouter that keeps zero data. Pick another model in Settings → Document reading, or add a back-up model.${said}`;
   }
-  const choice = data.choices?.[0];
-  if (choice?.finish_reason === 'length') throw new ScanError('The document was too long to read in one go. Try one page at a time.');
-  return { result: cfg.parse(choice?.message?.content), model: `openrouter:${data.model ?? models[0]}` };
+  if (/model.*(not|n't) (found|exist|valid)|invalid model|not a valid model/i.test(f.message)) return `OpenRouter doesn’t recognise the model “${models[0]}”. Choose it again from the list in Settings → Document reading.${said}`;
+  if (/image|vision|modalit/i.test(f.message)) return `The chosen model can’t read photos. Pick a model from the list in Settings → Document reading (it only shows ones that can).${said}`;
+  return `The document could not be read. Please enter it by hand.${said}`;
 }
 
 async function extractViaAnthropic<T>(files: DocFile[], cfg: ReadConfig<T>): Promise<{ result: T; model: string }> {

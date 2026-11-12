@@ -38,6 +38,7 @@ export async function POST(req: Request) {
     const hint = form.get('hint') === 'prescription' ? 'prescription' : 'invoice';
     const db = createServiceClient();
     const { extraction, model } = await extractFromDocument(docs, hint, await getReaderConfig(db));
+    if (extraction.document_type === 'other') extraction.document_type = hint; // the pharmacist said what it is
 
     const { data: scan, error } = await db
       .from('scans')

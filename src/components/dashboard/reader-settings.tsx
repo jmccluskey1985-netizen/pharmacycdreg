@@ -16,6 +16,13 @@ export function ReaderSettings() {
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [testing, setTesting] = useState(false);
+  async function test() {
+    setTesting(true); setMsg(null);
+    try { const d = await api('/api/settings/reader/test', { method: 'POST' }); setMsg({ ok: d.ok, text: d.message }); }
+    catch (err) { setMsg({ ok: false, text: err instanceof ApiError ? err.message : 'The test failed' }); }
+    finally { setTesting(false); }
+  }
 
   const load = () => api('/api/settings/reader').then((d: Status) => { setSt(d); setModels(d.models); });
   useEffect(() => { load(); api('/api/settings/reader/models').then((d) => setAll(d.models ?? [])).catch(() => setAll([])); }, []);
@@ -95,10 +102,11 @@ export function ReaderSettings() {
           <p className="mt-1 text-xs text-muted-foreground">Tip: use the same model Halo uses for prescriptions.</p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button className="btn-primary" disabled={busy || !models.length || (!st?.has_key && key.trim().length < 20)}>{busy && <Loader2 className="h-4 w-4 animate-spin" />} Save</button>
-          {msg && <span className={`flex items-center gap-1 text-sm ${msg.ok ? 'text-brand' : 'text-destructive'}`}>{msg.ok && <Check className="h-4 w-4" />} {msg.text}</span>}
+          {st?.has_key && <button type="button" onClick={test} disabled={testing} className="btn-secondary">{testing && <Loader2 className="h-4 w-4 animate-spin" />} Test</button>}
         </div>
+        {msg && <p className={`flex items-start gap-1 rounded-lg p-3 text-sm ${msg.ok ? 'bg-brand/10 text-brand' : 'bg-destructive/10 text-destructive'}`}>{msg.ok && <Check className="mt-0.5 h-4 w-4 flex-shrink-0" />} {msg.text}</p>}
       </form>
     </section>
   );
