@@ -5,15 +5,20 @@ export interface ReaderConfig { apiKey: string; models: string[]; source: 'setti
 
 const parseModels = (s: string | null | undefined) => (s || '').split(',').map((m) => m.trim()).filter(Boolean);
 
+// Halo's chain (docs/RX_READER_SPEC.md §1). Gemini 3.8 Flash is always tried first; models picked in
+// Settings become back-ups; OpenRouter takes at most 3.
+export const PRIMARY_MODEL = 'google/gemini-3.8-flash';
+export const HALO_BACKUPS = ['qwen/qwen3-vl-235b-a22b-instruct', 'qwen/qwen2.5-vl-72b-instruct'];
+export const modelChain = (saved: string[]) => [...new Set([PRIMARY_MODEL, ...saved, ...HALO_BACKUPS])].slice(0, 3);
+
 /** The site-wide OpenRouter key/models (set by the site owner in Settings), else the environment ones. */
 export async function getReaderConfig(db: SupabaseClient): Promise<ReaderConfig | null> {
   const { data, error } = await db.from('site_secrets').select('openrouter_key_enc, openrouter_models').eq('id', 'reader').maybeSingle();
   if (!error && data?.openrouter_key_enc) {
     const apiKey = open(data.openrouter_key_enc);
-    const models = parseModels(data.openrouter_models);
-    if (apiKey && models.length) return { apiKey, models, source: 'settings' };
+    if (apiKey) return { apiKey, models: modelChain(parseModels(data.openrouter_models)), source: 'settings' };
   }
   const envModels = parseModels(process.env.OPENROUTER_MODELS);
-  if (process.env.OPENROUTER_API_KEY && envModels.length) return { apiKey: process.env.OPENROUTER_API_KEY, models: envModels, source: 'environment' };
+  if (process.env.OPENROUTER_API_KEY) return { apiKey: process.env.OPENROUTER_API_KEY, models: modelChain(envModels), source: 'environment' };
   return null;
 }

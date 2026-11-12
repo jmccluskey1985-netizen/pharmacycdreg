@@ -6,8 +6,7 @@ import { api, ApiError } from '@/lib/api';
 
 interface Status { needs_migration: boolean; has_key: boolean; hint: string | null; models: string[]; updated_at: string | null; environment_fallback: boolean }
 interface Model { id: string; name: string; prompt_price: number }
-// Halo's chain (docs/RX_READER_SPEC.md §1): won Halo's test on real Irish prescriptions; all have zero-data providers.
-const HALO_MODELS = ['google/gemini-3.8-flash', 'qwen/qwen3-vl-235b-a22b-instruct', 'qwen/qwen2.5-vl-72b-instruct'];
+
 
 /** OpenRouter key + models for reading invoices, prescriptions and paper register pages. */
 export function ReaderSettings() {
@@ -54,7 +53,7 @@ export function ReaderSettings() {
       <div className="flex items-start gap-3">
         <ScanText className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand" />
         <div>
-          <h2 className="font-semibold">Document reading <span className={`ml-1 rounded-full px-2 py-0.5 text-xs ${st?.has_key && st.models.length ? 'bg-brand/15 text-brand' : 'bg-muted text-muted-foreground'}`}>{st?.has_key && st.models.length ? 'On' : 'Off'}</span></h2>
+          <h2 className="font-semibold">Document reading <span className={`ml-1 rounded-full px-2 py-0.5 text-xs ${st?.has_key ? 'bg-brand/15 text-brand' : 'bg-muted text-muted-foreground'}`}>{st?.has_key ? 'On' : 'Off'}</span></h2>
           <p className="text-sm text-muted-foreground">Site owner only — one OpenRouter account (the same one Halo uses) reads invoices, prescriptions and paper register pages for <b>every pharmacy</b>. Other pharmacies never see this or need a key. Only providers that keep no data are used. The key is encrypted and never shown again.</p>
         </div>
       </div>
@@ -76,9 +75,10 @@ export function ReaderSettings() {
         </div>
 
         <div>
+          <p className="mb-2 rounded-lg bg-secondary px-3 py-2 text-sm"><b>Gemini 3.8 Flash</b> is always used first (Halo’s choice). Back-ups: anything below, then Halo’s Qwen models.</p>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <label className="label mb-0">Models <span className="font-normal text-muted-foreground">(first is used; the others are back-ups)</span></label>
-            <button type="button" onClick={() => setModels(HALO_MODELS)} className="btn-secondary py-1.5 text-sm">Use Halo’s models</button>
+            <label className="label mb-0">Extra back-up models <span className="font-normal text-muted-foreground">(optional)</span></label>
+            <button type="button" onClick={() => setModels([])} className="btn-ghost py-1 text-xs">Clear</button>
           </div>
           {models.length > 0 && (
             <ol className="mb-2 flex flex-wrap gap-1.5">
@@ -105,11 +105,11 @@ export function ReaderSettings() {
               </ul>
             </div>
           )}
-          <p className="mt-1 text-xs text-muted-foreground">{zdrOnly ? 'Only models with a zero-data-retention provider are listed. ' : ''}Tip: “Use Halo’s models” sets Gemini 3.8 Flash with two Qwen back-ups — then Save and Test.</p>
+          <p className="mt-1 text-xs text-muted-foreground">{zdrOnly ? 'Only models with a zero-data-retention provider are listed. ' : ''}Leave this empty to use Halo’s set-up as it is.</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <button className="btn-primary" disabled={busy || !models.length || (!st?.has_key && key.trim().length < 20)}>{busy && <Loader2 className="h-4 w-4 animate-spin" />} Save</button>
+          <button className="btn-primary" disabled={busy || (!st?.has_key && key.trim().length < 20)}>{busy && <Loader2 className="h-4 w-4 animate-spin" />} Save</button>
           {st?.has_key && <button type="button" onClick={test} disabled={testing} className="btn-secondary">{testing && <Loader2 className="h-4 w-4 animate-spin" />} Test</button>}
         </div>
         {msg && <p className={`flex items-start gap-1 rounded-lg p-3 text-sm ${msg.ok ? 'bg-brand/10 text-brand' : 'bg-destructive/10 text-destructive'}`}>{msg.ok && <Check className="mt-0.5 h-4 w-4 flex-shrink-0" />} {msg.text}</p>}

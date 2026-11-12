@@ -36,7 +36,7 @@ export async function GET() {
 
 const Body = z.object({
   api_key: z.string().trim().min(20).max(300).optional(),
-  models: z.array(z.string().trim().min(3).max(120).regex(/^[\w.\-:/]+$/)).min(1).max(4),
+  models: z.array(z.string().trim().min(3).max(120).regex(/^[\w.\-:/]+$/)).max(4).default([]),
 });
 
 /** Check a key with OpenRouter (no document is sent). */
