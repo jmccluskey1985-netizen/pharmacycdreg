@@ -14,7 +14,7 @@ import { FirstRun } from './first-run';
 
 const NAV = [
   { href: '/dashboard', label: 'Registers', icon: BookOpen, show: () => true },
-  { href: '/dashboard/scan', label: 'Scan', icon: ScanLine, show: can.scan, primary: true },
+  { href: '/dashboard/scan?type=prescription', label: 'Scan Rx', icon: ScanLine, show: can.scan, primary: true },
   { href: '/dashboard/inbox', label: 'To confirm', icon: Inbox, show: can.record, badge: true, halo: true },
   { href: '/dashboard/search', label: 'Search', icon: Search, show: () => true },
   { href: '/dashboard/patients', label: 'Patients', icon: UserRound, show: can.record },
@@ -40,7 +40,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   if (locked || !staff) return <PinPad />;
 
   const items = NAV.filter((n) => n.show(staff.role) && (!(n as any).halo || pharmacy?.halo_enabled) && (!(n as any).admin || pharmacy?.is_site_admin));
-  const active = (href: string) => (href === '/dashboard' ? path === href || path.startsWith('/dashboard/register') : path.startsWith(href));
+  const active = (href: string) => { const h = href.split('?')[0]; return h === '/dashboard' ? path === h || path.startsWith('/dashboard/register') : path.startsWith(h); };
 
   return (
     <div className={`min-h-screen pb-24 transition-[padding] duration-200 lg:pb-0 ${hidden ? 'lg:pl-16' : 'lg:pl-64'}`}>
@@ -91,9 +91,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
       <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:py-6">
         {/* Top-left: show sidebar + New entry */}
-        <div className="no-print mb-4 flex items-center gap-2">
+        {!path.startsWith('/dashboard/scan') && <div className="no-print mb-4 flex flex-wrap items-center gap-2">
+          {can.scan(staff.role) && <Link href="/dashboard/scan?type=prescription" className="btn-brand"><ScanLine className="h-4 w-4" /> Scan Rx</Link>}
           {can.record(staff.role) && <NewEntryButton />}
-        </div>
+        </div>}
         <BillingBanner />
         {children}
       </main>

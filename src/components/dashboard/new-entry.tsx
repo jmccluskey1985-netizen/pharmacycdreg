@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, PackageMinus, PackagePlus, Camera, Keyboard, Flame, Undo2, ArrowLeft, Search } from 'lucide-react';
+import { Plus, PackageMinus, PackagePlus, Camera, Keyboard, Flame, Undo2, ArrowLeft, Search, BookPlus } from 'lucide-react';
+import { can } from '@/lib/roles';
 import { Modal } from '@/components/modal';
 import { api } from '@/lib/api';
 import { useStaff } from './staff-context';
@@ -20,7 +21,7 @@ const SOURCES: { key: Source; title: string; text: string; icon: any; entry: str
 /** Top-left "New entry": pick where the details come from, then scan it or type it in. */
 export function NewEntryButton() {
   const router = useRouter();
-  const { pharmacy } = useStaff();
+  const { pharmacy, staff } = useStaff();
   const [open, setOpen] = useState(false);
   const [source, setSource] = useState<(typeof SOURCES)[number] | null>(null);
   const [typing, setTyping] = useState(false);
@@ -47,6 +48,12 @@ export function NewEntryButton() {
                 <span><span className="block font-semibold">{s.title}</span><span className="block text-sm text-muted-foreground">{s.text}</span></span>
               </button>
             ))}
+            {staff && can.openRegister(staff.role) && (
+              <button onClick={() => go('/dashboard?new=register')} className="flex items-start gap-3 rounded-xl border border-dashed border-border p-4 text-left transition hover:border-brand hover:bg-brand/5 sm:col-span-2">
+                <BookPlus className="mt-0.5 h-6 w-6 flex-shrink-0 text-brand" />
+                <span><span className="block font-semibold">New CD book</span><span className="block text-sm text-muted-foreground">Start a register for a drug you don’t have one for yet — type it in, pick from the CD list, or snap the paper page</span></span>
+              </button>
+            )}
           </div>
         )}
 
@@ -72,7 +79,7 @@ export function NewEntryButton() {
             <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input autoFocus className="input pl-9" placeholder="Search drug…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
             <div className="max-h-[50vh] divide-y divide-border overflow-y-auto rounded-xl border border-border">
               {regs === null && <p className="p-4 text-sm text-muted-foreground">Loading…</p>}
-              {regs && shown.length === 0 && <p className="p-4 text-sm text-muted-foreground">No matching register. Open one from Registers first.</p>}
+              {regs && shown.length === 0 && <p className="p-4 text-sm text-muted-foreground">No CD book for that yet. <button onClick={() => go('/dashboard?new=register')} className="font-semibold text-primary underline">Open a new CD book</button></p>}
               {shown.map((r) => (
                 <button key={r.id} onClick={() => go(`/dashboard/register/${r.id}?new=${source.entry}`)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/60">
                   <span className="font-medium">{r.product.drug_name} {r.product.strength} <span className="font-normal text-muted-foreground">{r.product.form}</span></span>

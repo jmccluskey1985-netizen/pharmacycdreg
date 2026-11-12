@@ -252,7 +252,8 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
         </div>
       )}
 
-      <div className="flex gap-3">
+      {/* Kept on screen while scrolling, so Sign & record never needs a scroll to reach */}
+      <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-10 -mx-1 flex gap-3 rounded-xl bg-card/95 px-1 py-2 backdrop-blur lg:bottom-0">
         {onCancel && <button type="button" onClick={onCancel} className="btn-secondary flex-1">Cancel</button>}
         <button className="btn-primary flex-1" disabled={busy}>{busy && <Loader2 className="h-4 w-4 animate-spin" />} {submitLabel ?? (correcting ? 'Record correction' : 'Sign & record entry')}</button>
       </div>

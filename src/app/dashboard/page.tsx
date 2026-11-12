@@ -33,6 +33,12 @@ export default function RegistersPage() {
   const [q, setQ] = useState('');
   const [view, setView] = useState<'shelf' | 'table'>('shelf');
   useEffect(() => { try { if (localStorage.getItem('cdreg-view') === 'table') setView('table'); } catch {} }, []);
+  // Deep links from "New entry → New CD book" and the scanner.
+  useEffect(() => {
+    const n = new URLSearchParams(window.location.search).get('new');
+    if (n === 'register') setOpen(true); else if (n === 'list') setFromList(true); else if (n === 'paper') setSnap(true);
+    if (n) window.history.replaceState(null, '', '/dashboard');
+  }, []);
   const pickView = (v: 'shelf' | 'table') => { setView(v); try { localStorage.setItem('cdreg-view', v); } catch {} };
 
   const load = useCallback(() => api('/api/registers').then((d) => setRegs(d.registers)), []);
@@ -62,7 +68,7 @@ export default function RegistersPage() {
           </div>
           {writable && staff && can.openRegister(staff.role) && <button onClick={() => setSnap(true)} className="btn-secondary" title="Photograph your paper register to start registers with their balance"><Camera className="h-4 w-4" /> <span className="hidden sm:inline">Snap paper register</span></button>}
           {writable && staff && can.openRegister(staff.role) && <button onClick={() => setFromList(true)} className="btn-secondary"><ListChecks className="h-4 w-4" /> <span className="hidden sm:inline">From CD list</span></button>}
-          {writable && staff && can.openRegister(staff.role) && <button onClick={() => setOpen(true)} className="btn-primary"><Plus className="h-4 w-4" /> New<span className="hidden sm:inline"> register</span></button>}
+          {writable && staff && can.openRegister(staff.role) && <button onClick={() => setOpen(true)} className="btn-primary"><Plus className="h-4 w-4" /> New<span className="hidden sm:inline"> CD book</span></button>}
         </div>
       </div>
 
@@ -99,7 +105,7 @@ export default function RegistersPage() {
       <Modal open={fromList} onClose={() => setFromList(false)} title="Set up registers from the CD list" wide>
         <SetupFromList registers={regs ?? []} onDone={() => { setFromList(false); load(); }} />
       </Modal>
-      <Modal open={open} onClose={() => setOpen(false)} title="Open a new register">
+      <Modal open={open} onClose={() => setOpen(false)} title="New CD book">
         <NewRegisterForm registers={regs ?? []} onDone={() => { setOpen(false); load(); }} />
       </Modal>
     </div>

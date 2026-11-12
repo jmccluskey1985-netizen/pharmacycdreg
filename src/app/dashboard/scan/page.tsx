@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Camera, CheckCircle2, FileText, ImagePlus, Loader2, Plus, RotateCcw, Sun, Maximize, Hand, Sparkles, X, AlertTriangle, Receipt, ClipboardList } from 'lucide-react';
+import { ScanLine, Camera, CheckCircle2, FileText, ImagePlus, Loader2, Plus, RotateCcw, Sun, Maximize, Hand, Sparkles, X, AlertTriangle, Receipt, ClipboardList } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 import { can } from '@/lib/roles';
 import { useStaff } from '@/components/dashboard/staff-context';
@@ -34,10 +34,12 @@ async function compress(blob: Blob, name: string): Promise<File> {
 
 export default function ScanPage() {
   const { staff } = useStaff();
-  const [docType, setDocType] = useState<'invoice' | 'prescription'>('invoice');
+  // Prescriptions are the everyday scan, so they're the default; the last choice is remembered.
+  const [docType, setDocTypeState] = useState<'invoice' | 'prescription'>('prescription');
+  const setDocType = (t: 'invoice' | 'prescription') => { setDocTypeState(t); try { localStorage.setItem('cdreg-scan-type', t); } catch {} };
   useEffect(() => {
-    const t = new URLSearchParams(window.location.search).get('type');
-    if (t === 'prescription' || t === 'invoice') setDocType(t);
+    const t = new URLSearchParams(window.location.search).get('type') ?? (() => { try { return localStorage.getItem('cdreg-scan-type'); } catch { return null; } })();
+    if (t === 'prescription' || t === 'invoice') setDocTypeState(t);
   }, []);
   const [stage, setStage] = useState<Stage>('capture');
   const [pages, setPages] = useState<Page[]>([]);
@@ -97,10 +99,11 @@ export default function ScanPage() {
     if ('vibrate' in navigator) navigator.vibrate?.(30);
     const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b!), 'image/jpeg', 0.92));
     const file = await compress(blob, `page-${pages.length + 1}.jpg`);
-    setPages((p) => {
-      setToast(`Page ${p.length + 1} captured — tap Read, or snap the next page`);
-      return [...p, { file, url: URL.createObjectURL(file) }];
-    });
+    const next = [...pages, { file, url: URL.createObjectURL(file) }];
+    setPages(next);
+    // A prescription is one page: read it straight away. Invoices may have several pages.
+    if (docType === 'prescription') { read(next); return; }
+    setToast(`Page ${next.length} captured — tap Read, or snap the next page`);
     setTimeout(() => setToast(null), 3500);
   }
 
@@ -111,17 +114,19 @@ export default function ScanPage() {
       const file = await compress(f, f.name);
       added.push({ file, url: f.type === 'application/pdf' ? '' : URL.createObjectURL(file) });
     }
-    setPages((p) => [...p, ...added]);
+    const next = [...pages, ...added];
+    setPages(next);
+    if (docType === 'prescription' && added.length) read(next);
   }
 
-  async function read() {
-    if (!pages.length) return;
+  async function read(list: Page[] = pages) {
+    if (!list.length) return;
     stopCamera();
     setStage('reading');
     setError(null);
     try {
       const fd = new FormData();
-      pages.forEach((p) => fd.append('file', p.file));
+      list.forEach((p) => fd.append('file', p.file));
       fd.append('hint', docType);
       const d = await api('/api/scan', { method: 'POST', body: fd });
       setResult({ ...d, done: {} as Record<number, boolean> });
@@ -168,12 +173,6 @@ export default function ScanPage() {
           <button onClick={reset} className="btn-ghost"><RotateCcw className="h-4 w-4" /> Scan another</button>
         </div>
 
-        <div className="card mb-4 grid gap-1 text-sm">
-          <p className="font-semibold capitalize">{x.document_type}{x.reference ? ` · ${x.reference}` : ''}{x.document_date ? ` · ${x.document_date}` : ''}</p>
-          {x.supplier_name && <p className="text-muted-foreground">From {x.supplier_name}{x.supplier_address ? `, ${x.supplier_address}` : ''}</p>}
-          {x.patient_name && <p className="text-muted-foreground">Patient {x.patient_name}{x.prescriber_name ? ` · Prescriber ${x.prescriber_name}` : ''}</p>}
-          <p className="text-muted-foreground">{result.proposals.length} controlled drug line{result.proposals.length === 1 ? '' : 's'} found{result.ignored ? ` · ${result.ignored} other line${result.ignored === 1 ? '' : 's'} ignored` : ''}</p>
-        </div>
 
         {result.exempt?.length > 0 && (
           <div className="mb-4 rounded-xl border border-border bg-muted p-4 text-sm">
@@ -193,15 +192,25 @@ export default function ScanPage() {
 
         <div className="space-y-4">
           {result.proposals.map((p: any, i: number) => (
-            <ProposalCard key={i} p={p} done={!!result.done[i]} onDone={() => setResult({ ...result, done: { ...result.done, [i]: true } })} canRecord={!!staff && can.record(staff.role)} />
+            <ProposalCard key={i} p={p} autoOpen={result.proposals.length === 1 && !!p.register_id} done={!!result.done[i]} onDone={() => setResult({ ...result, done: { ...result.done, [i]: true } })} canRecord={!!staff && can.record(staff.role)} />
           ))}
+        </div>
+
+        <div className="card mt-4 grid gap-1 text-sm">
+          <p className="font-semibold capitalize">{x.document_type}{x.reference ? ` · ${x.reference}` : ''}{x.document_date ? ` · ${x.document_date}` : ''}</p>
+          {x.supplier_name && <p className="text-muted-foreground">From {x.supplier_name}{x.supplier_address ? `, ${x.supplier_address}` : ''}</p>}
+          {x.patient_name && <p className="text-muted-foreground">Patient {x.patient_name}{x.prescriber_name ? ` · Prescriber ${x.prescriber_name}` : ''}</p>}
+          <p className="text-muted-foreground">{result.proposals.length} controlled drug line{result.proposals.length === 1 ? '' : 's'} found{result.ignored ? ` · ${result.ignored} other line${result.ignored === 1 ? '' : 's'} ignored` : ''}</p>
         </div>
 
         {result.proposals.length > 0 && remaining === 0 && (
           <div className="card mt-6 flex items-center gap-3 border-brand/40 bg-brand/10">
             <CheckCircle2 className="h-6 w-6 text-brand" />
-            <p className="font-semibold">All lines recorded.</p>
-            <Link href="/dashboard" className="btn-primary ml-auto">Back to registers</Link>
+            <p className="font-semibold">Recorded.</p>
+            <div className="ml-auto flex gap-2">
+              <Link href="/dashboard" className="btn-secondary">Registers</Link>
+              <button onClick={reset} className="btn-brand"><ScanLine className="h-4 w-4" /> Scan next</button>
+            </div>
           </div>
         )}
       </div>
@@ -212,9 +221,9 @@ export default function ScanPage() {
   const live = camera === 'on' || camera === 'starting';
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="mb-4 grid grid-cols-2 gap-2 rounded-xl bg-muted p-1">
+      <div className="mb-3 grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
         {([['invoice', 'Invoice / docket', Receipt], ['prescription', 'Prescription', ClipboardList]] as const).map(([v, l, I]) => (
-          <button key={v} onClick={() => setDocType(v)} className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition ${docType === v ? 'bg-card shadow-sm' : 'text-muted-foreground'}`}>
+          <button key={v} onClick={() => setDocType(v)} className={`flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold transition ${docType === v ? 'bg-card shadow-sm' : 'text-muted-foreground'}`}>
             <I className="h-4 w-4" /> {l}
           </button>
         ))}
@@ -258,7 +267,7 @@ export default function ScanPage() {
               <span className="h-14 w-14 rounded-full bg-white" />
             </button>
             {pages.length > 0 ? (
-              <button onClick={read} className="relative flex h-14 items-center gap-1.5 rounded-full bg-brand px-4 text-sm font-bold text-white shadow-lg" aria-label="Read the document">
+              <button onClick={() => read()} className="relative flex h-14 items-center gap-1.5 rounded-full bg-brand px-4 text-sm font-bold text-white shadow-lg" aria-label="Read the document">
                 <Sparkles className="h-5 w-5" /> Read
                 <span className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs font-bold text-brand">{pages.length}</span>
               </button>
@@ -314,16 +323,17 @@ export default function ScanPage() {
               <button onClick={() => fileRef.current?.click()} className="flex h-28 w-20 flex-shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-border text-muted-foreground"><Plus className="h-6 w-6" /></button>
             )}
           </div>
-          <button onClick={read} className="btn-brand mt-4 w-full text-base"><Sparkles className="h-5 w-5" /> Read {pages.length > 1 ? `${pages.length} pages` : 'document'}</button>
+          <button onClick={() => read()} className="btn-brand mt-4 w-full text-base"><Sparkles className="h-5 w-5" /> Read {pages.length > 1 ? `${pages.length} pages` : 'document'}</button>
         </div>
       )}
     </div>
   );
 }
 
-function ProposalCard({ p, done, onDone, canRecord }: { p: any; done: boolean; onDone: () => void; canRecord: boolean }) {
+function ProposalCard({ p, done, onDone, canRecord, autoOpen }: { p: any; done: boolean; onDone: () => void; canRecord: boolean; autoOpen?: boolean }) {
   const [registerId, setRegisterId] = useState<string | null>(p.register_id);
-  const [open, setOpen] = useState(false);
+  // One drug matched to your register (the usual prescription): go straight to the filled-in entry.
+  const [open, setOpen] = useState(!!autoOpen && canRecord);
   const chosen = p.candidates.find((c: any) => c.id === registerId);
   const conf = p.item.confidence as 'high' | 'medium' | 'low';
   const confCls = conf === 'high' ? 'bg-brand/15 text-primary' : conf === 'medium' ? 'bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100' : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200';
@@ -360,7 +370,7 @@ function ProposalCard({ p, done, onDone, canRecord }: { p: any; done: boolean; o
                 {p.candidates.map((c: any) => <option key={c.id} value={c.id}>{c.label}</option>)}
               </select>
             ) : (
-              <p className="rounded-lg bg-muted p-3 text-sm">No open register for this product. <Link href="/dashboard" className="text-primary underline">Open one</Link>, then scan again.</p>
+              <p className="rounded-lg bg-muted p-3 text-sm">No CD book for this product yet. <Link href="/dashboard?new=register" className="text-primary underline">Open a new CD book</Link>, then scan again.</p>
             )}
           </div>
           {registerId && !open && canRecord && <button onClick={() => setOpen(true)} className="btn-primary mt-3 w-full">Check details &amp; record</button>}
