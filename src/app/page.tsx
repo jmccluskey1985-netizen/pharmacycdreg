@@ -7,6 +7,7 @@ import { Logo } from '@/components/logo';
 import { PricingCard } from '@/components/pricing-card';
 import { LoginCard } from '@/components/login-card';
 import { DEMO } from '@/lib/demo/flag';
+import { RegisterCoverPreview } from '@/components/register-cover-preview';
 
 const FEATURES = [
   { icon: BookOpen, title: 'Looks like the register you know', text: 'One page per drug, same columns as the paper book — with the balance worked out for you.' },
@@ -190,9 +191,13 @@ export default function LandingPage() {
           <div className="mt-10 space-y-14">
             {PREVIEWS.map((p, i) => (
               <div key={p.src} className={`grid items-center gap-6 lg:gap-10 ${i % 2 ? 'lg:grid-cols-[1fr_1.6fr]' : 'lg:grid-cols-[1.6fr_1fr]'}`}>
-                <figure className={`overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border ${i % 2 ? 'lg:order-2' : ''}`}>
-                  <img src={p.src} alt={p.alt} loading="lazy" className="w-full" />
-                </figure>
+                {i === 0 ? (
+                  <figure><RegisterCoverPreview src={p.src} alt={p.alt} /></figure>
+                ) : (
+                  <figure className={`overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border ${i % 2 ? 'lg:order-2' : ''}`}>
+                    <img src={p.src} alt={p.alt} loading="lazy" className="w-full" />
+                  </figure>
+                )}
                 <div className={i % 2 ? 'lg:order-1' : ''}>
                   <h3 className="text-2xl font-bold">{p.title}</h3>
                   <p className="mt-2 text-lg text-muted-foreground">{p.text}</p>
