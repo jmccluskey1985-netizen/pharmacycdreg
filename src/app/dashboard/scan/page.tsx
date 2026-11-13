@@ -405,7 +405,7 @@ function ProposalCard({ p, done, onDone, canRecord, autoOpen, canOpenBook }: { p
 
 /** Start a CD book straight from a scanned line: brand, drug, strength and form come from the scan. */
 function StartBook({ item, receipt, onStarted, onCancel }: { item: any; receipt: boolean; onStarted: (id: string, label: string, balance: number) => void; onCancel?: () => void }) {
-  const cat = productFor(item.drug_name, item.form);
+  const cat = productFor(item.drug_name, item.form, item.brand);
   const [f, setF] = useState({ brand: item.brand ?? cat?.brands[0] ?? '', drug_name: item.drug_name, strength: item.strength, form: cat?.form ?? item.form, unit: cat?.unit ?? (item.quantity_unit || 'tablets'), balance: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

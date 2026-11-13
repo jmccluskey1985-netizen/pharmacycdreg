@@ -219,7 +219,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
       const pp = productOf(body.stereoisomer_of_register_id);
       cls = pp.class_name; sched = pp.schedule; parentId = pp.id;
     }
-    if (regList().some((r) => norm(r.product.drug_name) === norm(body.drug_name) && norm(r.product.strength) === norm(body.strength) && norm(r.product.form) === norm(body.form))) return fail(409, 'A live register for this product already exists');
+    if (regList().some((r) => norm(r.product.drug_name) === norm(body.drug_name) && norm(r.product.strength) === norm(body.strength) && norm(r.product.form) === norm(body.form) && norm(r.product.brand ?? '') === norm(body.brand ?? ''))) return fail(409, 'A live register for this product already exists');
     const pid = uid(), rid = uid();
     S.products.push({ id: pid, drug_name: body.drug_name, brand: body.brand ?? null, class_name: cls, schedule: sched, schedule_paragraph: body.schedule_paragraph || null, form: body.form, strength: body.strength, unit: body.unit, is_stereoisomer_of: parentId, parent: null } as any);
     S.registers.push({ id: rid, product_id: pid, opened_at: today(), closed_at: null });

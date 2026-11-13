@@ -8,7 +8,7 @@ export function filterRegisters<T extends RegLike>(regs: T[], q: string): T[] {
   if (!t) return regs;
   const products = searchCdProducts(t);
   return regs.filter((r) => {
-    const p = productFor(r.product.drug_name, r.product.form);
+    const p = productFor(r.product.drug_name, r.product.form, (r.product as any).brand);
     if (p && products.includes(p)) {
       // brand search should still respect a strength typed alongside it ("oxycontin 10")
       const nums = t.match(/\d+(\.\d+)?/g);

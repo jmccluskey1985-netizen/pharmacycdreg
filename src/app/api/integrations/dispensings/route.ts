@@ -69,8 +69,9 @@ export async function POST(req: Request) {
   }
 
   const regs = await liveRegisters(k.pharmacy_id);
-  let { match } = matchRegister(regs, d.drug.name, d.drug.strength, d.drug.form);
-  if (!match && d.drug.brand) match = matchRegister(regs, d.drug.brand, d.drug.strength, d.drug.form).match;
+  // Brand-aware: a Shortec dispensing never lands in an OxyNorm book.
+  let { match } = matchRegister(regs, d.drug.name, d.drug.strength, d.drug.form, d.drug.brand);
+  if (!match && d.drug.brand) match = matchRegister(regs, d.drug.brand, d.drug.strength, d.drug.form, d.drug.brand).match;
 
   let problem: string | null = null;
   // A pack quantity ("1 OP", "2 packs") is not a register quantity. Never auto-post it.

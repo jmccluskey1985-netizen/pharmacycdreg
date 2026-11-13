@@ -56,7 +56,7 @@ export function SnapPaperRegisters({ onChanged }: { onChanged: () => void }) {
 
   async function open(it: Item) {
     const p = it.result?.page;
-    const cat = productFor(it.f.drug_name, it.f.form);
+    const cat = productFor(it.f.drug_name, it.f.form, it.result?.page?.brand);
     update(it.key, { status: 'opening', error: undefined });
     try {
       const d = await api('/api/registers', { method: 'POST', json: {

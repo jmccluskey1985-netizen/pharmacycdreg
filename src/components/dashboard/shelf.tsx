@@ -19,7 +19,7 @@ const strengthNum = (s: string) => parseFloat(s.replace(',', '.')) || 0;
 function arrange(regs: Reg[]) {
   const byClass = new Map<string, Map<string, TypeGroup>>();
   for (const r of regs) {
-    const p = productFor(r.product.drug_name, r.product.form);
+    const p = productFor(r.product.drug_name, r.product.form, brandOf(r.product));
     const brand = brandOf(r.product) ?? r.product.drug_name;
     const key = `${p ? p.key : `${r.product.drug_name}|${r.product.form}`}|${brand.toLowerCase()}`;
     const types = byClass.get(r.product.class_name) ?? new Map<string, TypeGroup>();

@@ -18,7 +18,7 @@ export async function GET() {
     const balances = await balancesFor(regs.map((r) => r.id));
     const items = (data ?? []).map((row: any) => {
       const p = row.payload;
-      const { match, candidates } = matchRegister(regs, p.drug.name, p.drug.strength, p.drug.form);
+      const { match, candidates } = matchRegister(regs, p.drug.name, p.drug.strength, p.drug.form, p.drug.brand);
       const registerId = row.register_id ?? match?.id ?? null;
       return {
         id: row.id,

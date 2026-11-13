@@ -2,16 +2,19 @@
 
 import { useMemo, useState } from 'react';
 import { Search, Loader2, Check } from 'lucide-react';
-import { CD_PRODUCTS, searchCdProducts, type CdProduct } from '@/data/cd-products';
+import { CD_PRODUCTS, searchCdProducts, normBrand, type CdProduct } from '@/data/cd-products';
+import { brandOf } from '@/lib/product-name';
 import { genericKey, sameStrength } from '@/lib/cd-catalogue';
 import { api, ApiError } from '@/lib/api';
 
-interface Existing { product: { drug_name: string; strength: string; form: string } }
+interface Existing { product: { drug_name: string; strength: string; form: string; brand?: string | null } }
 type Pick = { product: CdProduct; strength: string; balance: string; brand: string };
 
 const sameForm = (a: string, b: string) => a.toLowerCase().replace(/s$/, '') === b.toLowerCase().replace(/s$/, '');
+// Same drug, strength, form AND brand (each brand has its own register).
 export const isOpen = (regs: Existing[], p: CdProduct, strength: string) =>
-  regs.some((r) => genericKey(r.product.drug_name) === genericKey(p.generic) && sameStrength(r.product.strength, strength) && sameForm(r.product.form, p.form));
+  regs.some((r) => genericKey(r.product.drug_name) === genericKey(p.generic) && sameStrength(r.product.strength, strength) && sameForm(r.product.form, p.form)
+    && (normBrand(brandOf(r.product))?.toLowerCase() ?? '') === (p.brands[0]?.toLowerCase() ?? ''));
 
 /** Tick the CD products you stock (by strength), add opening balances, open them all at once. */
 export function SetupFromList({ registers, onDone }: { registers: Existing[]; onDone: () => void }) {
@@ -26,7 +29,7 @@ export function SetupFromList({ registers, onDone }: { registers: Existing[]; on
   const toggle = (p: CdProduct, s: string) => setPicks((x) => {
     const k = id(p, s);
     const next = { ...x };
-    if (next[k]) delete next[k]; else next[k] = { product: p, strength: s, balance: '', brand: p.brands[0] };
+    if (next[k]) delete next[k]; else next[k] = { product: p, strength: s, balance: '', brand: p.brands[0] ?? '' };
     return next;
   });
   const list = Object.entries(picks);
@@ -38,14 +41,14 @@ export function SetupFromList({ registers, onDone }: { registers: Existing[]; on
     for (const [, x] of list) {
       try {
         await api('/api/registers', { method: 'POST', json: {
-          drug_name: x.product.generic, brand: x.brand, class_name: x.product.class, schedule: 2, schedule_paragraph: x.product.para,
+          drug_name: x.product.generic, brand: x.brand || null, class_name: x.product.class, schedule: 2, schedule_paragraph: x.product.para,
           form: x.product.form, strength: x.strength, unit: x.product.unit,
           opening_balance: x.balance ? Number(x.balance) : undefined, opening_date: date,
           opening_balance_note: 'Brought forward from paper CD register',
         } });
         ok++;
       } catch (e) {
-        failed.push(`${x.brand} ${x.strength}: ${e instanceof ApiError ? e.message : 'failed'}`);
+        failed.push(`${x.brand || x.product.generic} ${x.strength}: ${e instanceof ApiError ? e.message : 'failed'}`);
       }
     }
     setBusy(false);
@@ -63,7 +66,7 @@ export function SetupFromList({ registers, onDone }: { registers: Existing[]; on
             <div className="space-y-2">
               {items.map((p) => (
                 <div key={p.key} className="rounded-lg border border-border p-3">
-                  <p className="text-sm font-semibold">{p.brands.slice(0, 3).join(' / ')} <span className="font-normal text-muted-foreground">· {p.form}</span></p>
+                  <p className="text-sm font-semibold">{p.brands[0] ?? p.generic} <span className="font-normal text-muted-foreground">· {p.form}</span></p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {p.strengths.map((s) => {
                       const already = isOpen(registers, p, s);

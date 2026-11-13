@@ -100,8 +100,9 @@ export async function POST(req: Request) {
     };
     const exempt = extraction.items.filter((i) => i.is_controlled_drug && registerExemption(i.drug_name, i.strength, i.form, i.brand));
     const proposals = await Promise.all(extraction.items.filter((i) => i.is_controlled_drug && !registerExemption(i.drug_name, i.strength, i.form, i.brand)).map(async (item) => {
-      const { match, candidates, state } = matchRegister(regs, item.drug_name, item.strength, item.form, item.brand);
+      const { match, candidates, state, otherBrands } = matchRegister(regs, item.drug_name, item.strength, item.form, item.brand);
       const qty = decideQuantity(item, extraction.document_type);
+      if (otherBrands?.length) qty.flags.unshift(`You have ${otherBrands.map((r) => r.label).join(', ')} — not ${item.brand}. Brands aren’t interchangeable: start a ${item.brand} book or check the brand dispensed.`);
       qty.flags.push(...docFlags);
       const prior = match ? await priorFor(match.id, qty.quantity) : null;
       if (prior) { qty.flags.unshift(prior.text); if (prior.blocking) qty.blocking = true; }

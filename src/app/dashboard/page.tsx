@@ -333,7 +333,7 @@ function TypeTable({ items }: { items: Reg[] }) {
 
 /** Start one CD book from the shelf: brand, balance brought forward and its date. */
 function StartFromList({ g, onDone }: { g: Ghost; onDone: () => void }) {
-  const [brand, setBrand] = useState(g.product.brands[0]);
+  const [brand, setBrand] = useState(g.product.brands[0] ?? '');
   const [balance, setBalance] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [busy, setBusy] = useState(false);
@@ -343,7 +343,7 @@ function StartFromList({ g, onDone }: { g: Ghost; onDone: () => void }) {
     setBusy(true); setError(null);
     try {
       await api('/api/registers', { method: 'POST', json: {
-        drug_name: g.product.generic, brand, class_name: g.product.class, schedule: 2, schedule_paragraph: g.product.para,
+        drug_name: g.product.generic, brand: brand || null, class_name: g.product.class, schedule: 2, schedule_paragraph: g.product.para,
         form: g.product.form, strength: g.strength, unit: g.product.unit,
         opening_balance: balance ? Number(balance) : undefined, opening_date: date, opening_balance_note: 'Brought forward from paper CD register',
       } });
@@ -353,7 +353,7 @@ function StartFromList({ g, onDone }: { g: Ghost; onDone: () => void }) {
   }
   return (
     <form onSubmit={start} className="space-y-4">
-      <p className="text-lg font-bold">{brand} {g.strength} <span className="font-normal text-muted-foreground">{g.product.form}</span></p>
+      <p className="text-lg font-bold">{brand || g.product.generic} {g.strength} <span className="font-normal text-muted-foreground">{g.product.form}</span></p>
       <p className="-mt-3 text-sm text-muted-foreground">{g.product.generic}</p>
       <div><label className="label">Brand you stock</label>
         <input className="input" list="start-brands" value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="Pick or type any brand, e.g. Rowex" />

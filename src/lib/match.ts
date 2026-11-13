@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import { genericKey, sameStrength } from '@/lib/cd-catalogue';
-import { productTitle, genericLine } from '@/lib/product-name';
+import { productTitle, genericLine, brandOf } from '@/lib/product-name';
+import { normBrand } from '@/data/cd-products';
 
 const norm = (s: string) => s.toLowerCase().replace(/hydrochloride|sulfate|sulphate|tartrate|citrate|base|\(.*?\)/g, '').replace(/[^a-z0-9]/g, '');
 const normStrength = (s: string) => s.toLowerCase().replace(/\s+/g, '').replace(/micrograms?|µg|ug/g, 'mcg').replace(/milligrams?/g, 'mg');
@@ -38,7 +39,17 @@ export function matchRegister(regs: RegisterOption[], drugName: string, strength
     const byForm = exact.filter((r) => f.includes(r.form.toLowerCase().split(' ').pop()!) || r.form.toLowerCase().includes(f.split(' ').pop()!));
     if (byForm.length) exact = byForm;
   }
+  // Brands are not interchangeable (OxyNorm ≠ Shortec): a read brand only goes in that brand's book.
+  const b = normBrand(brand)?.toLowerCase();
+  if (b && exact.length) {
+    const regBrand = (r: RegisterOption) => normBrand(brandOf(r))?.toLowerCase() ?? null;
+    const same = exact.filter((r) => regBrand(r) === b);
+    const unbranded = exact.filter((r) => regBrand(r) === null);
+    if (same.length) exact = same;
+    else if (unbranded.length) exact = unbranded;
+    else return { match: null, state: 'no_register' as MatchState, candidates: [], otherBrands: exact };
+  }
   const match = exact.length === 1 ? exact[0] : null;
   const state: MatchState = match ? 'your_register' : exact.length > 1 || sameDrug.length ? 'pick_register' : 'no_register';
-  return { match, state, candidates: exact.length ? exact : sameDrug };
+  return { match, state, candidates: exact.length ? exact : sameDrug, otherBrands: [] as RegisterOption[] };
 }
