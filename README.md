@@ -1,5 +1,7 @@
 # PharmacyCDReg.ie
 
+> New to the project? Start with [HANDOVER.md](HANDOVER.md).
+
 Electronic Controlled Drug Register for Irish community pharmacies. It is a sister product to PharmacyConsultation.ie, uses the same logo style and login pattern, and has its own domain, repo and database.
 
 ## What it does
@@ -8,10 +10,10 @@ Electronic Controlled Drug Register for Irish community pharmacies. It is a sist
 |---|---|
 | **Sign in** | Pharmacy email + password on the landing page (Supabase Auth), then each person enters their **staff PIN** (4–6 digits, bcrypt-hashed, 5 tries/min). The PIN sets an httpOnly signed cookie. Every entry is signed by that staff member's name and PSI number. Auto-locks after 15 min idle. |
 | **Registers** | One "book" per drug/strength/form, grouped by schedule and class. Pages use the same columns as the PSI paper register: date, name & address, authority to possess, amount obtained/supplied, stock balance, pharmacist, plus footnotes and continued-from/on page. Opening a register plays a book-opening animation. |
-| **Entries** | Receipt, supply, witnessed destruction, patient return (kept out of stock) and patient-return destruction. The running balance is calculated and never typed. Entries that would take stock below zero are refused. |
+| **Entries** | Receipt, supply, witnessed destruction and correction. Patient returns go in a separate CD Destruction Record Book, and expired Schedule 2 stock can be set aside until its witnessed destruction (see docs/DESTRUCTION_AND_QUARANTINE.md). The running balance is calculated and never typed. Entries that would take stock below zero are refused. |
 | **Corrections** | Never overwrite. A correction is a new row; the original stays visible, struck through, with a footnote giving who, when, what changed and why. Balances recalculate. |
 | **Scan invoices** | Phone camera viewfinder (multi-page) or upload. Claude reads the wholesaler invoice, picks out CD lines and converts packs to units, then matches each line to a register. A pharmacist checks and confirms every line; nothing is recorded automatically. Prescriptions are also supported. |
-| **Inspection** | Search by drug, date, supplier, patient, prescriber or authority, sorted either way. Print or CSV export per register. Witnessed Destruction Record page. |
+| **Inspection** | Search by drug, date, supplier, patient, prescriber or authority, sorted either way. Print or CSV export per register. Witnessed Destruction Record and CD Destruction Record Book. |
 | **Audit** | Every entry, sign-in, failed PIN, view, export, scan and staff change goes into an append-only `audit_log`. |
 | **Roles** | Supervising pharmacist, pharmacist, locum pharmacist (with optional access end date), technician (can scan/draft only) and read-only. |
 
@@ -53,7 +55,7 @@ Electronic Controlled Drug Register for Irish community pharmacies. It is a sist
 
 Mirrors PharmacyConsultation.ie, with prices set in `src/config/pricing.ts`:
 - **€19/month + VAT**, a limited-time launch price shown against €29, and a **one-month free trial**.
-- **Self sign-up** at `/start`. The pharmacy is created, then Stripe Checkout runs with the **card required up front**, €0 today, and the card is charged automatically on day 30 unless cancelled. Irish VAT is handled by Stripe Tax, and the VAT number is captured at checkout.
+- **Self sign-up** at `/start`. The pharmacy is created, then The free month starts straight away with **no card needed**, and a countdown offers Subscribe; subscribing early keeps the remaining free days. Irish VAT is handled by Stripe Tax, and the VAT number is captured at checkout.
 - `POST /api/stripe/webhook` keeps `pharmacies.subscription_status`, `trial_ends_at` and `current_period_end` in sync. One free month per pharmacy.
 - **Billing page** for the supervising pharmacist: the Stripe customer portal for card changes, invoices and cancelling.
 - **Trial reminders** go out 7, 3, 1 and 0 days before the end, via Vercel Cron → `/api/cron/trial-reminders`, which needs `CRON_SECRET`.
@@ -67,7 +69,7 @@ Mirrors PharmacyConsultation.ie, with prices set in `src/config/pricing.ts`:
 
 ## Setup
 
-1. Create a Supabase project in an EU region and run the files in `supabase/migrations` in order (0001 → 0004) in its SQL editor.
+1. Create a Supabase project in an EU region and run the files in `supabase/migrations` in order (0001 → 0011) in its SQL editor.
 2. Copy `.env.example` to `.env.local` and fill it in. Generate `STAFF_SESSION_SECRET` with `openssl rand -hex 32`.
 3. `npm install && npm run dev`
 4. Pharmacies sign up themselves at `/start`. To set one up by hand instead, run:
