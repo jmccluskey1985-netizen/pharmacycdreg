@@ -27,12 +27,19 @@ export async function middleware(request: NextRequest) {
 
   try {
     const { response, user, needsCode } = await updateSession(request);
+    // A redirect must carry any refreshed sign-in cookies; otherwise the rotated refresh token
+    // is lost and the pharmacy gets signed out next time.
+    const redirect = (url: URL) => {
+      const r = NextResponse.redirect(url);
+      response.cookies.getAll().forEach((c) => r.cookies.set(c));
+      return withHeaders(r);
+    };
     // Already signed in? The home page goes straight to the register (add ?home=1 to see it).
     if (pathname === '/' && user && !needsCode && !request.nextUrl.searchParams.has('home') && !request.nextUrl.searchParams.has('code')) {
       const url = request.nextUrl.clone();
       url.pathname = '/dashboard';
       url.search = '';
-      return NextResponse.redirect(url);
+      return redirect(url);
     }
     if (pathname.startsWith('/dashboard') && user && needsCode) {
       const url = request.nextUrl.clone();
@@ -40,14 +47,14 @@ export async function middleware(request: NextRequest) {
       url.search = '';
       url.searchParams.set('code', '1');
       url.searchParams.set('next', pathname);
-      return NextResponse.redirect(url);
+      return redirect(url);
     }
     // Dashboard needs the pharmacy login; send people back to the landing-page sign-in.
     if (pathname.startsWith('/dashboard') && !user) {
       const url = request.nextUrl.clone();
       url.pathname = '/';
       url.searchParams.set('next', pathname);
-      return NextResponse.redirect(url);
+      return redirect(url);
     }
     return withHeaders(response);
   } catch (err) {
