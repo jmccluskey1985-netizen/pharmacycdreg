@@ -38,6 +38,9 @@ export const EntrySchema = z.discriminatedUnion('entry_type', [
   z.object({ ...base, entry_type: z.literal('destruction'), quantity: qty, witness_name: s(2), witness_role: s(2), destruction_method: opt }),
   z.object({ ...base, entry_type: z.literal('patient_return'), quantity: qty, recipient_name: s(2), recipient_address: opt, patient_id: z.string().uuid().optional().nullable() }),
   z.object({ ...base, entry_type: z.literal('patient_return_destruction'), quantity: qty, witness_name: s(2), witness_role: s(2), destruction_method: opt, recipient_name: opt }),
+  // Stock adjustment after a stock check (made through /api/stock-checks/[id]/adjust).
+  z.object({ ...base, entry_type: z.literal('adjustment_in'), quantity: qty, notes: s(10) }),
+  z.object({ ...base, entry_type: z.literal('adjustment_out'), quantity: qty, notes: s(10) }),
   z.object({
     ...base,
     entry_type: z.literal('correction'),
@@ -63,6 +66,8 @@ export const STOCK_EFFECT: Record<string, 1 | -1 | 0> = {
   receipt: 1,
   supply: -1,
   destruction: -1,
+  adjustment_in: 1,
+  adjustment_out: -1,
   patient_return: 0,
   patient_return_destruction: 0,
 };

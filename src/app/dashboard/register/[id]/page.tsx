@@ -3,7 +3,7 @@
 import { productTitle, genericLine, brandOf } from '@/lib/product-name';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ChevronLeft, ChevronRight, Download, Plus, Printer, PencilLine, Trash2, Repeat, X } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Download, Plus, Printer, PencilLine, Trash2, Repeat, X, BellRing, StickyNote } from 'lucide-react';
 import { api } from '@/lib/api';
 import { can } from '@/lib/roles';
 import { canWrite } from '@/lib/stripe';
@@ -14,6 +14,7 @@ import { EntryForm, type EntryType } from '@/components/dashboard/entry-form';
 import { StockCheckButton } from '@/components/dashboard/stock-check';
 import { QuarantinePanel } from '@/components/dashboard/quarantine';
 import { RepeatSupplies, type SupplyLine } from '@/components/dashboard/repeat-supplies';
+import { ReminderForm } from '@/components/dashboard/reminder-form';
 
 const LINES_PER_PAGE = 16;
 
@@ -43,18 +44,19 @@ const fmtQty = (q: string | number) => Number(q).toLocaleString('en-IE', { maxim
 function partyCell(r: Raw) {
   if (r.entry_type === 'receipt') return { name: r.supplier_name, address: r.supplier_address };
   if (r.entry_type === 'destruction') return { name: 'DESTROYED', address: `Witness: ${r.witness_name} (${r.witness_role})` };
+  if (r.entry_type === 'adjustment_in' || r.entry_type === 'adjustment_out') return { name: 'STOCK ADJUSTMENT', address: `After stock check — ${r.entry_type === 'adjustment_in' ? 'added to' : 'removed from'} balance` };
   if (r.entry_type === 'patient_return') return { name: `Patient return — ${r.recipient_name}`, address: 'Not pharmacy stock' };
   if (r.entry_type === 'patient_return_destruction') return { name: 'PATIENT RETURN DESTROYED', address: `Witness: ${r.witness_name} (${r.witness_role})` };
   return { name: r.recipient_name, address: r.recipient_address };
 }
 
 function authorityCell(r: Raw) {
-  if (r.entry_type === 'receipt') return r.notes ?? '';
+  if (r.entry_type === 'receipt' || r.entry_type.startsWith('adjustment')) return r.notes ?? '';
   return [r.authority_to_possess || (r.prescriber_name ? `Rx — ${r.prescriber_name}` : ''), r.prescription_ref].filter(Boolean).join(' · ');
 }
 
 export default function RegisterBook({ params }: { params: { id: string } }) {
-  const { staff, pharmacy } = useStaff();
+  const { staff, pharmacy, refresh } = useStaff();
   const [data, setData] = useState<{ register: any; ledger: Ledger[]; entries: Raw[]; staff: Person[] } | null>(null);
   const [opened, setOpened] = useState(false);
   const [page, setPage] = useState(0);
@@ -73,6 +75,7 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [anchor, setAnchor] = useState<string | null>(null);
   const [repeating, setRepeating] = useState(false);
+  const [reminding, setReminding] = useState(false);
 
   const load = useCallback(async () => {
     const d = await api(`/api/registers/${params.id}`);
@@ -164,7 +167,8 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
               catch (e: any) { alert(e?.message ?? 'Could not remove it'); }
             }} className="btn-ghost text-destructive"><Trash2 className="h-4 w-4" /> Remove book</button>
           )}
-          <StockCheckButton registerId={params.id} unit={p.unit} balance={Number(balance)} canRecord={!!mayRecord} />
+          <StockCheckButton registerId={params.id} unit={p.unit} balance={Number(balance)} canRecord={!!mayRecord} onChanged={load} />
+          <Link href={`/dashboard/notes?register_id=${params.id}`} className="btn-secondary"><StickyNote className="h-4 w-4" /> Notes</Link>
           <QuarantinePanel registerId={params.id} unit={p.unit} balance={Number(balance)} canRecord={!!mayRecord} onChanged={load} />
           {mayRecord && <button onClick={() => setAdding(true)} className="btn-primary"><Plus className="h-4 w-4" /> New entry</button>}
         </div>
@@ -217,13 +221,13 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
                           const r = l.raw;
                           const party = partyCell(r);
                           const who = people.get(r.recorded_by_staff_id);
-                          const inQty = r.entry_type === 'receipt' ? fmtQty(r.quantity) : '';
-                          const outQty = ['supply', 'destruction', 'patient_return_destruction'].includes(r.entry_type) ? fmtQty(r.quantity) : '';
+                          const inQty = ['receipt', 'adjustment_in'].includes(r.entry_type) ? fmtQty(r.quantity) : '';
+                          const outQty = ['supply', 'destruction', 'patient_return_destruction', 'adjustment_out'].includes(r.entry_type) ? fmtQty(r.quantity) : '';
                           const cls = l.struck ? 'struck' : '';
                           return (
                             <tr key={l.key} onClick={(e) => choose(l, e)} aria-selected={selected.includes(l.key) || undefined}
                               title={selectable(l) ? 'Click to select · Shift-click for a range · then “Repeat for today”' : undefined}
-                              className={`${selectable(l) ? 'cursor-pointer select-none' : ''} ${selected.includes(l.key) ? 'bg-brand/15 outline outline-2 -outline-offset-2 outline-brand' : r.entry_type.includes('patient_return') ? 'bg-sky-50/60 dark:bg-sky-950/30' : r.entry_type === 'destruction' ? 'bg-amber-50/60 dark:bg-amber-950/20' : selectable(l) ? 'hover:bg-brand/5' : ''}`}>
+                              className={`${selectable(l) ? 'cursor-pointer select-none' : ''} ${selected.includes(l.key) ? 'bg-brand/15 outline outline-2 -outline-offset-2 outline-brand' : r.entry_type.includes('patient_return') ? 'bg-sky-50/60 dark:bg-sky-950/30' : r.entry_type === 'destruction' ? 'bg-amber-50/60 dark:bg-amber-950/20' : r.entry_type.startsWith('adjustment') ? 'bg-violet-50/70 dark:bg-violet-950/30' : selectable(l) ? 'hover:bg-brand/5' : ''}`}>
                               <td className={`${cls} tabular-nums`}>{fmtDate(r.transaction_date)}</td>
                               <td className={cls}>
                                 <span className="font-medium">{party.name}</span>
@@ -302,6 +306,7 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
           <div className="flex items-center gap-2 rounded-full bg-foreground px-3 py-2 text-sm text-background shadow-2xl">
             <span className="px-2 font-semibold">{selected.length} selected</span>
             <button onClick={() => setRepeating(true)} className="flex items-center gap-1.5 rounded-full bg-brand px-3 py-1.5 font-semibold text-white"><Repeat className="h-4 w-4" /> Repeat for today</button>
+            <button onClick={() => setReminding(true)} className="flex items-center gap-1.5 rounded-full bg-background/15 px-3 py-1.5 font-semibold hover:bg-background/25"><BellRing className="h-4 w-4" /> <span className="hidden sm:inline">Set up</span> reminder</button>
             <button onClick={() => setSelected([])} className="rounded-full p-1.5 hover:bg-background/20" aria-label="Clear selection"><X className="h-4 w-4" /></button>
           </div>
         </div>
@@ -309,6 +314,10 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
       <Modal open={repeating} onClose={() => setRepeating(false)} title={`Repeat ${selected.length > 1 ? `${selected.length} supplies` : 'supply'} — ${brandOf(p) ?? p.drug_name} ${p.strength}`} wide>
         {repeating && <RepeatSupplies registerId={params.id} unit={p.unit} balance={Number(balance)} lines={chosenLines}
           onCancel={() => setRepeating(false)} onDone={async () => { setRepeating(false); setSelected([]); await load(); }} />}
+      </Modal>
+      <Modal open={reminding} onClose={() => setReminding(false)} title="Dispensing reminder" wide>
+        {reminding && <ReminderForm initial={{ lines: chosenLines.map((l) => ({ register_id: params.id, quantity: Number(l.quantity), recipient_name: l.recipient_name ?? '', recipient_address: l.recipient_address ?? '', prescriber_name: l.prescriber_name, prescriber_address: l.prescriber_address, authority_to_possess: l.authority_to_possess, patient_id: l.patient_id ?? null })) }}
+          onCancel={() => setReminding(false)} onSaved={() => { setReminding(false); setSelected([]); refresh(); }} />}
       </Modal>
       <Modal open={adding} onClose={() => setAdding(false)} title={`New entry — ${brandOf(p) ?? p.drug_name} ${p.strength}`}>
         <EntryForm registerId={params.id} unit={p.unit} balance={balance} initial={addType ? { entry_type: addType } : undefined} onCancel={() => setAdding(false)} onSaved={async () => { setAdding(false); await load(); }} />

@@ -8,6 +8,8 @@
 'use client';
 import { decideQuantity } from '@/lib/quantity';
 import { productTitle } from '@/lib/product-name';
+import { STOCK_EFFECT } from '@/lib/entry-schema';
+import { advance } from '@/lib/reminders';
 import { genericKey, sameStrength, registerExemption } from '@/lib/cd-catalogue';
 
 type Json = Record<string, any>;
@@ -135,7 +137,7 @@ function ledger(regId: string): Json[] {
     const corrs = rows.filter((c) => c.corrects_entry_id === o.id);
     const c = corrs[corrs.length - 1];
     const eff = c ? { ...o, ...Object.fromEntries(Object.entries(c).filter(([k, v]) => v !== null && !['id', 'seq', 'entry_type', 'recorded_at', 'recorded_by_staff_id', 'corrects_entry_id', 'correction_reason', 'source'].includes(k))) } : o;
-    const effect = o.entry_type === 'receipt' ? 1 : ['supply', 'destruction'].includes(o.entry_type) ? -1 : 0;
+    const effect = (STOCK_EFFECT[o.entry_type] ?? 0);
     bal += effect * Number(eff.quantity);
     return { ...eff, correction_count: corrs.length, correction_reason: c?.correction_reason ?? null, running_balance: String(bal) };
   });
@@ -164,6 +166,22 @@ const patientMatch = (p: Json, q: string) => {
   return t.split(/\s+/).every((w) => `${p.first_name} ${p.surname}`.toLowerCase().includes(w));
 };
 const Q = (): Json[] => ((S as any).quarantine ||= []);
+const NOTES = (): Json[] => ((S as any).notes ||= []);
+const FB = (): Json[] => ((S as any).feedback ||= [
+  { id: 'fb1', kind: 'idea', message: 'Text the patient when their weekly supply is ready', status: 'planned', reply: 'Planned for spring.', shared: true, shared_title: 'Text patients when a supply is ready', votes: 7, voted: false, created_at: new Date().toISOString(), staff_name: 'Demo' },
+  { id: 'fb2', kind: 'idea', message: 'Print a monthly balance summary for all registers', status: 'new', reply: null, shared: true, shared_title: 'Monthly balance summary for all registers', votes: 4, voted: false, created_at: new Date().toISOString(), staff_name: 'Demo' },
+]);
+// A sample weekly reminder, due today, built from the first patient supply in the demo registers.
+const REM = (): Json[] => {
+  const X = S as any;
+  if (!X.reminders) {
+    X.reminders = [];
+    const e = [...S.entries].reverse().find((x) => x.entry_type === 'supply' && x.recipient_name);
+    if (e) X.reminders.push({ id: 'rem1', title: `${e.recipient_name} — weekly`, frequency: 'weekly', interval_days: null, next_due: today(), notes: null, active: true, last_done_on: null, last_done_by_name: null,
+      lines: [{ register_id: e.register_id, quantity: Number(e.quantity), recipient_name: e.recipient_name, recipient_address: e.recipient_address, prescriber_name: e.prescriber_name ?? null, prescriber_address: e.prescriber_address ?? null, authority_to_possess: null, patient_id: null }] });
+  }
+  return X.reminders;
+};
 const BOOK = (): Json[] => ((S as any).destructionBook ||= []);
 const qFor = (regId: string) => Q().filter((i) => i.register_id === regId && i.status === 'awaiting').reduce((n, i) => n + Number(i.quantity), 0);
 const regList = () => S.registers.filter((r) => !r.closed_at).map((r) => ({ id: r.id, opened_at: r.opened_at, closed_at: null, product: productOf(r.id), balance: balance(r.id), quarantined: qFor(r.id), entry_count: S.entries.filter((e) => e.register_id === r.id).length }));
@@ -194,7 +212,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
   const needStaff = () => (st ? null : fail(423, 'Enter your PIN to continue', 'LOCKED'));
 
   if (path === '/api/staff/me') {
-    return res({ pharmacy: S.pharmacy, staff: st && { id: st.id, full_name: st.full_name, role: st.role, psi_number: st.psi_number }, locked: !st, hasPins: true, inboxCount: S.inbox.filter((i) => i.status === 'pending').length });
+    return res({ pharmacy: S.pharmacy, staff: st && { id: st.id, full_name: st.full_name, role: st.role, psi_number: st.psi_number }, locked: !st, hasPins: true, inboxCount: S.inbox.filter((i) => i.status === 'pending').length, remindersDue: st ? REM().filter((r) => r.active && r.next_due <= today()).length : 0 });
   }
   if (path === '/api/staff/unlock' && method === 'POST') {
     const s = S.staff.find((x) => x.is_active && x.pin === String(body.pin));
@@ -250,11 +268,11 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     let next = bal;
     if (e.entry_type === 'correction') {
       const orig = ledger(e.register_id).find((x) => x.id === e.corrects_entry_id)!;
-      const eff = orig.entry_type === 'receipt' ? 1 : ['supply', 'destruction'].includes(orig.entry_type) ? -1 : 0;
+      const eff = (STOCK_EFFECT[orig.entry_type] ?? 0);
       next = bal + eff * (Number(e.quantity) - Number(orig.quantity));
       const raw = S.entries.find((x) => x.id === e.corrects_entry_id)!;
       for (const k of Object.keys(raw)) if (e[k] == null || e[k] === '') e[k] = (raw as any)[k];
-    } else next = bal + (e.entry_type === 'receipt' ? 1 : ['supply', 'destruction'].includes(e.entry_type) ? -1 : 0) * Number(e.quantity);
+    } else next = bal + (STOCK_EFFECT[e.entry_type] ?? 0) * Number(e.quantity);
     if (next < 0) return fail(409, `This would take the balance below zero (current ${bal}). Check the quantity or record the missing receipt first.`);
     const seq = S.entries.filter((x) => x.register_id === e.register_id).length + 1;
     const row = { ...e, id: uid(), seq, quantity: String(e.quantity), recorded_at: new Date().toISOString(), recorded_by_staff_id: st!.id, source: e.inbox_id ? 'pmr' : e.scan_id ? 'scan' : 'manual' };
@@ -290,6 +308,72 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     if (method === 'PUT') { if (body.api_key) { R.has_key = true; R.hint = `…${String(body.api_key).slice(-4)}`; } R.models = body.models; }
     if (method === 'DELETE') { R.has_key = false; R.hint = null; }
     return res(R);
+  }
+  if (path === '/api/reminders') {
+    if (needStaff()) return needStaff()!;
+    if (method === 'GET') return res({ reminders: REM().map((r) => ({ ...r, due: r.active && r.next_due <= today(), lines: r.lines.map((l: Json) => ({ ...l, label: productTitle(productOf(l.register_id)), unit: productOf(l.register_id).unit, balance: balance(l.register_id), closed: false })) })) });
+    const r = { ...body, id: uid(), active: true, last_done_on: null, last_done_by_name: null };
+    REM().push(r); audit('reminder.created', { title: body.title });
+    return res({ reminder: r });
+  }
+  if ((m = path.match(/^\/api\/reminders\/([^/]+)\/done$/)) && method === 'POST') {
+    const r = REM().find((x) => x.id === m![1]); if (!r) return fail(404, 'Reminder not found');
+    Object.assign(r, { next_due: advance(r.next_due, r.frequency, r.interval_days, today()), last_done_on: today(), last_done_by_name: st?.full_name });
+    audit(`reminder.${body.action}`); return res({ reminder: r });
+  }
+  if ((m = path.match(/^\/api\/reminders\/([^/]+)$/))) {
+    const i = REM().findIndex((x) => x.id === m![1]); if (i < 0) return fail(404, 'Reminder not found');
+    if (method === 'DELETE') { REM().splice(i, 1); return res({ ok: true }); }
+    Object.assign(REM()[i], body); return res({ reminder: REM()[i] });
+  }
+  if (path === '/api/notes') {
+    if (needStaff()) return needStaff()!;
+    if (method === 'GET') {
+      const arch = url.searchParams.get('archived') === '1';
+      return res({ notes: NOTES().filter((n) => !!n.archived === arch).map((n): Json => ({ ...n, register_label: n.register_id ? productTitle(productOf(n.register_id)) : null })).sort((a: Json, b: Json) => Number(b.pinned) - Number(a.pinned) || b.updated_at.localeCompare(a.updated_at)) });
+    }
+    const n = { id: uid(), title: body.title, body: body.body ?? '', category: body.category ?? null, pinned: !!body.pinned, archived: false, register_id: body.register_id ?? null, stock_check_id: body.stock_check_id ?? null, created_by_name: st!.full_name, updated_by_name: st!.full_name, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), attachments: [] };
+    NOTES().push(n); return res({ note: n });
+  }
+  if ((m = path.match(/^\/api\/notes\/([^/]+)\/attachments$/)) && method === 'POST') {
+    const n = NOTES().find((x) => x.id === m![1]); if (!n) return fail(404, 'Note not found');
+    const file = (init?.body as FormData)?.get?.('file') as File | null;
+    if (!file) return fail(400, 'Choose a photo or PDF');
+    const a = { id: uid(), file_name: file.name || 'photo.jpg', mime_type: file.type || 'image/jpeg', size_bytes: file.size, created_at: new Date().toISOString(), url: URL.createObjectURL(file) };
+    n.attachments.push(a); return res({ attachment: a });
+  }
+  if ((m = path.match(/^\/api\/notes\/attachments\/([^/]+)$/)) && method === 'DELETE') {
+    for (const n of NOTES()) n.attachments = n.attachments.filter((a: Json) => a.id !== m![1]);
+    return res({ ok: true });
+  }
+  if ((m = path.match(/^\/api\/notes\/([^/]+)$/)) && method === 'PATCH') {
+    const n = NOTES().find((x) => x.id === m![1]); if (!n) return fail(404, 'Note not found');
+    Object.assign(n, body, { updated_by_name: st?.full_name, updated_at: new Date().toISOString() }); return res({ note: n });
+  }
+  if ((m = path.match(/^\/api\/stock-checks\/([^/]+)\/adjust$/)) && method === 'POST') {
+    if (needStaff()) return needStaff()!;
+    const c = ((S as any).checks || []).find((x: Json) => x.id === m![1]); if (!c) return fail(404, 'Stock check not found');
+    const bal = balance(c.register_id);
+    if (bal !== Number(c.register_balance)) return fail(409, 'The register has changed since this count — do a new stock check, then amend from that.');
+    if (!body.investigation || body.investigation.trim().length < 10) return fail(400, 'Say what you did to investigate (at least a sentence)');
+    const diff = Number(c.counted) - bal;
+    const notes = `Stock check ${today().split('-').reverse().join('/')} by ${c.checked_by_name}: counted ${c.counted}, register ${bal} (${diff > 0 ? '+' : ''}${diff}). Investigation: ${body.investigation}`;
+    const seq = S.entries.filter((x) => x.register_id === c.register_id).length + 1;
+    const e = { id: uid(), register_id: c.register_id, seq, entry_type: diff > 0 ? 'adjustment_in' : 'adjustment_out', transaction_date: today(), recorded_at: new Date().toISOString(), quantity: String(Math.abs(diff)), notes, recorded_by_staff_id: st!.id, source: 'manual' };
+    S.entries.push(e as any);
+    let note = null;
+    if (body.save_note) { const p = productOf(c.register_id); note = { id: uid(), title: `Stock discrepancy — ${p.brand || p.drug_name} ${p.strength} (${diff > 0 ? '+' : ''}${diff})`, body: `${notes}\n\nRegister line ${seq} records the adjustment.`, category: 'Stock discrepancy', pinned: false, archived: false, register_id: c.register_id, stock_check_id: c.id, created_by_name: st!.full_name, updated_by_name: st!.full_name, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), attachments: [] }; NOTES().push(note); }
+    audit('stock_check.balance_amended', { diff });
+    return res({ entry: { id: e.id, seq }, note, balance: Number(c.counted) });
+  }
+  if (path === '/api/feedback') {
+    if (method === 'GET') return res({ mine: FB().filter((f) => !f.shared), ideas: FB().filter((f) => f.shared), all: null, is_admin: false });
+    FB().unshift({ ...body, id: uid(), status: 'new', reply: null, shared: false, created_at: new Date().toISOString(), staff_name: st?.full_name });
+    return res({ ok: true });
+  }
+  if ((m = path.match(/^\/api\/feedback\/([^/]+)\/vote$/))) {
+    const f = FB().find((x) => x.id === m![1]); if (!f) return fail(404, 'Not found');
+    f.voted = !f.voted; f.votes += f.voted ? 1 : -1; return res({ voted: f.voted });
   }
   if (path === '/api/quarantine') {
     if (needStaff()) return needStaff()!;

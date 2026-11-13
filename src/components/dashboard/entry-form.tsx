@@ -7,7 +7,7 @@ import { QuickFillInput, type Suggestion } from './quickfill-input';
 import { PatientForm, type PatientRecord } from './patient-form';
 import { Modal } from '@/components/modal';
 
-export type EntryType = 'receipt' | 'supply' | 'destruction' | 'patient_return' | 'patient_return_destruction' | 'correction';
+export type EntryType = 'receipt' | 'supply' | 'destruction' | 'patient_return' | 'patient_return_destruction' | 'adjustment_in' | 'adjustment_out' | 'correction';
 
 export interface EntryDraft {
   entry_type: EntryType;

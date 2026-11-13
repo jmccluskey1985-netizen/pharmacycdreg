@@ -9,6 +9,7 @@ export interface SupplyLine {
   recipient_name: string | null; recipient_address: string | null;
   prescriber_name: string | null; prescriber_address: string | null;
   authority_to_possess: string | null; prescription_ref: string | null; patient_id?: string | null;
+  register_id?: string; label?: string; unit?: string; // set when lines span several registers (dispensing reminders)
 }
 
 type Status = { state: 'idle' | 'saving' | 'saved' | 'dup' | 'error'; message?: string; level?: 'block' | 'warn' };
@@ -24,7 +25,7 @@ const cleanAuthority = (a: string | null) => (a ?? '').replace(/,?\s*dated \d{1,
  * a Schedule 2 supply needs its own prescription, and re-using the old number would be
  * caught as a duplicate.
  */
-export function RepeatSupplies({ registerId, unit, balance, lines, onDone, onCancel }: { registerId: string; unit: string; balance: number; lines: SupplyLine[]; onDone: () => void; onCancel: () => void }) {
+export function RepeatSupplies({ registerId, unit, balance, balances, lines, onDone, onCancel, onAllSaved }: { registerId?: string; unit: string; balance: number; balances?: Record<string, number>; lines: SupplyLine[]; onDone: () => void; onCancel: () => void; onAllSaved?: (count: number) => Promise<void> | void }) {
   const [date, setDate] = useState(today());
   const [rows, setRows] = useState<Row[]>(lines.map((src) => ({ src, qty: String(Number(src.quantity)), ref: '', reason: '', status: { state: 'idle' } })));
   const [busy, setBusy] = useState(false);
@@ -32,14 +33,22 @@ export function RepeatSupplies({ registerId, unit, balance, lines, onDone, onCan
 
   const pending = rows.filter((r) => r.status.state !== 'saved');
   const total = pending.reduce((n, r) => n + (Number(r.qty) || 0), 0);
-  const after = balance - total;
+  // Balance after, per register (several registers when recording a dispensing reminder).
+  const afterBy: Record<string, { label: string; unit: string; after: number }> = {};
+  for (const r of pending) {
+    const id = r.src.register_id ?? registerId ?? '';
+    const a = (afterBy[id] ||= { label: r.src.label ?? '', unit: r.src.unit ?? unit, after: balances?.[id] ?? balance });
+    a.after -= Number(r.qty) || 0;
+  }
+  const multi = Object.keys(afterBy).length > 1 || !!balances;
+  const after = multi ? Math.min(0, ...Object.values(afterBy).map((a) => a.after)) : balance - total;
 
   async function saveRow(i: number, override = false) {
     const r = rows[i];
     upd(i, { status: { state: 'saving' } });
     try {
       await api('/api/entries', { method: 'POST', json: {
-        register_id: registerId, entry_type: 'supply', transaction_date: date, quantity: Number(r.qty),
+        register_id: r.src.register_id ?? registerId, entry_type: 'supply', transaction_date: date, quantity: Number(r.qty),
         recipient_name: r.src.recipient_name, recipient_address: r.src.recipient_address,
         prescriber_name: r.src.prescriber_name, prescriber_address: r.src.prescriber_address,
         authority_to_possess: cleanAuthority(r.src.authority_to_possess), prescription_ref: r.ref.trim() || null,
@@ -63,7 +72,7 @@ export function RepeatSupplies({ registerId, unit, balance, lines, onDone, onCan
     let ok = true;
     for (let i = 0; i < rows.length; i++) if (rows[i].status.state !== 'saved') ok = (await saveRow(i)) && ok;
     setBusy(false);
-    if (ok) setTimeout(onDone, 600);
+    if (ok) { await onAllSaved?.(rows.length); setTimeout(onDone, 600); }
   }
 
   const done = rows.every((r) => r.status.state === 'saved');
@@ -79,15 +88,16 @@ export function RepeatSupplies({ registerId, unit, balance, lines, onDone, onCan
           <div key={r.src.id} className={`rounded-xl border p-3 text-sm ${r.status.state === 'saved' ? 'border-brand/50 bg-brand/5' : r.status.state === 'dup' || r.status.state === 'error' ? 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950' : 'border-border'}`}>
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
+                {r.src.label && <p className="text-xs font-bold uppercase tracking-wide text-primary">{r.src.label}</p>}
                 <p className="font-semibold">{r.src.recipient_name}</p>
                 <p className="truncate text-xs text-muted-foreground">{r.src.recipient_address}</p>
-                <p className="text-xs text-muted-foreground">{cleanAuthority(r.src.authority_to_possess) ?? r.src.prescriber_name ?? 'No prescriber recorded'} · last supplied line {r.src.seq}</p>
+                <p className="text-xs text-muted-foreground">{cleanAuthority(r.src.authority_to_possess) ?? r.src.prescriber_name ?? 'No prescriber recorded'} {r.src.seq ? ` · last supplied line ${r.src.seq}` : ''}</p>
               </div>
               {r.status.state === 'saved' && <span className="flex items-center gap-1 font-semibold text-brand"><CheckCircle2 className="h-4 w-4" /> Recorded</span>}
             </div>
             {r.status.state !== 'saved' && (
               <div className="mt-2 grid gap-2 sm:grid-cols-[8rem_1fr]">
-                <label className="text-xs text-muted-foreground">Amount ({unit})<input className="input mt-0.5 py-1.5 font-semibold" type="number" min="0.001" step="any" inputMode="decimal" value={r.qty} onChange={(e) => upd(i, { qty: e.target.value })} /></label>
+                <label className="text-xs text-muted-foreground">Amount ({r.src.unit ?? unit})<input className="input mt-0.5 py-1.5 font-semibold" type="number" min="0.001" step="any" inputMode="decimal" value={r.qty} onChange={(e) => upd(i, { qty: e.target.value })} /></label>
                 <label className="text-xs text-muted-foreground">New prescription / Rx reference<input className="input mt-0.5 py-1.5" value={r.ref} onChange={(e) => upd(i, { ref: e.target.value })} placeholder="e.g. GMS 88412 or Rx 10331" /></label>
               </div>
             )}
@@ -106,10 +116,17 @@ export function RepeatSupplies({ registerId, unit, balance, lines, onDone, onCan
         ))}
       </div>
 
-      {!done && (
+      {!done && !multi && (
         <div className={`flex items-center justify-between rounded-lg px-4 py-3 text-sm ${after < 0 ? 'bg-destructive/10 text-destructive' : 'bg-secondary'}`}>
           <span>Balance after these {pending.length} supplies</span>
           <span className="text-lg font-bold tabular-nums">{after} {unit}</span>
+        </div>
+      )}
+      {!done && multi && (
+        <div className="space-y-1 rounded-lg bg-secondary px-4 py-3 text-sm">
+          {Object.entries(afterBy).map(([id, a]) => (
+            <p key={id} className={`flex justify-between gap-2 ${a.after < 0 ? 'font-semibold text-destructive' : ''}`}><span>{a.label} — balance after</span><b className="tabular-nums">{a.after} {a.unit}</b></p>
+          ))}
         </div>
       )}
       <div className="flex gap-3">

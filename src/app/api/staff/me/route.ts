@@ -25,7 +25,9 @@ export async function GET() {
     try {
       const { staff } = await requireStaff();
       const { count: inbox } = halo ? await db.from('pmr_inbox').select('id', { count: 'exact', head: true }).eq('pharmacy_id', account.pharmacyId).eq('status', 'pending') : { count: 0 };
-      return NextResponse.json({ pharmacy, staff, locked: false, hasPins: (count ?? 0) > 0, inboxCount: inbox ?? 0 });
+      // Dispensing reminders due today or overdue (0 before migration 0012).
+      const { count: due } = await db.from('dispense_reminders').select('id', { count: 'exact', head: true }).eq('pharmacy_id', account.pharmacyId).eq('active', true).lte('next_due', new Date().toISOString().slice(0, 10));
+      return NextResponse.json({ pharmacy, staff, locked: false, hasPins: (count ?? 0) > 0, inboxCount: inbox ?? 0, remindersDue: due ?? 0 });
     } catch (e) {
       if (e instanceof HttpError && e.status === 423) {
         return NextResponse.json({ pharmacy, staff: null, locked: true, hasPins: (count ?? 0) > 0 });

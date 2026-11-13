@@ -25,10 +25,11 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     const lines = (rows ?? []).map((r: any) => {
       const party = r.entry_type === 'receipt'
         ? `${r.supplier_name}, ${r.supplier_address}`
+        : r.entry_type.startsWith('adjustment') ? `Stock adjustment: ${r.notes ?? ''}`
         : r.recipient_name ? `${r.recipient_name}, ${r.recipient_address}` : r.entry_type.replace(/_/g, ' ');
       const authority = [r.authority_to_possess, r.prescriber_name, r.prescriber_address, r.prescription_ref].filter(Boolean).join('; ');
-      const obtained = r.entry_type === 'receipt' ? r.quantity : '';
-      const supplied = ['supply', 'destruction'].includes(r.entry_type) ? r.quantity : r.entry_type === 'patient_return_destruction' ? `${r.quantity} (patient return)` : '';
+      const obtained = ['receipt', 'adjustment_in'].includes(r.entry_type) ? r.quantity : '';
+      const supplied = ['supply', 'destruction', 'adjustment_out'].includes(r.entry_type) ? r.quantity : r.entry_type === 'patient_return_destruction' ? `${r.quantity} (patient return)` : '';
       return [r.seq, r.transaction_date, r.entry_type, party, authority, obtained, supplied, r.running_balance, who.get(r.recorded_by_staff_id) ?? '', r.recorded_at, r.correction_count > 0 ? 'Yes' : '', r.correction_reason ?? '', r.witness_name ? `${r.witness_name} (${r.witness_role})` : ''].map(csv).join(',');
     });
     const p = reg.product;

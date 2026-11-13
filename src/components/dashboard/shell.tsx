@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser, Settings, UserRound, ListOrdered, Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser, Settings, UserRound, ListOrdered, Menu, BellRing, StickyNote, MessageSquarePlus, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { NewEntryButton } from './new-entry';
 import { Modal } from '@/components/modal';
 import { TrainingBar, TrainingButton, useTraining } from './training';
@@ -17,21 +17,25 @@ import { FirstRun } from './first-run';
 const NAV = [
   { href: '/dashboard', label: 'Registers', icon: BookOpen, show: () => true },
   { href: '/dashboard/scan?type=prescription', label: 'Scan Rx', icon: ScanLine, show: can.scan, primary: true },
-  { href: '/dashboard/inbox', label: 'To confirm', icon: Inbox, show: can.record, badge: true, halo: true },
+  { href: '/dashboard/inbox', label: 'To confirm', icon: Inbox, show: can.record, badge: 'inbox', halo: true },
   { href: '/dashboard/search', label: 'Search', icon: Search, show: () => true },
   { href: '/dashboard/patients', label: 'Patients', icon: UserRound, show: can.record },
+  { href: '/dashboard/reminders', label: 'Reminders', icon: BellRing, show: can.record, badge: 'reminders' },
   { href: '/dashboard/destructions', label: 'Destructions', icon: Flame, show: () => true },
+  { href: '/dashboard/notes', label: 'Notes', icon: StickyNote, show: () => true },
   { href: '/dashboard/audit', label: 'Audit trail', icon: History, show: can.viewAudit },
   { href: '/dashboard/contacts', label: 'Doctors & suppliers', icon: BookUser, show: can.record },
   { href: '/dashboard/team', label: 'Team', icon: Users, show: can.manageStaff },
   { href: '/dashboard/integrations', label: 'Halo connection', icon: Plug, show: can.manageStaff, halo: true },
   { href: '/dashboard/billing', label: 'Billing', icon: CreditCard, show: can.manageStaff },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings, show: can.manageStaff },
+  { href: '/dashboard/feedback', label: 'Feedback & ideas', icon: MessageSquarePlus, show: () => true },
   { href: '/dashboard/waitlist', label: 'Waitlist', icon: ListOrdered, show: () => true, admin: true },
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {
-  const { loading, staff, locked, hasPins, pharmacy, lock, inboxCount, refresh } = useStaff();
+  const { loading, staff, locked, hasPins, pharmacy, lock, inboxCount, remindersDue, refresh } = useStaff();
+  const badgeOf = (n: any) => (n.badge === 'inbox' ? inboxCount : n.badge === 'reminders' ? remindersDue : 0);
   const training = useTraining();
   const path = usePathname();
   const [hidden, setHidden] = useState(false);
@@ -67,9 +71,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <Link key={n.href} href={n.href} title={hidden ? n.label : undefined} aria-label={n.label}
               className={`relative flex items-center rounded-lg py-2.5 text-sm font-medium transition ${hidden ? 'justify-center px-0' : 'gap-3 px-3'} ${active(n.href) ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
               <n.icon className="h-5 w-5 flex-shrink-0" /> {!hidden && n.label}
-              {(n as any).badge && inboxCount > 0 && (hidden
-                ? <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-brand ring-2 ring-card" />
-                : <span className="ml-auto rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-white">{inboxCount}</span>)}
+              {badgeOf(n) > 0 && (hidden
+                ? <span className={`absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full ring-2 ring-card ${n.badge === 'reminders' ? 'bg-amber-500' : 'bg-brand'}`} />
+                : <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-bold text-white ${n.badge === 'reminders' ? 'bg-amber-500' : 'bg-brand'}`}>{badgeOf(n)}</span>)}
             </Link>
           ))}
         </nav>
@@ -103,6 +107,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
           {can.record(staff.role) && <NewEntryButton />}
         </div>}
         <BillingBanner />
+        {remindersDue > 0 && can.record(staff.role) && !path.startsWith('/dashboard/reminders') && (
+          <Link href="/dashboard/reminders" className="no-print mb-4 flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
+            <BellRing className="h-5 w-5 flex-shrink-0" /> <span className="flex-1"><b>{remindersDue} dispensing reminder{remindersDue === 1 ? '' : 's'} due</b> — record {remindersDue === 1 ? 'it' : 'them'} in the registers in one click</span><span className="font-semibold underline">Open</span>
+          </Link>
+        )}
         {children}
       </main>
 
@@ -124,7 +133,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 ) : (
                   <Link key={n.href} href={n.href} className={`relative flex min-w-0 flex-col items-center gap-1 py-2.5 text-xs font-medium ${active(n.href) ? 'text-primary' : 'text-muted-foreground'}`}>
                     <n.icon className="h-5 w-5" /> <span className="max-w-full truncate px-1">{n.label}</span>
-                    {(n as any).badge && inboxCount > 0 && <span className="absolute right-[22%] top-1.5 rounded-full bg-brand px-1.5 text-[10px] font-bold text-white">{inboxCount}</span>}
+                    {badgeOf(n) > 0 && <span className="absolute right-[22%] top-1.5 rounded-full bg-brand px-1.5 text-[10px] font-bold text-white">{badgeOf(n)}</span>}
                   </Link>
                 ),
               )}
@@ -139,6 +148,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 {rest.map((n) => (
                   <Link key={n.href} href={n.href} onClick={() => setMore(false)} className={`flex items-center gap-3 rounded-xl border p-3 text-sm font-medium ${active(n.href) ? 'border-brand bg-brand/10' : 'border-border'}`}>
                     <n.icon className="h-5 w-5 flex-shrink-0 text-brand" /> <span className="truncate">{n.label}</span>
+                    {badgeOf(n) > 0 && <span className="ml-auto rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">{badgeOf(n)}</span>}
                   </Link>
                 ))}
               </div>

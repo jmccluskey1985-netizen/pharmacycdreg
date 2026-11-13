@@ -48,7 +48,7 @@ src/lib/
   demo/                     demo mode + training mode (in-browser mock of the API)
 src/data/cd-products.ts     CD catalogue: one product per brand, strengths, schedule paragraph
 src/components/dashboard/   shell (sidebar / icon rail), entry form, new-entry chooser, shelf, …
-supabase/migrations/        0001–0011 (see docs/OPERATIONS.md)
+supabase/migrations/        0001–0012 (see docs/OPERATIONS.md)
 scripts/                    create-pharmacy.mjs, rule tests, GMS list parser
 ```
 
@@ -79,7 +79,10 @@ scripts/                    create-pharmacy.mjs, rule tests, GMS list parser
   - Usual-doctor and collected-by chips.
 - **Scanning:** Rx (fewest steps: Scan Rx → check → sign), invoices and CD dockets, paper register pages. There is a duplicate guard on everything.
 - **Destruction:** set aside (quarantine) Sch 2 stock → witnessed destruction; a separate CD Destruction Record Book for patient returns and Sch 3/4 stock.
-- **Stock checks** with a required note when the count doesn't match; low-stock level per register.
+- **Stock checks** with a required note when the count doesn't match; low-stock level per register. After investigating, a pharmacist can **amend the balance** to the count. This adds a signed STOCK ADJUSTMENT line (`adjustment_in` / `adjustment_out`) with the investigation text; it's refused if the register changed since the count. The investigation can be saved as a note with photos.
+- **Dispensing reminders** (`/dashboard/reminders`): daily, weekly, every 2 or 4 weeks, monthly, or every N days. They can be created from selected supply rows on a register. When one is due, there's a badge and a banner; **Record now** posts every line through `/api/entries` (signed, with the balance and duplicate checks), then moves the reminder to its next date. **Skip this time** moves it on without recording anything.
+- **Notes** (`/dashboard/notes`): categories you can customise, pins, search, links to a register, and clickable URLs. Photos, scans and PDFs are stored in the private Supabase Storage bucket `cd-notes` and only served through `/api/notes/attachments/:id`. Edits are kept in the audit log.
+- **Feedback & ideas** (`/dashboard/feedback`): ideas, problems or other messages, emailed to `ADMIN_NOTIFY_EMAIL`. The site owner sets a status, replies, and can share an idea under a neutral title on the **ideas board**, where pharmacies vote (one vote each).
 - **Search:** drug dropdown by strength, and a patient report (all dispensings for a patient).
 - **Audit trail, print and CSV export** for inspection.
 - **Training mode:** a temporary copy of the pharmacy's register in the browser, under an orange bar. Nothing is saved, and it is cleared on refresh.
@@ -110,7 +113,8 @@ There is no automated end-to-end suite in the repo. Changes have been checked wi
 
 - [ ] **Stripe:** create the product and price, webhook and portal (README → Stripe setup); set `STRIPE_*` and `CRON_SECRET`.
 - [ ] **Google sign-in:** finish the Google Cloud client and Supabase provider set-up (docs/OPERATIONS.md §3).
-- [ ] **Migrations:** confirm 0009, 0010 and 0011 have been run in production.
+- [ ] **Migrations:** confirm 0009–0012 have been run in production.
+- [ ] **Reminders:** consider an email or push notification for due reminders (they're in-app only for now).
 - [ ] **Launch:** set `SIGNUPS_OPEN=1` and remove the `SIGNIN_UNLOCK_CODE` gate when ready.
 - [ ] **IPU evidence pack:** update DEC-001 (data processing) to name OpenRouter with zero data retention as the reader.
 - [ ] **Reader evaluation set:** build a set of anonymised Rx and invoice images with expected outputs, to measure accuracy before and after model changes.
