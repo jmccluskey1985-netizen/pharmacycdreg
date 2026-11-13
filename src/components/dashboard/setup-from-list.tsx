@@ -92,11 +92,8 @@ export function SetupFromList({ registers, onDone }: { registers: Existing[]; on
             {list.map(([k, x]) => (
               <div key={k} className="flex items-center justify-between gap-2 text-sm">
                 <span className="flex min-w-0 items-center gap-1.5">
-                  {x.product.brands.length > 1 ? (
-                    <select className="input w-auto py-1 text-sm font-semibold" value={x.brand} onChange={(e) => setPicks({ ...picks, [k]: { ...x, brand: e.target.value } })} aria-label="Brand">
-                      {x.product.brands.map((b) => <option key={b}>{b}</option>)}
-                    </select>
-                  ) : <b>{x.brand}</b>}
+                  <input className="input w-28 py-1 text-sm font-semibold" list={`brands-${k}`} value={x.brand} onChange={(e) => setPicks({ ...picks, [k]: { ...x, brand: e.target.value } })} aria-label="Brand" title="Pick or type any brand, e.g. Rowex" />
+                  <datalist id={`brands-${k}`}>{x.product.brands.map((b) => <option key={b} value={b} />)}</datalist>
                   <span className="truncate">{x.strength} <span className="text-muted-foreground">{x.product.form}</span></span>
                 </span>
                 <input className="input w-28 py-1.5" type="number" min="0" step="any" inputMode="decimal" placeholder={`0 ${x.product.unit}`} value={x.balance} onChange={(e) => setPicks({ ...picks, [k]: { ...x, balance: e.target.value } })} />

@@ -7,7 +7,7 @@ import { Plus, ScanLine, Users, Download, Camera, Loader2, AlertTriangle, CheckC
 import { SetupFromList } from '@/components/dashboard/setup-from-list';
 import { SnapPaperRegisters } from '@/components/dashboard/snap-paper-registers';
 import { Shelf, type Ghost } from '@/components/dashboard/shelf';
-import { CD_PRODUCTS } from '@/data/cd-products';
+import { CD_PRODUCTS, searchCdProducts } from '@/data/cd-products';
 import { isOpen } from '@/components/dashboard/setup-from-list';
 import { filterRegisters } from '@/lib/register-filter';
 import { api, ApiError } from '@/lib/api';
@@ -54,6 +54,7 @@ export default function RegistersPage() {
   useEffect(() => { try { if (localStorage.getItem('cdreg-all-cds') === 'off') setShowAll(false); } catch {} }, []);
   const toggleAll = () => setShowAll((v) => { try { localStorage.setItem('cdreg-all-cds', v ? 'off' : 'on'); } catch {} return !v; });
   const [starting, setStarting] = useState<Ghost | null>(null);
+  const [newInitial, setNewInitial] = useState('');
   const canOpen = writable && !!staff && can.openRegister(staff.role);
   const ghosts: Reg[] = !showAll || !regs || !canOpen ? [] : CD_PRODUCTS.flatMap((p) => p.strengths.filter((st) => !isOpen(regs, p, st)).map((st) => ({
     id: `ghost:${p.key}:${st}`, balance: 0, ghost: { product: p, strength: st },
@@ -99,7 +100,12 @@ export default function RegistersPage() {
           {q && <button onClick={() => setQ('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label="Clear"><X className="h-4 w-4" /></button>}
         </div>
       )}
-      {regs && regs.length > 0 && shown.length === 0 && <p className="text-muted-foreground">No register matches “{q}”.</p>}
+      {q.trim().length >= 2 && shelfItems.length === 0 && (
+        <div className="card flex flex-wrap items-center justify-between gap-3">
+          <p className="text-muted-foreground">Nothing matches “{q}”.</p>
+          {canOpen && <button onClick={() => { setNewInitial(q.trim()); setOpen(true); }} className="btn-primary"><Plus className="h-4 w-4" /> Add “{q.trim()}” as a new CD book</button>}
+        </div>
+      )}
       {regs === null && <p className="text-muted-foreground">Loading…</p>}
       {regs?.length === 0 && !ghosts.length && (
         <div className="card text-center">
@@ -129,14 +135,27 @@ export default function RegistersPage() {
         <SetupFromList registers={regs ?? []} onDone={() => { setFromList(false); load(); }} />
       </Modal>
       <Modal open={open} onClose={() => setOpen(false)} title="New CD book">
-        <NewRegisterForm registers={regs ?? []} onDone={() => { setOpen(false); load(); }} />
+        <NewRegisterForm key={newInitial} initialText={newInitial} registers={regs ?? []} onDone={() => { setOpen(false); setNewInitial(''); load(); }} />
       </Modal>
     </div>
   );
 }
 
-function NewRegisterForm({ onDone, registers }: { onDone: () => void; registers: Reg[] }) {
-  const [f, setF] = useState({ drug_name: '', brand: '', class_name: '', schedule: '2', schedule_paragraph: '', form: '', strength: '', unit: 'tablets', opening_balance: '', opening_balance_note: '', opening_date: '', stereoisomer_of_register_id: '' });
+function NewRegisterForm({ onDone, registers, initialText = '' }: { onDone: () => void; registers: Reg[]; initialText?: string }) {
+  // Anything typed in the shelf search ("methadone rowex", "oxynorm 10") seeds the form.
+  const seedFrom = (text: string) => {
+    const t = text.trim();
+    if (!t) return {};
+    const words = t.replace(/\d+(\.\d+)?\s*(mg|mcg|ml)?/gi, ' ').split(/\s+/).filter((w) => w.length > 2);
+    const hit = words.map((w) => searchCdProducts(w)).find((r) => r.length)?.[0];
+    const strength = (t.match(/\d+(\.\d+)?\s*(mg\/ml|mg\/5ml|mcg\/hr|micrograms?|mcg|mg|ml)/i)?.[0] ?? '').replace(/\s+/g, '');
+    const known = hit && hit.brands.find((b) => t.toLowerCase().includes(b.toLowerCase()));
+    const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const leftover = hit ? t.replace(new RegExp([hit.class, hit.generic, known, strength].filter(Boolean).map((x) => esc(x!)).join('|'), 'ig'), '').replace(/\d+(\.\d+)?\s*(mg\/ml|mg\/5ml|mcg\/hr|mcg|mg|ml)?/gi, '').replace(/\s+/g, ' ').trim() : '';
+    return hit ? { drug_name: hit.generic, class_name: hit.class, form: hit.form, unit: hit.unit, brand: known ?? (leftover ? leftover.replace(/\b\w/g, (c) => c.toUpperCase()) : ''), strength }
+      : { brand: t.replace(/\b\w/g, (c) => c.toUpperCase()) };
+  };
+  const [f, setF] = useState({ drug_name: '', brand: '', class_name: '', schedule: '2', schedule_paragraph: '', form: '', strength: '', unit: 'tablets', opening_balance: '', opening_balance_note: '', opening_date: '', stereoisomer_of_register_id: '', ...seedFrom(initialText) });
   const [reading, setReading] = useState(false);
   const [paper, setPaper] = useState<any>(null);
 
@@ -201,8 +220,22 @@ function NewRegisterForm({ onDone, registers }: { onDone: () => void; registers:
         <input type="file" accept="image/*,application/pdf" capture="environment" multiple className="hidden" onChange={readPage} />
       </label>
       {paper && <PaperResult d={paper} chosen={f.opening_balance} onChoose={(n) => setF((x) => ({ ...x, opening_balance: String(n) }))} />}
-      <div><label className="label">Brand</label><input className="input" value={f.brand} onChange={set('brand')} placeholder="e.g. OxyNorm" /></div>
-      <div><label className="label">Drug (generic name)</label><input className="input" required value={f.drug_name} onChange={set('drug_name')} placeholder="e.g. Oxycodone hydrochloride" /></div>
+      <div><label className="label">Brand</label>
+        <input className="input" list="all-brands" value={f.brand} placeholder="Pick or type any brand, e.g. Rowex"
+          onChange={(e) => {
+            const v = e.target.value;
+            const p = CD_PRODUCTS.find((x) => x.brands.some((b) => b.toLowerCase() === v.trim().toLowerCase()));
+            setF((x) => ({ ...x, brand: v, ...(p && !x.drug_name ? { drug_name: p.generic, class_name: p.class, form: p.form, unit: p.unit } : {}) }));
+          }} />
+        <datalist id="all-brands">{[...new Set(CD_PRODUCTS.flatMap((p) => p.brands))].sort().map((b) => <option key={b} value={b} />)}</datalist></div>
+      <div><label className="label">Drug (generic name)</label>
+        <input className="input" required list="all-generics" value={f.drug_name} placeholder="e.g. Methadone hydrochloride"
+          onChange={(e) => {
+            const v = e.target.value;
+            const p = CD_PRODUCTS.find((x) => x.generic.toLowerCase() === v.trim().toLowerCase());
+            setF((x) => ({ ...x, drug_name: v, ...(p ? { class_name: x.class_name || p.class, unit: x.unit === 'tablets' && !x.form ? p.unit : x.unit } : {}) }));
+          }} />
+        <datalist id="all-generics">{[...new Set(CD_PRODUCTS.map((p) => p.generic))].sort().map((g) => <option key={g} value={g} />)}</datalist></div>
       <label className="flex items-start gap-2 text-sm sm:col-span-2">
         <input type="checkbox" className="mt-0.5 h-5 w-5" checked={stereo} onChange={(e) => setStereo(e.target.checked)} />
         <span>This is a <b>stereoisomer</b> of a drug already registered. It will be recorded in that drug&apos;s part of the register.</span>
@@ -322,10 +355,9 @@ function StartFromList({ g, onDone }: { g: Ghost; onDone: () => void }) {
     <form onSubmit={start} className="space-y-4">
       <p className="text-lg font-bold">{brand} {g.strength} <span className="font-normal text-muted-foreground">{g.product.form}</span></p>
       <p className="-mt-3 text-sm text-muted-foreground">{g.product.generic}</p>
-      {g.product.brands.length > 1 && (
-        <div><label className="label">Brand you stock</label>
-          <select className="input" value={brand} onChange={(e) => setBrand(e.target.value)}>{g.product.brands.map((b) => <option key={b}>{b}</option>)}</select></div>
-      )}
+      <div><label className="label">Brand you stock</label>
+        <input className="input" list="start-brands" value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="Pick or type any brand, e.g. Rowex" />
+        <datalist id="start-brands">{g.product.brands.map((b) => <option key={b} value={b} />)}</datalist></div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div><label className="label">Balance brought forward ({g.product.unit})</label><input className="input font-semibold" type="number" min="0" step="any" inputMode="decimal" value={balance} onChange={(e) => setBalance(e.target.value)} placeholder="0" autoFocus /></div>
         <div><label className="label">As at</label><input className="input" type="date" max={new Date().toISOString().slice(0, 10)} value={date} onChange={(e) => setDate(e.target.value)} /></div>
