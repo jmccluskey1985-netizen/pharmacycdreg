@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser, Settings, UserRound, ListOrdered, Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { NewEntryButton } from './new-entry';
 import { Modal } from '@/components/modal';
+import { TrainingBar, TrainingButton, useTraining } from './training';
 import { BillingBanner } from './billing-banner';
 import { Logo, LogoMark } from '@/components/logo';
 import { ROLE_LABELS, can } from '@/lib/roles';
@@ -30,7 +31,8 @@ const NAV = [
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {
-  const { loading, staff, locked, hasPins, pharmacy, lock, inboxCount } = useStaff();
+  const { loading, staff, locked, hasPins, pharmacy, lock, inboxCount, refresh } = useStaff();
+  const training = useTraining();
   const path = usePathname();
   const [hidden, setHidden] = useState(false);
   const [more, setMore] = useState(false);
@@ -45,9 +47,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const active = (href: string) => { const h = href.split('?')[0]; return h === '/dashboard' ? path === h || path.startsWith('/dashboard/register') : path.startsWith(h); };
 
   return (
-    <div className={`min-h-screen pb-24 transition-[padding] duration-200 lg:pb-0 ${hidden ? 'lg:pl-16' : 'lg:pl-64'}`}>
+    <div className={`min-h-screen pb-24 transition-[padding] duration-200 lg:pb-0 ${hidden ? 'lg:pl-16' : 'lg:pl-64'} ${training ? 'pt-9' : ''}`}>
+      <TrainingBar />
       {/* Desktop sidebar: full, or collapsed to an icon rail (remembered on this device) */}
-      <aside className={`no-print fixed inset-y-0 left-0 hidden flex-col border-r border-border bg-card transition-[width] duration-200 lg:flex ${hidden ? 'w-16' : 'w-64'}`}>
+      <aside className={`no-print fixed bottom-0 left-0 ${training ? 'top-9' : 'top-0'} hidden flex-col border-r border-border bg-card transition-[width] duration-200 lg:flex ${hidden ? 'w-16' : 'w-64'}`}>
         {hidden ? (
           <div className="flex flex-col items-center gap-2 py-4">
             <Link href="/dashboard" aria-label="Registers"><LogoMark className="h-8 w-8" /></Link>
@@ -74,24 +77,26 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <div className="flex flex-col items-center gap-2 border-t border-border py-3">
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-xs font-bold text-secondary-foreground" title={`${staff.full_name} · ${ROLE_LABELS[staff.role]}`}>{staff.full_name.split(' ').map((w) => w[0]).slice(0, 2).join('')}</span>
             <button onClick={lock} className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground" title="Lock / switch user" aria-label="Lock / switch user"><Lock className="h-5 w-5" /></button>
+            <TrainingButton pharmacy={pharmacy} onStarted={refresh} compact className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground" />
           </div>
         ) : <div className="border-t border-border p-4">
           <p className="text-xs text-muted-foreground">{pharmacy?.name}</p>
           <p className="mt-2 text-sm font-semibold">{staff.full_name}</p>
           <p className="text-xs text-muted-foreground">{ROLE_LABELS[staff.role]}{staff.psi_number ? ` · PSI ${staff.psi_number}` : ''}</p>
           <button onClick={lock} className="btn-secondary mt-3 w-full text-sm"><Lock className="h-4 w-4" /> Lock / switch user</button>
+          <TrainingButton pharmacy={pharmacy} onStarted={refresh} className="btn-ghost mt-1 w-full text-sm" />
         </div>}
       </aside>
 
       {/* Mobile top bar */}
-      <header className="no-print sticky top-0 z-30 flex items-center justify-between border-b border-border bg-card/90 px-4 py-2.5 backdrop-blur lg:hidden">
+      <header className={`no-print sticky ${training ? 'top-9' : 'top-0'} z-30 flex items-center justify-between border-b border-border bg-card/90 px-4 py-2.5 backdrop-blur lg:hidden`}>
         <Logo size="sm" tagline={false} />
         <button onClick={lock} className="flex items-center gap-2 rounded-full bg-secondary py-1.5 pl-3 pr-2 text-sm font-medium text-secondary-foreground">
           {staff.full_name.split(' ')[0]} <Lock className="h-4 w-4" />
         </button>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:py-6">
+      <main key={training ? 'training' : 'live'} className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:py-6">
         {/* Top-left: show sidebar + New entry */}
         {!path.startsWith('/dashboard/scan') && !path.startsWith('/dashboard/register/') && <div className="no-print mb-4 flex flex-wrap items-center gap-2">
           {can.scan(staff.role) && <Link href="/dashboard/scan?type=prescription" className="btn-brand"><ScanLine className="h-4 w-4" /> Scan Rx</Link>}
@@ -138,6 +143,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 ))}
               </div>
               <button onClick={() => { setMore(false); lock(); }} className="btn-secondary mt-3 w-full"><Lock className="h-4 w-4" /> Lock / switch user</button>
+              <TrainingButton pharmacy={pharmacy} onStarted={() => { setMore(false); refresh(); }} className="btn-ghost mt-1 w-full" />
             </Modal>
           </>
         );

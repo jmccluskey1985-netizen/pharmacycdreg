@@ -101,7 +101,9 @@ function load(): State {
   } catch {}
   return seed();
 }
-const save = () => { try { sessionStorage.setItem(KEY, JSON.stringify(S)); } catch {} };
+// Training mode keeps everything in memory only (no sessionStorage): a refresh clears it.
+let TRAINING = false;
+const save = () => { if (TRAINING) return; try { sessionStorage.setItem(KEY, JSON.stringify(S)); } catch {} };
 export function resetDemo() { S = seed(); save(); }
 
 const res = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -424,17 +426,22 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     return res({ ...r, list_date: GMS_LIST_DATE });
   }
   if (path.startsWith('/api/billing/')) return res({ error: 'Billing opens Stripe in the live version — not available in the demo.' }, 400);
-  return fail(404, 'Not available in the demo');
+  return fail(404, TRAINING ? 'Not available in training mode' : 'Not available in the demo');
 }
 
-export function installDemo() {
-  if ((window as any).__cdregDemo) return;
-  (window as any).__cdregDemo = true;
-  S = load();
+function installInterceptor(passthrough: (path: string) => boolean = () => false) {
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url, window.location.origin);
     if (url.origin === window.location.origin && url.pathname.startsWith('/api/')) {
+      if (passthrough(url.pathname)) return realFetch(input as any, init);
+      // Training: the PIN is checked by the real server (no PINs are copied); the session is local.
+      if (TRAINING && url.pathname === '/api/staff/unlock') {
+        const r = await realFetch(input as any, init);
+        const body = await r.clone().json().catch(() => ({}));
+        if (r.ok && body?.staff?.id) S.activeStaffId = body.staff.id;
+        return r;
+      }
       const r = await handle((init?.method || 'GET').toUpperCase(), url.pathname, url, init);
       save();
       return r;
@@ -450,4 +457,42 @@ export function installDemo() {
     if (m) exportRegisters([m[1]], `cd-register-${m[1]}.csv`);
     else if (a.getAttribute('href') === '/api/export') exportRegisters(S.registers.map((r) => r.id), `cd-register-all-${today()}.csv`);
   }, true);
+}
+
+export function installDemo() {
+  if ((window as any).__cdregDemo) return;
+  (window as any).__cdregDemo = true;
+  S = load();
+  installInterceptor();
+}
+
+/** Reading photos still uses the real reader in training (it writes nothing to the register). */
+const TRAINING_PASSTHROUGH = ['/api/scan', '/api/scan/register-page', '/api/scan/status', '/api/settings/reader', '/api/settings/reader/test'];
+
+/**
+ * Training mode: practise on a copy of the pharmacy's own registers. Every change stays in this
+ * page's memory; nothing reaches the real register, and a refresh clears it all.
+ */
+export function installTraining(snap: Json, pharmacy: Json) {
+  if ((window as any).__cdregDemo || (window as any).__cdregTraining) return;
+  (window as any).__cdregTraining = true;
+  TRAINING = true;
+  const base = seed();
+  S = {
+    ...base,
+    pharmacy: { ...pharmacy },
+    staff: snap.staff,
+    products: snap.products,
+    registers: snap.registers,
+    entries: snap.entries,
+    audit: [],
+    inbox: snap.inbox ?? [],
+    keys: [],
+    contacts: snap.contacts ?? [],
+    activeStaffId: snap.activeStaffId,
+  } as unknown as State;
+  if (snap.patients) (S as any).patients = snap.patients;
+  if (snap.settings) (S as any).settings = snap.settings;
+  if (snap.lowStock) (S as any).lowStock = snap.lowStock;
+  installInterceptor((path) => TRAINING_PASSTHROUGH.includes(path));
 }
