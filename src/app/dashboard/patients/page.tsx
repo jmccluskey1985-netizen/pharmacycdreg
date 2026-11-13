@@ -10,7 +10,7 @@ import { PatientForm, type PatientRecord } from '@/components/dashboard/patient-
 import { useStaff } from '@/components/dashboard/staff-context';
 import { can } from '@/lib/roles';
 
-const fmt = (d: string | null) => (d ? d.split('-').reverse().join('/') : '—');
+const fmt = (d: string | null) => (d ? d.split('-').reverse().join('/') : '-');
 const TYPES: Record<string, string> = { supply: 'Supplied', patient_return: 'Patient return', patient_return_destruction: 'Return destroyed' };
 
 /** Patients: same record layout and search as PharmacyConsultation.ie, with each patient's CD supplies. */
@@ -66,12 +66,12 @@ export default function PatientsPage() {
             {list?.length === 0 && <tr><td colSpan={6} className="px-4 py-5 text-muted-foreground">{q ? 'No match.' : 'No patients yet.'}</td></tr>}
             {list?.map((p) => (
               <tr key={p.id} onClick={() => setOpen(p)} className="cursor-pointer hover:bg-muted/40">
-                <td className="px-4 py-2.5 font-semibold">{p.surname || '—'}</td>
+                <td className="px-4 py-2.5 font-semibold">{p.surname || '-'}</td>
                 <td className="px-4 py-2.5">{p.first_name}</td>
                 <td className="px-4 py-2.5 tabular-nums">{fmt(p.date_of_birth)}</td>
-                <td className="max-w-[16rem] truncate px-4 py-2.5 text-muted-foreground">{p.address || '—'}</td>
-                <td className="px-4 py-2.5 tabular-nums">{p.gms_number || '—'}</td>
-                <td className="px-4 py-2.5 text-muted-foreground">{p.gp_name || '—'}</td>
+                <td className="max-w-[16rem] truncate px-4 py-2.5 text-muted-foreground">{p.address || '-'}</td>
+                <td className="px-4 py-2.5 tabular-nums">{p.gms_number || '-'}</td>
+                <td className="px-4 py-2.5 text-muted-foreground">{p.gp_name || '-'}</td>
               </tr>
             ))}
           </tbody>
@@ -101,7 +101,7 @@ function PatientDetail({ patient, onBack, onChanged }: { patient: PatientRecord;
             <div>
               <h1 className="text-2xl font-bold">{name}</h1>
               <p className="text-sm text-muted-foreground">{[patient.date_of_birth && `Born ${fmt(patient.date_of_birth)}`, patient.gms_number && `GMS ${patient.gms_number}`, patient.phone].filter(Boolean).join(' · ') || 'No date of birth recorded'}</p>
-              <p className="text-sm">{patient.address || '—'}</p>
+              <p className="text-sm">{patient.address || '-'}</p>
               {patient.gp_name && <p className="mt-1 text-sm text-muted-foreground">Usual doctor: <b className="text-foreground">{patient.gp_name}</b>{patient.gp_address ? `, ${patient.gp_address}` : ''}</p>}
               {patient.notes && <p className="mt-1 text-sm text-muted-foreground">{patient.notes}</p>}
             </div>

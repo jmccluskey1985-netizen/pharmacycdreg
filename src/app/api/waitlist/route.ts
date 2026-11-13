@@ -18,7 +18,7 @@ const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 
 export async function POST(req: Request) {
   const limit = checkRateLimit(`waitlist:${clientKey(req)}`, 5, 15 * 60_000);
-  if (!limit.ok) return NextResponse.json({ error: 'Too many attempts — try again later.' }, { status: 429 });
+  if (!limit.ok) return NextResponse.json({ error: 'Too many attempts: try again later.' }, { status: 429 });
 
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: 'Please check your details.' }, { status: 400 });
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     if (error && error.code !== '23505') {
       console.error('[waitlist]', error.message);
       const missing = /relation .* does not exist|schema cache|Could not find the table/i.test(error.message);
-      return NextResponse.json({ error: missing ? 'Waitlist not set up yet (run 0004_waitlist.sql).' : 'Could not save — please try again.' }, { status: 500 });
+      return NextResponse.json({ error: missing ? 'Waitlist not set up yet (run 0004_waitlist.sql).' : 'Could not save: please try again.' }, { status: 500 });
     }
     if (!error) {
       await sendEmail({
@@ -45,6 +45,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('[waitlist] failed', err instanceof Error ? err.message : err);
-    return NextResponse.json({ error: 'Could not save — please try again.' }, { status: 500 });
+    return NextResponse.json({ error: 'Could not save: please try again.' }, { status: 500 });
   }
 }

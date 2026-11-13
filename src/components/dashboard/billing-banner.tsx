@@ -57,7 +57,7 @@ export function BillingBanner() {
         <span className="flex-1">
           Free month: <b>{d === 0 ? 'ends today' : `${d} day${d === 1 ? '' : 's'} left`}</b>
           {' '}· then {formatEuro(PLAN.price)}/month{PLAN.originalPrice ? <> (launch price, normally {formatEuro(PLAN.originalPrice)})</> : null}.
-          {' '}{urgent ? 'Subscribe to keep recording after it ends.' : 'Subscribe any time — you won’t be charged until the free month ends.'}
+          {' '}{urgent ? 'Subscribe to keep recording after it ends.' : 'Subscribe any time: you won’t be charged until the free month ends.'}
         </span>
         {manager ? <button onClick={go} disabled={busy} className={`btn py-1.5 font-semibold ${urgent ? 'bg-brand text-white hover:bg-brand/90' : 'btn-primary'}`}>{busy && <Loader2 className="h-4 w-4 animate-spin" />} Subscribe</button>
           : <span className={urgent ? 'text-white/75' : 'text-muted-foreground'}>Ask your supervising pharmacist to subscribe.</span>}
@@ -68,7 +68,7 @@ export function BillingBanner() {
     return (
       <div className="no-print mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-muted px-4 py-3 text-sm">
         <Eye className="h-4 w-4" />
-        <span className="flex-1"><b>Your free month has ended.</b> The register is read-only — you can still view, search, print and export it. Subscribe to keep recording; everything you entered is kept.</span>
+        <span className="flex-1"><b>Your free month has ended.</b> The register is read-only: you can still view, search, print and export it. Subscribe to keep recording; everything you entered is kept.</span>
         {manager && <button onClick={go} disabled={busy} className="btn-primary py-2 text-sm">{busy && <Loader2 className="h-4 w-4 animate-spin" />} Subscribe</button>}
       </div>
     );
@@ -82,7 +82,7 @@ export function BillingBanner() {
         <span className="flex-1">
           {pharmacy.cancel_at_period_end
             ? <>Your free month ends in <b>{d} day{d === 1 ? '' : 's'}</b> and won&apos;t renew. Your register will become read-only.</>
-            : <>Free month: <b>{d} day{d === 1 ? '' : 's'} left</b>. Then {formatEuro(PLAN.price)}/month — nothing to do if you&apos;re staying.</>}
+            : <>Free month: <b>{d} day{d === 1 ? '' : 's'} left</b>. Then {formatEuro(PLAN.price)}/month: nothing to do if you&apos;re staying.</>}
         </span>
         {manager && <Link href="/dashboard/billing" className="font-semibold text-primary underline-offset-2 hover:underline">Billing</Link>}
       </div>

@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     if (!reg) return NextResponse.json({ error: 'Register not found' }, { status: 404 });
     const balance = (await balancesFor([b.register_id]))[b.register_id] ?? 0;
     const diff = b.counted - balance;
-    if (diff !== 0 && !b.notes) return NextResponse.json({ error: 'The count doesn’t match the register — add a note on what you found', mismatch: { balance, diff } }, { status: 400 });
+    if (diff !== 0 && !b.notes) return NextResponse.json({ error: 'The count doesn’t match the register. Add a note on what you found', mismatch: { balance, diff } }, { status: 400 });
     const { data, error } = await db.from('stock_checks').insert({ pharmacy_id: account.pharmacyId, register_id: b.register_id, counted: b.counted, register_balance: balance, notes: b.notes || null, checked_by_staff_id: staff.id, checked_by_name: staff.full_name }).select('*').single();
     if (error) {
       if (/relation|does not exist/i.test(error.message)) return NextResponse.json({ error: 'Stock checks need a one-off database update first (run migration 0007 in Supabase).' }, { status: 409 });

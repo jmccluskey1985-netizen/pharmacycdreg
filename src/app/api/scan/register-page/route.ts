@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   try {
     const { account, staff } = await requireStaff(can.openRegister, { write: true });
     const limit = checkRateLimit(`scan:${account.pharmacyId}`, 20, 60_000);
-    if (!limit.ok) return NextResponse.json({ error: 'Too many scans — wait a moment' }, { status: 429 });
+    if (!limit.ok) return NextResponse.json({ error: 'Too many scans: wait a moment' }, { status: 429 });
 
     const form = await req.formData();
     const files = form.getAll('file').filter((f): f is File => f instanceof File);

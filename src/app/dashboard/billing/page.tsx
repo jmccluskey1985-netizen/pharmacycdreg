@@ -12,13 +12,13 @@ const LABEL: Record<string, string> = {
   trialing: 'Free month',
   active: 'Active',
   past_due: 'Payment overdue',
-  canceled: 'Cancelled — read-only',
-  unpaid: 'Unpaid — read-only',
+  canceled: 'Cancelled: read-only',
+  unpaid: 'Unpaid: read-only',
   incomplete: 'Checkout not finished',
   incomplete_expired: 'Checkout expired',
-  paused: 'Paused — read-only',
+  paused: 'Paused: read-only',
 };
-const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' }) : '—');
+const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' }) : '-');
 
 export default function BillingPage() {
   const { pharmacy, refresh } = useStaff();
@@ -50,13 +50,13 @@ export default function BillingPage() {
       ) : (s === 'trialing' && !pharmacy.has_subscription) || s === 'trial_ended' ? (
         <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
           <div className="card">
-            <h2 className="text-lg font-semibold">{s === 'trial_ended' ? 'Your free month has ended' : `Free month — ends ${fmt(pharmacy.trial_ends_at)}`}</h2>
+            <h2 className="text-lg font-semibold">{s === 'trial_ended' ? 'Your free month has ended' : `Free month: ends ${fmt(pharmacy.trial_ends_at)}`}</h2>
             <p className="mt-2 text-sm text-muted-foreground">
               {s === 'trial_ended'
                 ? <>Subscribe to keep recording. The register stays readable meanwhile, and everything already entered is kept.</>
-                : <>No card was needed to start. Subscribe now and you won&apos;t be charged until the free month ends — then it&apos;s {formatEuro(PLAN.price)}/month + VAT at the launch price. Cancel any time.</>}
+                : <>No card was needed to start. Subscribe now and you won&apos;t be charged until the free month ends, then it&apos;s {formatEuro(PLAN.price)}/month + VAT at the launch price. Cancel any time.</>}
             </p>
-            <button onClick={async () => { setBusy(true); await startCheckout(); setBusy(false); }} disabled={busy} className="btn-brand mt-5 w-full">{busy && <Loader2 className="h-4 w-4 animate-spin" />} Subscribe — {formatEuro(PLAN.price)}/month</button>
+            <button onClick={async () => { setBusy(true); await startCheckout(); setBusy(false); }} disabled={busy} className="btn-brand mt-5 w-full">{busy && <Loader2 className="h-4 w-4 animate-spin" />} Subscribe: {formatEuro(PLAN.price)}/month</button>
           </div>
           <PricingCard cta={false} />
         </div>

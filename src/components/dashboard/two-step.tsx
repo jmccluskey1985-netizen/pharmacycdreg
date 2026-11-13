@@ -49,7 +49,7 @@ export function TwoStepSettings({ locked = false }: { locked?: boolean }) {
     setBusy(true); setError(null);
     const { error: vErr } = await getSupabaseClient().auth.mfa.challengeAndVerify({ factorId: enrolling.id, code: code.replace(/\s/g, '') });
     setBusy(false);
-    if (vErr) { setError('That code didn’t work — use the newest code shown in the app.'); return; }
+    if (vErr) { setError('That code didn’t work: use the newest code shown in the app.'); return; }
     setEnrolling(null); setCode(''); setName('');
     await fetch('/api/audit/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'security.two_step_added' }) }).catch(() => {});
     load();
@@ -82,7 +82,7 @@ export function TwoStepSettings({ locked = false }: { locked?: boolean }) {
           {factors.map((f) => (
             <li key={f.id} className="flex items-center justify-between gap-3 px-3 py-2">
               <span className="flex items-center gap-2"><Smartphone className="h-4 w-4 text-muted-foreground" /> {f.friendly_name || 'Authenticator'} <span className="text-xs text-muted-foreground">added {new Date(f.created_at).toLocaleDateString('en-IE')}</span></span>
-              <button onClick={() => remove(f)} disabled={busy || (locked && factors.length <= 1)} title={locked && factors.length <= 1 ? 'Two-step sign-in is required — add another phone first, or turn off “Require two-step sign-in”' : undefined} className="btn-ghost text-sm text-destructive disabled:opacity-40"><Trash2 className="h-4 w-4" /> Remove</button>
+              <button onClick={() => remove(f)} disabled={busy || (locked && factors.length <= 1)} title={locked && factors.length <= 1 ? 'Two-step sign-in is required: add another phone first, or turn off “Require two-step sign-in”' : undefined} className="btn-ghost text-sm text-destructive disabled:opacity-40"><Trash2 className="h-4 w-4" /> Remove</button>
             </li>
           ))}
         </ul>

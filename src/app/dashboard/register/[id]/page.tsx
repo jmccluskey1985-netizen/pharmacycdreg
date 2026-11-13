@@ -44,15 +44,15 @@ const fmtQty = (q: string | number) => Number(q).toLocaleString('en-IE', { maxim
 function partyCell(r: Raw) {
   if (r.entry_type === 'receipt') return { name: r.supplier_name, address: r.supplier_address };
   if (r.entry_type === 'destruction') return { name: 'DESTROYED', address: `Witness: ${r.witness_name} (${r.witness_role})` };
-  if (r.entry_type === 'adjustment_in' || r.entry_type === 'adjustment_out') return { name: 'STOCK ADJUSTMENT', address: `After stock check — ${r.entry_type === 'adjustment_in' ? 'added to' : 'removed from'} balance` };
-  if (r.entry_type === 'patient_return') return { name: `Patient return — ${r.recipient_name}`, address: 'Not pharmacy stock' };
+  if (r.entry_type === 'adjustment_in' || r.entry_type === 'adjustment_out') return { name: 'STOCK ADJUSTMENT', address: `After stock check: ${r.entry_type === 'adjustment_in' ? 'added to' : 'removed from'} balance` };
+  if (r.entry_type === 'patient_return') return { name: `Patient return: ${r.recipient_name}`, address: 'Not pharmacy stock' };
   if (r.entry_type === 'patient_return_destruction') return { name: 'PATIENT RETURN DESTROYED', address: `Witness: ${r.witness_name} (${r.witness_role})` };
   return { name: r.recipient_name, address: r.recipient_address };
 }
 
 function authorityCell(r: Raw) {
   if (r.entry_type === 'receipt' || r.entry_type.startsWith('adjustment')) return r.notes ?? '';
-  return [r.authority_to_possess || (r.prescriber_name ? `Rx — ${r.prescriber_name}` : ''), r.prescription_ref, r.notes?.startsWith('Late entry') ? r.notes : null].filter(Boolean).join(' · ');
+  return [r.authority_to_possess || (r.prescriber_name ? `Rx: ${r.prescriber_name}` : ''), r.prescription_ref, r.notes?.startsWith('Late entry') ? r.notes : null].filter(Boolean).join(' · ');
 }
 
 export default function RegisterBook({ params }: { params: { id: string } }) {
@@ -182,7 +182,7 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
               <p className="text-2xl font-extrabold uppercase tracking-wide text-brand-dark sm:text-3xl">Register of Controlled Drugs</p>
               <p className="mt-2 text-base text-slate-600 sm:text-lg">for recording the obtaining and supplying of controlled drugs</p>
               <p className="mt-6 text-lg font-bold text-slate-700">{productTitle(p)}</p>
-              {genericLine(p) && <p className="text-sm text-slate-500">{p.class_name} — {genericLine(p)}</p>}
+              {genericLine(p) && <p className="text-sm text-slate-500">{p.class_name}: {genericLine(p)}</p>}
             </div>
             <div className="relative hidden w-[38%] items-end justify-end bg-gradient-to-b from-brand-dark to-brand-deep p-6 sm:flex">
               <span className="absolute inset-y-0 left-0 w-4 bg-brand/60" />
@@ -272,15 +272,15 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
                     <div>
                       <p className="text-xs font-bold uppercase">Footnotes:</p>
                       <div className="mt-1 min-h-[44px] rounded border border-[rgb(var(--rule)/.7)] p-2 text-xs leading-relaxed">
-                        {pageNotes.length ? pageNotes.map((f) => <p key={f.n}><b className="text-red-600">{f.n}</b> {f.text}</p>) : <span className="text-muted-foreground">—</span>}
+                        {pageNotes.length ? pageNotes.map((f) => <p key={f.n}><b className="text-red-600">{f.n}</b> {f.text}</p>) : <span className="text-muted-foreground">-</span>}
                       </div>
                     </div>
                   </div>
 
                   <footer className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Continued from page <b className="inline-block min-w-[28px] rounded border border-[rgb(var(--rule))] px-1 text-center text-[rgb(var(--ink))]">{page > 0 ? page : '—'}</b></span>
+                    <span>Continued from page <b className="inline-block min-w-[28px] rounded border border-[rgb(var(--rule))] px-1 text-center text-[rgb(var(--ink))]">{page > 0 ? page : '-'}</b></span>
                     <span className="font-bold tracking-widest text-[rgb(var(--ink))]">PAGE {page + 1}</span>
-                    <span>Continued on page <b className="inline-block min-w-[28px] rounded border border-[rgb(var(--rule))] px-1 text-center text-[rgb(var(--ink))]">{page < pages - 1 ? page + 2 : '—'}</b></span>
+                    <span>Continued on page <b className="inline-block min-w-[28px] rounded border border-[rgb(var(--rule))] px-1 text-center text-[rgb(var(--ink))]">{page < pages - 1 ? page + 2 : '-'}</b></span>
                   </footer>
                 </div>
               </div>
@@ -312,7 +312,7 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
           </div>
         </div>
       )}
-      <Modal open={repeating} onClose={() => setRepeating(false)} title={`Repeat ${selected.length > 1 ? `${selected.length} supplies` : 'supply'} — ${brandOf(p) ?? p.drug_name} ${p.strength}`} wide>
+      <Modal open={repeating} onClose={() => setRepeating(false)} title={`Repeat ${selected.length > 1 ? `${selected.length} supplies` : 'supply'}: ${brandOf(p) ?? p.drug_name} ${p.strength}`} wide>
         {repeating && <RepeatSupplies registerId={params.id} unit={p.unit} balance={Number(balance)} lines={chosenLines}
           onCancel={() => setRepeating(false)} onDone={async () => { setRepeating(false); setSelected([]); await load(); }} />}
       </Modal>
@@ -320,7 +320,7 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
         {reminding && <ReminderForm initial={{ lines: chosenLines.map((l) => ({ register_id: params.id, quantity: Number(l.quantity), recipient_name: l.recipient_name ?? '', recipient_address: l.recipient_address ?? '', prescriber_name: l.prescriber_name, prescriber_address: l.prescriber_address, authority_to_possess: l.authority_to_possess, patient_id: l.patient_id ?? null })) }}
           onCancel={() => setReminding(false)} onSaved={() => { setReminding(false); setSelected([]); refresh(); }} />}
       </Modal>
-      <Modal open={adding} onClose={() => setAdding(false)} title={`New entry — ${brandOf(p) ?? p.drug_name} ${p.strength}`}>
+      <Modal open={adding} onClose={() => setAdding(false)} title={`New entry: ${brandOf(p) ?? p.drug_name} ${p.strength}`}>
         <EntryForm registerId={params.id} unit={p.unit} balance={balance} initial={addType ? { entry_type: addType } : undefined} onCancel={() => setAdding(false)} onSaved={async () => { setAdding(false); await load(); }} />
       </Modal>
       <Modal open={!!correcting} onClose={() => setCorrecting(null)} title="Correct a register entry">

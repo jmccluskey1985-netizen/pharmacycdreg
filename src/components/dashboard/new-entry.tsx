@@ -15,8 +15,8 @@ interface Reg { id: string; balance: number; closed_at: string | null; product: 
 const SOURCES: { key: Source; title: string; text: string; icon: any; entry: string; scan?: 'prescription' | 'invoice' }[] = [
   { key: 'dispensing', title: 'From a dispensing', text: 'Supplied to a patient on a prescription', icon: PackageMinus, entry: 'supply', scan: 'prescription' },
   { key: 'invoice', title: 'From an invoice', text: 'Stock received from a wholesaler', icon: PackagePlus, entry: 'receipt', scan: 'invoice' },
-  { key: 'destruction', title: 'Destruction', text: 'Expired / damaged stock — set aside or destroy', icon: Flame, entry: 'destruction' },
-  { key: 'patient_return', title: 'Patient return', text: 'Into the CD Destruction Record Book — not the register', icon: Undo2, entry: 'patient_return' },
+  { key: 'destruction', title: 'Destruction', text: 'Expired / damaged stock: set aside or destroy', icon: Flame, entry: 'destruction' },
+  { key: 'patient_return', title: 'Patient return', text: 'Into the CD Destruction Record Book, not the register', icon: Undo2, entry: 'patient_return' },
 ];
 
 /** Top-left "New entry": pick where the details come from, then scan it or type it in. */
@@ -40,7 +40,7 @@ export function NewEntryButton() {
   return (
     <>
       <button onClick={() => setOpen(true)} className="btn-primary"><Plus className="h-4 w-4" /> New entry</button>
-      <Modal open={open} onClose={close} title={!source ? 'New entry' : typing ? `${source.title} — choose the register` : source.title}>
+      <Modal open={open} onClose={close} title={!source ? 'New entry' : typing ? `${source.title}: choose the register` : source.title}>
         {!source && (
           <div className="grid gap-2 sm:grid-cols-2">
             {SOURCES.map((s) => (
@@ -52,7 +52,7 @@ export function NewEntryButton() {
             {staff && can.openRegister(staff.role) && (
               <button onClick={() => go('/dashboard?new=register')} className="flex items-start gap-3 rounded-xl border border-dashed border-border p-4 text-left transition hover:border-brand hover:bg-brand/5 sm:col-span-2">
                 <BookPlus className="mt-0.5 h-6 w-6 flex-shrink-0 text-brand" />
-                <span><span className="block font-semibold">New CD book</span><span className="block text-sm text-muted-foreground">Start a register for a drug you don’t have one for yet — type it in, pick from the CD list, or snap the paper page</span></span>
+                <span><span className="block font-semibold">New CD book</span><span className="block text-sm text-muted-foreground">Start a register for a drug you don’t have one for yet, type it in, pick from the CD list, or photograph the paper page</span></span>
               </button>
             )}
           </div>
@@ -61,11 +61,11 @@ export function NewEntryButton() {
         {source && !typing && (
           <div className="space-y-3">
             {source.key === 'dispensing' && pharmacy?.halo_enabled && (
-              <p className="rounded-lg bg-secondary p-3 text-sm">Dispensed in Halo? It arrives in <b>To confirm</b> automatically — no need to enter it here.</p>
+              <p className="rounded-lg bg-secondary p-3 text-sm">Dispensed in Halo? It arrives in <b>To confirm</b> automatically: no need to enter it here.</p>
             )}
             <button onClick={() => go(`/dashboard/scan?type=${source.scan}`)} className="flex w-full items-center gap-3 rounded-xl border-2 border-brand bg-brand/5 p-4 text-left hover:bg-brand/10">
               <Camera className="h-6 w-6 text-brand" />
-              <span><span className="block font-semibold">Snap the {source.key === 'invoice' ? 'invoice or CD docket' : 'prescription'}</span><span className="block text-sm text-muted-foreground">Reads the drug and quantity{source.key === 'invoice' ? ', supplier and invoice number' : ', patient and prescriber'} for you to check</span></span>
+              <span><span className="block font-semibold">Photograph the {source.key === 'invoice' ? 'invoice or CD docket' : 'prescription'}</span><span className="block text-sm text-muted-foreground">Reads the drug and quantity{source.key === 'invoice' ? ', supplier and invoice number' : ', patient and prescriber'} for you to check</span></span>
             </button>
             <button onClick={() => setTyping(true)} className="flex w-full items-center gap-3 rounded-xl border border-border p-4 text-left hover:bg-muted">
               <Keyboard className="h-6 w-6 text-muted-foreground" />

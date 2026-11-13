@@ -98,7 +98,7 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
       patient_id: p.patient_id ?? null,
       recipient_name: p.name,
       recipient_address: p.address ?? x.recipient_address,
-      ...(doc ? { prescriber_name: doc.name, prescriber_address: doc.address ?? x.prescriber_address, authority_to_possess: x.authority_to_possess || `Prescription — ${doc.name}` } : {}),
+      ...(doc ? { prescriber_name: doc.name, prescriber_address: doc.address ?? x.prescriber_address, authority_to_possess: x.authority_to_possess || `Prescription: ${doc.name}` } : {}),
     };
   });
   const pickWitness = (p: Suggestion) => setD((x) => ({ ...x, witness_name: p.name, witness_role: p.role ?? x.witness_role }));
@@ -107,7 +107,7 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
       ...x,
       prescriber_name: p.name,
       prescriber_address: p.address ?? x.prescriber_address,
-      authority_to_possess: x.authority_to_possess || `Prescription — ${p.name}${p.registration ? ` (Reg ${p.registration})` : p.gms_number ? ` (GMS ${p.gms_number})` : ''}`,
+      authority_to_possess: x.authority_to_possess || `Prescription: ${p.name}${p.registration ? ` (Reg ${p.registration})` : p.gms_number ? ` (GMS ${p.gms_number})` : ''}`,
     }));
 
   const preview = useMemo(() => {
@@ -178,8 +178,8 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
 
       {late && (
         <div className="space-y-1 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
-          <p className="font-semibold">Late entry — this transaction is more than a day old</p>
-          <input className="input" required minLength={5} value={lateReason} onChange={(e) => setLateReason(e.target.value)} placeholder="Why it’s being entered now, e.g. system down — entered from the paper fallback sheet" />
+          <p className="font-semibold">Late entry: this transaction is more than a day old</p>
+          <input className="input" required minLength={5} value={lateReason} onChange={(e) => setLateReason(e.target.value)} placeholder="Why it’s being entered now, e.g. system down: entered from the paper fallback sheet" />
           <p className="text-xs opacity-80">The reason is printed on the register line.</p>
         </div>
       )}
@@ -195,7 +195,7 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
       {type === 'supply' && !correcting && (
         <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1 text-sm">
           <button type="button" onClick={() => { setRequisition(false); }} className={`rounded-lg px-2 py-1.5 font-semibold ${!requisition ? 'bg-card shadow-sm' : 'text-muted-foreground'}`}>To a patient (prescription)</button>
-          <button type="button" onClick={() => { setRequisition(true); setD((x) => ({ ...x, patient_id: null, authority_to_possess: x.authority_to_possess?.startsWith('Requisition') ? x.authority_to_possess : 'Requisition — signed by ' })); }} className={`rounded-lg px-2 py-1.5 font-semibold ${requisition ? 'bg-card shadow-sm' : 'text-muted-foreground'}`}>On a requisition</button>
+          <button type="button" onClick={() => { setRequisition(true); setD((x) => ({ ...x, patient_id: null, authority_to_possess: x.authority_to_possess?.startsWith('Requisition') ? x.authority_to_possess : 'Requisition: signed by ' })); }} className={`rounded-lg px-2 py-1.5 font-semibold ${requisition ? 'bg-card shadow-sm' : 'text-muted-foreground'}`}>On a requisition</button>
         </div>
       )}
       {type === 'supply' && requisition && (
@@ -214,7 +214,7 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
             <Field label="Address"><input className="input" required value={d.recipient_address ?? ''} onChange={set('recipient_address')} /></Field>
             <Field label="Prescriber name"><QuickFillInput kind="prescriber" value={d.prescriber_name ?? ''} onChange={setVal('prescriber_name')} onPick={pickPrescriber} placeholder="Name, IMC or GMS no." /></Field>
             <Field label="Prescriber address"><input className="input" value={d.prescriber_address ?? ''} onChange={set('prescriber_address')} /></Field>
-            <Field label="Authority to be in possession" hint="Prescription / requisition reference"><input className="input" value={d.authority_to_possess ?? ''} onChange={set('authority_to_possess')} placeholder="e.g. Prescription — Dr A. Byrne" /></Field>
+            <Field label="Authority to be in possession" hint="Prescription / requisition reference"><input className="input" value={d.authority_to_possess ?? ''} onChange={set('authority_to_possess')} placeholder="e.g. Prescription: Dr A. Byrne" /></Field>
             <Field label="Rx / reference no."><input className="input" value={d.prescription_ref ?? ''} onChange={set('prescription_ref')} /></Field>
             <Field label="Collected by">
               <input className="input" value={d.collected_by ?? ''} onChange={set('collected_by')} placeholder="Patient / representative" />
@@ -256,13 +256,13 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
       {preview !== null && (
         <div className={`flex items-center justify-between rounded-lg px-4 py-3 text-sm ${preview < 0 ? 'bg-destructive/10 text-destructive' : 'bg-secondary'}`}>
           <span>Balance after this entry</span>
-          <span className="text-lg font-bold tabular-nums">{Number.isFinite(preview) ? preview : '—'} {unit}</span>
+          <span className="text-lg font-bold tabular-nums">{Number.isFinite(preview) ? preview : '-'} {unit}</span>
         </div>
       )}
       {error && <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
       {dup && (
         <div className={`space-y-2 rounded-lg border p-3 text-sm ${dup.level === 'block' ? 'border-destructive/40 bg-destructive/10' : 'border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100'}`}>
-          <p className="font-semibold">{dup.level === 'block' ? 'This looks like a duplicate — not recorded' : 'Possible duplicate — not recorded yet'}</p>
+          <p className="font-semibold">{dup.level === 'block' ? 'This looks like a duplicate: not recorded' : 'Possible duplicate: not recorded yet'}</p>
           <p>{dup.message}</p>
           {!overriding ? (
             <div className="flex flex-wrap gap-2">
@@ -272,7 +272,7 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
           ) : (
             <div className="space-y-2">
               <input className="input" value={dupReason} onChange={(e) => setDupReason(e.target.value)} placeholder={d.entry_type === 'receipt' ? 'e.g. Second delivery on a separate docket' : 'e.g. New prescription, dated today, Rx 10412'} autoFocus />
-              <button type="button" disabled={busy || dupReason.trim().length < 5} onClick={() => submit(undefined, true)} className="btn-primary py-1.5 text-sm">Record anyway — reason saved in audit trail</button>
+              <button type="button" disabled={busy || dupReason.trim().length < 5} onClick={() => submit(undefined, true)} className="btn-primary py-1.5 text-sm">Record anyway: reason saved in audit trail</button>
             </div>
           )}
         </div>

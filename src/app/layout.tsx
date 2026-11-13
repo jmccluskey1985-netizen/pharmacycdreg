@@ -5,7 +5,7 @@ import { Analytics } from '@vercel/analytics/next';
 import { ErrorListener } from '@/components/error-listener';
 
 export const metadata: Metadata = {
-  title: 'PharmacyCDReg.ie — Electronic Controlled Drug Register',
+  title: 'PharmacyCDReg.ie: Electronic Controlled Drug Register',
   description: 'Electronic Controlled Drug Register for Irish community pharmacies.',
   robots: { index: false, follow: false },
   appleWebApp: { capable: true, title: 'CD Register', statusBarStyle: 'default' },

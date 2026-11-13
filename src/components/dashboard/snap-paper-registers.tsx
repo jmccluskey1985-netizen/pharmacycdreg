@@ -18,7 +18,7 @@ const UNITS = ['tablets', 'capsules', 'ml', 'patches', 'ampoules', 'vials', 'uni
 const fmt = (iso: string) => (iso ? iso.split('-').reverse().join('/') : '');
 
 /**
- * Snap the latest page of each drug in the paper CD register (one photo per drug). Each is
+ * Photograph the latest page of each drug in the paper CD register (one photo per drug). Each is
  * read separately and becomes a new, blank register carrying only the balance brought
  * forward and its date. The pharmacist checks every card before it's opened.
  */
@@ -77,7 +77,7 @@ export function SnapPaperRegisters({ onChanged }: { onChanged: () => void }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">Photograph the <b>latest page</b> of each drug in your paper register — one photo per drug. Each becomes a new register, blank apart from the balance brought forward and its date. Sideways photos are fine; names aren’t read.</p>
+      <p className="text-sm text-muted-foreground">Photograph the <b>latest page</b> of each drug in your paper register. One photo per drug. Each becomes a new register, blank apart from the balance brought forward and its date. Sideways photos are fine; names aren’t read.</p>
       <div className="grid gap-2 sm:grid-cols-2">
         <button onClick={() => cameraRef.current?.click()} className="btn-brand"><Camera className="h-5 w-5" /> Take photo</button>
         <button onClick={() => fileRef.current?.click()} className="btn-secondary"><ImagePlus className="h-5 w-5" /> Choose photos</button>
@@ -117,7 +117,7 @@ export function SnapPaperRegisters({ onChanged }: { onChanged: () => void }) {
                       </div>
                       {blockingChoice && (
                         <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                          <span className="font-semibold text-amber-800 dark:text-amber-200">Doesn’t add up — count the stock, then pick:</span>
+                          <span className="font-semibold text-amber-800 dark:text-amber-200">Doesn’t add up: count the stock, then pick:</span>
                           {o.options.map((n: number, i: number) => (
                             <button key={n} type="button" onClick={() => update(it.key, (x) => ({ f: { ...x.f, balance: String(n) } }))} className={`rounded-full border px-2.5 py-0.5 font-semibold ${it.f.balance === String(n) ? 'border-brand bg-brand text-white' : 'border-border'}`}>{n} {i === 0 ? '(as written)' : '(by the sum)'}</button>
                           ))}

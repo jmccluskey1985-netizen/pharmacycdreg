@@ -87,7 +87,7 @@ export async function GET(req: Request) {
       for (const k of KNOWN_SUPPLIERS) {
         if (!k.name.toLowerCase().includes(ql) && !k.match.test(q)) continue;
         if ([...seen].some((n) => k.match.test(n))) continue; // already known under this pharmacy's spelling
-        out.push({ name: k.name, address: k.address, source: 'preset', detail: k.address ? undefined : 'Add the address once — it’s remembered' });
+        out.push({ name: k.name, address: k.address, source: 'preset', detail: k.address ? undefined : 'Add the address once: it’s remembered' });
       }
     }
     // National fallback for doctors: the HSE GMS GP list.

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { PublicPage, H2, P, UL } from '@/components/public/public-page';
 import { COMPANY } from '@/config/company';
 
-export const metadata: Metadata = { title: 'Security — PharmacyCDReg.ie', description: 'How PharmacyCDReg.ie protects your Controlled Drug Register and patient data.' };
+export const metadata: Metadata = { title: 'Security: PharmacyCDReg.ie', description: 'How PharmacyCDReg.ie protects your Controlled Drug Register and patient data.' };
 
 export default function SecurityPage() {
   return (
@@ -15,9 +15,9 @@ export default function SecurityPage() {
       </UL>
       <H2>A register that can’t be quietly changed</H2>
       <UL>
-        <li><b>Append-only.</b> Register lines and the audit trail can’t be edited or deleted — the database itself refuses. Mistakes are corrected with a new, signed correction line; the original stays visible.</li>
+        <li><b>Append-only.</b> Register lines and the audit trail can’t be edited or deleted. The database itself refuses. Mistakes are corrected with a new, signed correction line; the original stays visible.</li>
         <li><b>Tamper-evident.</b> Every line is sealed with a SHA-256 fingerprint of its contents and the line before it. “Verify integrity” recomputes them all and shows the first line that doesn’t match. A weekly email records the latest fingerprints outside the system.</li>
-        <li><b>Every action is logged</b> — entries, views, exports, sign-ins, failed PINs, setting changes — with who and when.</li>
+        <li><b>Every action is logged</b>, entries, views, exports, sign-ins, failed PINs, setting changes, with who and when.</li>
       </UL>
       <H2>Who can get in</H2>
       <UL>
@@ -38,7 +38,7 @@ export default function SecurityPage() {
         <li>Daily database backups by our hosting provider, kept off the live system.</li>
         <li>You can download every register (CSV) or a full backup (JSON) whenever you like.</li>
         <li>If the system or internet is down, print the paper fallback sheet; lines entered afterwards are flagged as late entries with the reason.</li>
-        <li>If your subscription ends, the register becomes read-only — never deleted.</li>
+        <li>If your subscription ends, the register becomes read-only, never deleted.</li>
       </UL>
       <H2>Report a security concern</H2>
       <P>Email <a className="text-primary underline" href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a>. We take every report seriously and respond as quickly as we can.</P>

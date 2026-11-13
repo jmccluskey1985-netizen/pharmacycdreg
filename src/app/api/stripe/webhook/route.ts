@@ -53,7 +53,7 @@ export async function POST(req: Request) {
         await sendEmail({
           to: adminEmail(),
           subject: `New PharmacyCDReg trial: ${ph?.name ?? pharmacyId}`,
-          html: `<p><b>${ph?.name ?? 'A pharmacy'}</b> started its free month (${sub.status}).</p><p>Billing email: ${s.customer_details?.email ?? '—'}<br>Subscription: ${sub.id}</p>`,
+          html: `<p><b>${ph?.name ?? 'A pharmacy'}</b> started its free month (${sub.status}).</p><p>Billing email: ${s.customer_details?.email ?? '-'}<br>Subscription: ${sub.id}</p>`,
         });
         break;
       }

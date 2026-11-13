@@ -19,7 +19,7 @@ const TIPS = [
   { icon: Hand, text: 'Lay it flat and hold steady' },
 ];
 
-/** Downscale big phone photos before upload — faster, and plenty for reading text. */
+/** Downscale big phone photos before upload, faster, and plenty for reading text. */
 async function compress(blob: Blob, name: string): Promise<File> {
   if (blob.type === 'application/pdf') return new File([blob], name, { type: blob.type });
   const img = await createImageBitmap(blob).catch(() => null);
@@ -105,7 +105,7 @@ export default function ScanPage() {
     setPages(next);
     // A prescription is one page: read it straight away. Invoices may have several pages.
     if (docType === 'prescription') { read(next); return; }
-    setToast(`Page ${next.length} captured — tap Read, or snap the next page`);
+    setToast(`Page ${next.length} captured: tap Read, or photograph the next page`);
     setTimeout(() => setToast(null), 3500);
   }
 
@@ -178,7 +178,7 @@ export default function ScanPage() {
 
         {result.exempt?.length > 0 && (
           <div className="mb-4 rounded-xl border border-border bg-muted p-4 text-sm">
-            <p className="mb-1 font-semibold">Not entered — no register needed</p>
+            <p className="mb-1 font-semibold">Not entered: no register needed</p>
             <ul className="list-disc pl-5 text-muted-foreground">{result.exempt.map((e: any, i: number) => <li key={i}><b className="text-foreground">{e.label}</b>: {e.reason}</li>)}</ul>
           </div>
         )}
@@ -234,7 +234,7 @@ export default function ScanPage() {
       {status && !status.configured && (
         <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
           {status.can_set_up
-            ? <><b>Scanning isn’t switched on yet.</b> Add the OpenRouter key in <a href="/dashboard/settings" className="font-semibold underline">Settings → Document reading</a> — it switches scanning on for every pharmacy.</>
+            ? <><b>Scanning isn’t switched on yet.</b> Add the OpenRouter key in <a href="/dashboard/settings" className="font-semibold underline">Settings → Document reading</a>. It switches scanning on for every pharmacy.</>
             : <><b>Reading documents isn’t available right now.</b> You can still make the entry by hand from <b>New entry</b>.</>}
         </div>
       )}
@@ -291,7 +291,7 @@ export default function ScanPage() {
             <button onClick={() => fileRef.current?.click()} className="btn-primary"><ImagePlus className="h-4 w-4" /> Choose photo or PDF</button>
             {camera !== 'unavailable' && <button onClick={startCamera} className="btn-secondary"><Camera className="h-4 w-4" /> Use camera</button>}
           </div>
-          {camera === 'unavailable' && <p className="mt-3 text-xs text-muted-foreground">Camera not available — choose a photo instead.</p>}
+          {camera === 'unavailable' && <p className="mt-3 text-xs text-muted-foreground">Camera not available: choose a photo instead.</p>}
         </div>
       )}
 
@@ -379,7 +379,7 @@ function ProposalCard({ p, done, onDone, canRecord, autoOpen, canOpenBook }: { p
               startOpen
                 ? <StartBook item={p.item} receipt={p.draft?.entry_type === 'receipt'} onStarted={(id, label, balance) => { setCandidates((c) => [...c, { id, label }]); setRegisterId(id); setStarted({ id, balance }); setStartOpen(false); if (canRecord) setOpen(true); }} onCancel={candidates.length ? () => setStartOpen(false) : undefined} />
                 : <button type="button" onClick={() => setStartOpen(true)} className="mt-2 text-sm font-semibold text-primary underline">Not listed? Start a new CD book for it</button>
-            ) : !candidates.length && <p className="rounded-lg bg-muted p-3 text-sm">No CD book for this product yet — ask the supervising pharmacist to start one.</p>)}
+            ) : !candidates.length && <p className="rounded-lg bg-muted p-3 text-sm">No CD book for this product yet: ask the supervising pharmacist to start one.</p>)}
           </div>
           {registerId && !open && canRecord && <button onClick={() => setOpen(true)} className="btn-primary mt-3 w-full">Check details &amp; record</button>}
           {registerId && !canRecord && <p className="mt-3 text-sm text-muted-foreground">A pharmacist needs to confirm this entry.</p>}

@@ -76,8 +76,8 @@ export const REGISTER_PAGE_SYSTEM = `You read a photo of a page from an Irish ph
 
 - The photo may be rotated 90° or 180° or taken at an angle. Read it in the correct orientation.
 - The product is handwritten at the top (PRODUCT / CLASS OF DRUG lines), e.g. "OXYCODONE OXYNORM 5mg".
-- Transcribe ONLY dates and the three amount columns for every filled row, in order, top to bottom. Do NOT transcribe names, addresses, prescribers or reference numbers — they are not needed.
-- Handwritten digits are easy to confuse (1/7, 4/9, 5/6, 0/6, 3/8). Read each balance as written and set balance_unclear when unsure — do not "fix" it to make the sums work; the rules check the arithmetic.
+- Transcribe ONLY dates and the three amount columns for every filled row, in order, top to bottom. Do NOT transcribe names, addresses, prescribers or reference numbers. They are not needed.
+- Handwritten digits are easy to confuse (1/7, 4/9, 5/6, 0/6, 3/8). Read each balance as written and set balance_unclear when unsure. Do not "fix" it to make the sums work; the rules check the arithmetic.
 - A row with an amount obtained is a receipt (balance goes up); supplied goes down.
 - If the page is not a CD register page, set is_cd_register_page false.`;
 
@@ -103,7 +103,7 @@ export function decideOpening(page: RegisterPage): OpeningDecision {
   const rows = page.rows.filter((r) => r.obtained != null || r.supplied != null || r.balance != null);
   if (!page.is_cd_register_page) flags.push('This doesn’t look like a CD register page');
   if (!rows.length && page.balance_transferred == null) {
-    return { balance: null, date: null, source: 'none', options: [], label: 'No entries read', flags: [...flags, 'No balance could be read — type it in'], blocking: true, rows_checked: 0 };
+    return { balance: null, date: null, source: 'none', options: [], label: 'No entries read', flags: [...flags, 'No balance could be read: type it in'], blocking: true, rows_checked: 0 };
   }
 
   let running: number | null = page.balance_transferred;
@@ -115,7 +115,7 @@ export function decideOpening(page: RegisterPage): OpeningDecision {
     if (r.date) lastDate = r.date;
     if (i === rows.length - 1) lastExpected = expected;
     else if (r.balance != null && expected != null && Math.abs(r.balance - expected) > 0.001) {
-      flags.push(`Line ${i + 1}${r.date_written ? ` (${r.date_written})` : ''}: book says ${r.balance}, the sum gives ${expected} — check your paper book`);
+      flags.push(`Line ${i + 1}${r.date_written ? ` (${r.date_written})` : ''}: book says ${r.balance}, the sum gives ${expected}: check your paper book`);
     }
     // The paper book is the legal record: carry on from what it says where legible.
     running = r.balance != null && !r.balance_unclear ? r.balance : expected ?? r.balance;
@@ -124,22 +124,22 @@ export function decideOpening(page: RegisterPage): OpeningDecision {
   const last = rows[rows.length - 1];
   const written = last ? last.balance : page.balance_transferred;
   const date = lastDate;
-  if (!date) flags.push('No date read for the last entry — check the date');
-  else if (date > today()) flags.push(`Date ${date} is in the future — check the date`);
+  if (!date) flags.push('No date read for the last entry: check the date');
+  else if (date > today()) flags.push(`Date ${date} is in the future: check the date`);
 
   const base = { date, rows_checked: rows.length };
   if (written != null && lastExpected != null) {
     if (Math.abs(written - lastExpected) < 0.001) {
       if (last?.balance_unclear) flags.push('Last balance was hard to read, but the sum agrees');
-      return { ...base, balance: written, source: 'written_and_sum_agree', options: [written], label: `${written} — book and sum agree`, flags, blocking: false };
+      return { ...base, balance: written, source: 'written_and_sum_agree', options: [written], label: `${written}: book and sum agree`, flags, blocking: false };
     }
-    return { ...base, balance: null, source: 'needs_choice', options: [written, lastExpected], label: `Book says ${written}${last?.balance_unclear ? ' (hard to read)' : ''}, the sum gives ${lastExpected}`, flags: [...flags, 'Last balance doesn’t add up — count the stock and choose the right figure'], blocking: true };
+    return { ...base, balance: null, source: 'needs_choice', options: [written, lastExpected], label: `Book says ${written}${last?.balance_unclear ? ' (hard to read)' : ''}, the sum gives ${lastExpected}`, flags: [...flags, 'Last balance doesn’t add up: count the stock and choose the right figure'], blocking: true };
   }
   if (written != null) {
-    return { ...base, balance: written, source: 'written_only', options: [written], label: `${written} — as written (couldn’t check the sum)`, flags: last?.balance_unclear ? [...flags, 'Last balance was hard to read — check it'] : flags, blocking: !!last?.balance_unclear };
+    return { ...base, balance: written, source: 'written_only', options: [written], label: `${written}: as written (couldn’t check the sum)`, flags: last?.balance_unclear ? [...flags, 'Last balance was hard to read: check it'] : flags, blocking: !!last?.balance_unclear };
   }
   if (lastExpected != null) {
-    return { ...base, balance: lastExpected, source: 'sum_only', options: [lastExpected], label: `${lastExpected} — worked out from the page (no balance written)`, flags: [...flags, 'No balance written on the last line — check it'], blocking: true };
+    return { ...base, balance: lastExpected, source: 'sum_only', options: [lastExpected], label: `${lastExpected}: worked out from the page (no balance written)`, flags: [...flags, 'No balance written on the last line. Check it'], blocking: true };
   }
   return { ...base, balance: null, source: 'none', options: [], label: 'No balance read', flags: [...flags, 'Type the balance in'], blocking: true };
 }

@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 // Browser errors are written to the server log (Vercel → Logs), so a broken page is seen
-// without a phone call. Only the error message, page path and stack are kept — no form data.
+// without a phone call. Only the error message, page path and stack are kept. No form data.
 const seen = new Map<string, number>();
 
 export async function POST(req: Request) {

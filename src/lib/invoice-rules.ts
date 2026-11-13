@@ -48,9 +48,9 @@ const GOOD_REF_LABEL = /invoice|inv\b|inv\.|number|docket|no\.?:?$/i;
 
 /** Is the reference the invoice/docket number? Returns a flag message if not clearly so. */
 export function checkReference(ref: string | null | undefined, label: string | null | undefined): string | null {
-  if (!ref) return 'No invoice number read — type it in from the paper';
+  if (!ref) return 'No invoice number read: type it in from the paper';
   const l = (label || '').trim();
-  if (l && BAD_REF_LABEL.test(l) && !/invoice/i.test(l)) return `Number read was labelled “${l}”, not the invoice number — check it`;
+  if (l && BAD_REF_LABEL.test(l) && !/invoice/i.test(l)) return `Number read was labelled “${l}”, not the invoice number: check it`;
   if (l && !GOOD_REF_LABEL.test(l)) return `Check the invoice number (read from “${l}”)`;
   return null;
 }

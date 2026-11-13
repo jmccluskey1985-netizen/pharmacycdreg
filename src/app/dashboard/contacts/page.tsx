@@ -12,8 +12,8 @@ type Tab = Kind | 'gms';
 interface Contact { id: string; kind: Kind; name: string; address: string | null; registration: string | null; gms_number: string | null; role: string | null }
 
 const TABS: { kind: Tab; label: string; icon: any; hint: string }[] = [
-  { kind: 'prescriber', label: 'My doctors', icon: Stethoscope, hint: 'Your regular doctors and prescribers. You don’t need everyone — every GMS GP in Ireland is suggested automatically, and anyone already in your register too.' },
-  { kind: 'gms', label: 'All GMS GPs', icon: Landmark, hint: 'Every GP on the HSE GMS scheme in Ireland. These are suggested automatically when you type a prescriber — add your regulars to My doctors to see them first.' },
+  { kind: 'prescriber', label: 'My doctors', icon: Stethoscope, hint: 'Your regular doctors and prescribers. You don’t need everyone: every GMS GP in Ireland is suggested automatically, and anyone already in your register too.' },
+  { kind: 'gms', label: 'All GMS GPs', icon: Landmark, hint: 'Every GP on the HSE GMS scheme in Ireland. These are suggested automatically when you type a prescriber. Add your regulars to My doctors to see them first.' },
   { kind: 'supplier', label: 'Suppliers', icon: Truck, hint: 'Wholesalers and other suppliers you receive controlled drugs from.' },
   { kind: 'witness', label: 'Witnesses', icon: UserCheck, hint: 'People who usually witness destructions, with their capacity.' },
 ];
@@ -64,12 +64,12 @@ export default function ContactsPage() {
       {tab === 'gms' && <GmsBrowser mine={list} onAdded={load} />}
       {tab === 'supplier' && <CommonSuppliers mine={list} onAdded={load} />}
       {tab !== 'gms' && <div className="card divide-y divide-border p-0">
-        {shown.length === 0 && <p className="p-5 text-sm text-muted-foreground">None yet — add one, or paste a list.</p>}
+        {shown.length === 0 && <p className="p-5 text-sm text-muted-foreground">None yet: add one, or paste a list.</p>}
         {shown.map((c) => (
           <button key={c.id} onClick={() => setEditing(c)} className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left hover:bg-muted/50">
             <span>
               <span className="block font-medium">{c.name}</span>
-              <span className="block text-sm text-muted-foreground">{c.address || c.role || '—'}</span>
+              <span className="block text-sm text-muted-foreground">{c.address || c.role || '-'}</span>
             </span>
             <span className="text-right text-xs text-muted-foreground">
               {c.registration && <span className="block">IMC {c.registration}</span>}
@@ -104,7 +104,7 @@ function ContactForm({ initial, onDone }: { initial: Partial<Contact>; onDone: (
     <form onSubmit={(e) => { e.preventDefault(); save(); }} className="space-y-4">
       <div><label className="label">{f.kind === 'prescriber' ? 'Doctor / prescriber name' : 'Name'}</label>
         {f.kind === 'prescriber' && !initial.id ? (
-          <QuickFillInput kind="prescriber" required value={f.name} onChange={(v) => setF({ ...f, name: v })} onPick={(p) => setF({ ...f, name: p.name, address: p.address ?? f.address, gms_number: p.gms_number ?? f.gms_number, registration: p.registration ?? f.registration })} placeholder="Type a name or GMS no. — searches the HSE GMS list" />
+          <QuickFillInput kind="prescriber" required value={f.name} onChange={(v) => setF({ ...f, name: v })} onPick={(p) => setF({ ...f, name: p.name, address: p.address ?? f.address, gms_number: p.gms_number ?? f.gms_number, registration: p.registration ?? f.registration })} placeholder="Type a name or GMS no., searches the HSE GMS list" />
         ) : (
           <input className="input" required value={f.name} onChange={set('name')} />
         )}
@@ -142,7 +142,7 @@ function PasteForm({ kind, onDone }: { kind: Kind; onDone: () => void }) {
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">One per line: {kind === 'prescriber' ? <b>Name | Practice address | IMC no. | GMS no.</b> : kind === 'supplier' ? <b>Name | Address</b> : <b>Name | Capacity</b>}. Copy from a spreadsheet (tabs) or separate with |.</p>
       <textarea className="input min-h-[180px] font-mono text-sm" value={text} onChange={(e) => setText(e.target.value)} placeholder={example} />
-      {rows.length > 0 && <p className="text-sm">{rows.length} ready to add — first: <b>{rows[0].name}</b>{'address' in rows[0] && rows[0].address ? `, ${rows[0].address}` : ''}</p>}
+      {rows.length > 0 && <p className="text-sm">{rows.length} ready to add: first: <b>{rows[0].name}</b>{'address' in rows[0] && rows[0].address ? `, ${rows[0].address}` : ''}</p>}
       {msg && <p className="text-sm">{msg}</p>}
       <button onClick={save} disabled={busy || !rows.length} className="btn-primary w-full">{busy && <Loader2 className="h-4 w-4 animate-spin" />} Add {rows.length || ''}</button>
     </div>
@@ -206,7 +206,7 @@ function GmsBrowser({ mine, onAdded }: { mine: Contact[]; onAdded: () => void })
             <div key={x.g} className="flex items-start justify-between gap-3 px-4 py-3">
               <span className="min-w-0">
                 <span className="block font-medium">{x.n}</span>
-                <span className="block text-sm text-muted-foreground">{x.a || '—'}</span>
+                <span className="block text-sm text-muted-foreground">{x.a || '-'}</span>
               </span>
               <span className="flex flex-shrink-0 flex-col items-end gap-1">
                 <span className="text-xs text-muted-foreground">GMS {x.g}</span>

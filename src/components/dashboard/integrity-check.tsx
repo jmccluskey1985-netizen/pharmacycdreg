@@ -9,7 +9,7 @@ interface R { id?: string; label?: string; ok: boolean; checked: number; broken_
 /**
  * "Verify integrity": every line's fingerprint is recomputed from its contents and the line
  * before it. Shows the fingerprint of the latest line, which can be written down or printed
- * — if anything earlier were ever altered, that fingerprint could not be reproduced.
+ *: if anything earlier were ever altered, that fingerprint could not be reproduced.
  */
 export function IntegrityCheck({ registerId, compact }: { registerId?: string; compact?: boolean }) {
   const [busy, setBusy] = useState(false);
@@ -27,7 +27,7 @@ export function IntegrityCheck({ registerId, compact }: { registerId?: string; c
       {!compact && (
         <div>
           <h2 className="font-semibold">Register integrity</h2>
-          <p className="text-sm text-muted-foreground">Every line is sealed with a fingerprint of its contents and the line before it. Checking recomputes them all — any change made outside the app, even directly in the database, shows up here.</p>
+          <p className="text-sm text-muted-foreground">Every line is sealed with a fingerprint of its contents and the line before it. Checking recomputes them all: any change made outside the app, even directly in the database, shows up here.</p>
         </div>
       )}
       <button onClick={run} disabled={busy} className="btn-secondary">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />} Verify integrity</button>
@@ -36,10 +36,10 @@ export function IntegrityCheck({ registerId, compact }: { registerId?: string; c
       {res && !res.needs_migration && (
         <div className={`rounded-lg p-3 text-sm ${res.ok ? 'bg-brand/10' : 'bg-destructive/10 text-destructive'}`}>
           <p className="flex items-center gap-2 font-semibold">{res.ok ? <ShieldCheck className="h-4 w-4 text-brand" /> : <ShieldAlert className="h-4 w-4" />}
-            {res.ok ? `Intact — ${lines} register line${lines === 1 ? '' : 's'}${res.audit ? ` and ${res.audit.checked} audit records` : ''} verified` : 'A record has been altered outside the app'}</p>
+            {res.ok ? `Intact: ${lines} register line${lines === 1 ? '' : 's'}${res.audit ? ` and ${res.audit.checked} audit records` : ''} verified` : 'A record has been altered outside the app'}</p>
           <ul className="mt-1 space-y-0.5">
-            {res.registers.filter((r) => !r.ok).map((r) => <li key={r.id}>{r.label}: line {r.broken_seq} — {r.reason}</li>)}
-            {res.audit && !res.audit.ok && <li>Audit trail: record {res.audit.broken_seq} — {res.audit.reason}</li>}
+            {res.registers.filter((r) => !r.ok).map((r) => <li key={r.id}>{r.label}: line {r.broken_seq}: {r.reason}</li>)}
+            {res.audit && !res.audit.ok && <li>Audit trail: record {res.audit.broken_seq}: {res.audit.reason}</li>}
           </ul>
           {res.ok && res.registers.length === 1 && res.registers[0].head && <p className="mt-1 break-all font-mono text-xs text-muted-foreground">Latest fingerprint: {res.registers[0].head.slice(0, 16)}</p>}
           {res.ok && res.audit?.head && <p className="mt-1 break-all font-mono text-xs text-muted-foreground">Audit trail fingerprint: {res.audit.head.slice(0, 16)} · checked {new Date(res.checked_at).toLocaleString('en-IE')}</p>}

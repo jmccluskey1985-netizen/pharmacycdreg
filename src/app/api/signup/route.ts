@@ -17,7 +17,7 @@ const Body = z.object({
 });
 
 // Self sign-up: creates the pharmacy + its login. The client then signs in and is
-// straight into a free month — no card needed; they subscribe from Billing before it ends.
+// straight into a free month: no card needed; they subscribe from Billing before it ends.
 export async function POST(req: Request) {
   try {
     return await handle(req);
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
 
 async function handle(req: Request) {
   if (process.env.SIGNUPS_OPEN !== '1') {
-    return NextResponse.json({ error: 'Sign-ups open soon — please join the waitlist on the home page.' }, { status: 403 });
+    return NextResponse.json({ error: 'Sign-ups open soon: please join the waitlist on the home page.' }, { status: 403 });
   }
   const limit = checkRateLimit(`signup:${clientKey(req)}`, 3, 15 * 60_000);
   if (!limit.ok) return NextResponse.json({ error: 'Too many sign-up attempts. Try again later.' }, { status: 429 });
@@ -49,13 +49,13 @@ async function handle(req: Request) {
   if (userErr || !created.user) {
     const exists = /already|registered|exists/i.test(userErr?.message ?? '');
     console.error('[signup] createUser', userErr?.message);
-    return NextResponse.json({ error: exists ? 'An account with this email already exists — sign in instead.' : `Could not create the login: ${userErr?.message ?? 'unknown error'}` }, { status: exists ? 409 : 500 });
+    return NextResponse.json({ error: exists ? 'An account with this email already exists, sign in instead.' : `Could not create the login: ${userErr?.message ?? 'unknown error'}` }, { status: exists ? 409 : 500 });
   }
 
   const { data: ph, error: phErr } = await db
     .from('pharmacies')
     .insert({ name: b.pharmacy_name, address: b.address, psi_premises_number: b.psi_premises_number || null, contact_name: b.contact_name, contact_phone: b.contact_phone, billing_email: b.email,
-      // Free month starts now — no card needed. They subscribe from Billing before it runs out.
+      // Free month starts now: no card needed. They subscribe from Billing before it runs out.
       subscription_status: 'trialing', trial_ends_at: new Date(Date.now() + FREE_TRIAL_DAYS * 864e5).toISOString() })
     .select('id')
     .single();

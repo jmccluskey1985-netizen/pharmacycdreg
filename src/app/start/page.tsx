@@ -28,7 +28,7 @@ export default function StartPage() {
       const supabase = getSupabaseClient();
       await supabase.auth.signOut().catch(() => {});
       const { error: signInErr } = await supabase.auth.signInWithPassword({ email: f.email, password: f.password });
-      if (signInErr) throw new Error('Account created — please sign in on the home page to continue.');
+      if (signInErr) throw new Error('Account created: please sign in on the home page to continue.');
 
       // No card: straight into the register; the countdown and Subscribe button are in the dashboard.
       window.location.href = '/dashboard';
@@ -50,7 +50,7 @@ export default function StartPage() {
         <form onSubmit={submit} className="card space-y-4 sm:p-8">
           <div>
             <h1 className="text-2xl font-bold">Start your free month</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Set up your pharmacy in two minutes. No card needed — your free month starts now, and you subscribe from Billing when you&apos;re ready.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Set up your pharmacy in two minutes. No card needed: your free month starts now, and you subscribe from Billing when you&apos;re ready.</p>
           </div>
           {error && <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
 

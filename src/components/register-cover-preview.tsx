@@ -24,7 +24,7 @@ export function RegisterCoverPreview({ src, alt, cover = '/previews/register-cov
       <div className={`book book-slow ${open ? 'open' : ''}`}>
         <button type="button" onClick={() => setOpen(true)} aria-label="Open the register" aria-hidden={open} tabIndex={open ? -1 : 0} className="book-cover overflow-hidden bg-[#eceef0]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={cover} alt="Register of Controlled Drugs — PharmacyCDReg.ie" className="h-full w-full object-cover object-bottom" />
+          <img src={cover} alt="Register of Controlled Drugs: PharmacyCDReg.ie" className="h-full w-full object-cover object-bottom" />
           {!open && <span className="absolute bottom-[5%] left-[4%] rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-[#16477a] shadow">Tap to open</span>}
         </button>
         <div className="overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border">

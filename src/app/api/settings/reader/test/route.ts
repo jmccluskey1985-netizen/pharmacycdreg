@@ -37,7 +37,7 @@ export async function POST() {
         system: 'You check that image reading works.', schema: JSON_SCHEMA, name: 'reader_test',
         prompt: 'Set ok to true and colour to the main colour of this image.', parse: parseJsonWith(Schema), reader,
       });
-      return NextResponse.json({ ok: result.ok, message: `Working — ${model} answered in ${((Date.now() - t0) / 1000).toFixed(1)}s.` });
+      return NextResponse.json({ ok: result.ok, message: `Working: ${model} answered in ${((Date.now() - t0) / 1000).toFixed(1)}s.` });
     } catch (e) {
       return NextResponse.json({ ok: false, message: e instanceof ScanError ? e.message : 'The test failed.' });
     }

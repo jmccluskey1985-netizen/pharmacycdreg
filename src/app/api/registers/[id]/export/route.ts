@@ -33,7 +33,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       return [r.seq, r.transaction_date, r.entry_type, party, authority, obtained, supplied, r.running_balance, who.get(r.recorded_by_staff_id) ?? '', r.recorded_at, r.correction_count > 0 ? 'Yes' : '', r.correction_reason ?? '', r.witness_name ? `${r.witness_name} (${r.witness_role})` : ''].map(csv).join(',');
     });
     const p = reg.product;
-    const title = `Register of Controlled Drugs — ${p.class_name} — ${p.drug_name} ${p.strength} ${p.form}`;
+    const title = `Register of Controlled Drugs: ${p.class_name}: ${p.drug_name} ${p.strength} ${p.form}`;
     await audit(account.pharmacyId, 'register.exported', staff, account.authUserId, { format: 'csv' }, { table: 'cd_registers', id: reg.id });
     return new Response([csv(title), header.join(','), ...lines].join('\n'), {
       headers: {

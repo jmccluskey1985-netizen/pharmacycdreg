@@ -47,7 +47,7 @@ export default function IntegrationsPage() {
     <div className="mx-auto max-w-3xl space-y-5">
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-bold"><Plug className="h-6 w-6 text-brand" /> Halo connection</h1>
-        <p className="text-sm text-muted-foreground">When a controlled drug is dispensed in Halo (Add patient / label printed), Halo sends it here. It appears under <b>To confirm</b> for a pharmacist to sign — or goes straight into the register if you turn on auto-post.</p>
+        <p className="text-sm text-muted-foreground">When a controlled drug is dispensed in Halo (Add patient / label printed), Halo sends it here. It appears under <b>To confirm</b> for a pharmacist to sign: or goes straight into the register if you turn on auto-post.</p>
       </div>
 
       <div className="card space-y-3">
@@ -58,7 +58,7 @@ export default function IntegrationsPage() {
         </div>
         {newKey && (
           <div className="rounded-lg border border-brand/40 bg-brand/10 p-3">
-            <p className="text-sm font-semibold">Copy this key into Halo now — it won&apos;t be shown again.</p>
+            <p className="text-sm font-semibold">Copy this key into Halo now: it won&apos;t be shown again.</p>
             <div className="mt-2 flex items-center gap-2">
               <code className="flex-1 overflow-x-auto rounded bg-card px-2 py-1.5 font-mono text-xs">{newKey}</code>
               <button onClick={() => copy(newKey, 'key')} className="btn-secondary py-1.5 text-sm">{copied === 'key' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}</button>
@@ -77,7 +77,7 @@ export default function IntegrationsPage() {
         </div>
         <p className="text-sm text-muted-foreground">Header <code>Authorization: Bearer &lt;key&gt;</code>, body as JSON:</p>
         <pre className="overflow-x-auto rounded-lg bg-muted p-3 text-xs">{EXAMPLE}</pre>
-        <p className="text-xs text-muted-foreground">Resending the same <code>external_id</code> is safe — it&apos;s only recorded once. To undo a dispensing, send the same item with <code>&quot;action&quot;: &quot;reverse&quot;</code>; it appears under To confirm for a correction.</p>
+        <p className="text-xs text-muted-foreground">Resending the same <code>external_id</code> is safe: it&apos;s only recorded once. To undo a dispensing, send the same item with <code>&quot;action&quot;: &quot;reverse&quot;</code>; it appears under To confirm for a correction.</p>
       </div>
 
       <div className="card">

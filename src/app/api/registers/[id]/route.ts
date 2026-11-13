@@ -27,7 +27,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 }
 
 // Remove a CD book that was never used (opened by mistake, or a "start" you don't stock).
-// Only when it has NO entries at all — a register with any line, even corrected, is kept forever.
+// Only when it has NO entries at all, a register with any line, even corrected, is kept forever.
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   try {
     const { account, staff } = await requireStaff(can.openRegister);

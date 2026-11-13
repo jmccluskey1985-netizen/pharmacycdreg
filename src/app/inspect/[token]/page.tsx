@@ -4,7 +4,7 @@ import { productTitle } from '@/lib/product-name';
 import { openLink, Frame, fmtQty } from './shared';
 
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Inspection view — PharmacyCDReg.ie', robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: 'Inspection view: PharmacyCDReg.ie', robots: { index: false, follow: false } };
 
 export default async function InspectHome({ params }: { params: { token: string } }) {
   const { link, pharmacy, db } = await openLink(params.token, 'registers');

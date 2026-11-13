@@ -78,7 +78,7 @@ function DrugSearch() {
           {!picked && openList && matches.length > 0 && (
             <ul className="absolute left-0 top-full z-50 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-border bg-card py-1 shadow-xl sm:w-[28rem]">
               {matches.length > 1 && (
-                <li><button type="button" onClick={() => pick(`${f.q.trim()} — all ${matches.length}`, matches.map((m) => m.id))} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-semibold hover:bg-secondary"><Pill className="h-4 w-4 text-brand" /> All {matches.length} matching registers</button></li>
+                <li><button type="button" onClick={() => pick(`${f.q.trim()}: all ${matches.length}`, matches.map((m) => m.id))} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-semibold hover:bg-secondary"><Pill className="h-4 w-4 text-brand" /> All {matches.length} matching registers</button></li>
               )}
               {matches.map((r) => (
                 <li key={r.id} className="flex items-center hover:bg-secondary">
@@ -171,7 +171,7 @@ function PatientReport() {
           <div className="card">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Controlled drug supplies — patient report</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Controlled drug supplies: patient report</p>
                 <p className="text-lg font-bold">{who.name}</p>
                 {who.address && <p className="text-sm text-muted-foreground">{who.address}</p>}
                 <p className="text-xs text-muted-foreground">{dates.from || dates.to ? `${dates.from || 'start'} to ${dates.to || 'today'}` : 'All dates'} · printed {new Date().toLocaleDateString('en-IE')}</p>
@@ -186,7 +186,7 @@ function PatientReport() {
                 <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground"><tr><th className="py-1.5">Drug</th><th className="py-1.5 text-right">Supplies</th><th className="py-1.5 text-right">Total supplied</th><th className="py-1.5 text-right">Returned</th></tr></thead>
                 <tbody className="divide-y divide-border">
                   {data.totals.map((t) => (
-                    <tr key={t.label}><td className="py-1.5">{t.label}</td><td className="py-1.5 text-right tabular-nums">{t.count}</td><td className="py-1.5 text-right font-semibold tabular-nums">{t.supplied} {t.unit}</td><td className="py-1.5 text-right tabular-nums">{t.returned || '—'}</td></tr>
+                    <tr key={t.label}><td className="py-1.5">{t.label}</td><td className="py-1.5 text-right tabular-nums">{t.count}</td><td className="py-1.5 text-right font-semibold tabular-nums">{t.supplied} {t.unit}</td><td className="py-1.5 text-right tabular-nums">{t.returned || '-'}</td></tr>
                   ))}
                 </tbody>
               </table>

@@ -62,34 +62,34 @@ export interface RawItem {
 
 export function decideQuantity(item: RawItem, kind: 'invoice' | 'prescription' | 'other'): QtyDecision {
   const flags: string[] = [];
-  if (item.confidence === 'low') flags.push('Low-confidence read — check against the paper');
+  if (item.confidence === 'low') flags.push('Low-confidence read: check against the paper');
   if (PACK_UNITS.test((item.quantity_unit || '').trim())) {
-    return { quantity: null, source: 'none', label: `Written as ${item.quantity} ${item.quantity_unit}`, flags: [...flags, 'Pack quantity, not units — enter the number of tablets/ml/patches'], blocking: true };
+    return { quantity: null, source: 'none', label: `Written as ${item.quantity} ${item.quantity_unit}`, flags: [...flags, 'Pack quantity, not units: enter the number of tablets/ml/patches'], blocking: true };
   }
 
   if (kind === 'invoice') {
-    if (item.is_credit) return { quantity: null, source: 'none', label: 'Credit / return line', flags: [...flags, 'Credit or return — not a receipt. Record a correction if stock was already entered'], blocking: true };
+    if (item.is_credit) return { quantity: null, source: 'none', label: 'Credit / return line', flags: [...flags, 'Credit or return: not a receipt. Record a correction if stock was already entered'], blocking: true };
     // Handwritten change by the qty (e.g. printed 8, written 5 = what arrived). A tick is fine.
     let blocking = false;
     const hw = (item.handwritten_qty || '').match(/\d+(\.\d+)?/);
     if (hw && item.packs != null && Number(hw[0]) !== item.packs) {
-      flags.push(`Handwritten “${item.handwritten_qty}” beside printed ${item.packs} — confirm how many packs actually arrived`);
+      flags.push(`Handwritten “${item.handwritten_qty}” beside printed ${item.packs}: confirm how many packs actually arrived`);
       blocking = true;
     }
     const fromText = packSizeFromText(item.line_text);
     if (item.packs != null && item.pack_size == null && fromText != null) {
       item = { ...item, pack_size: fromText };
-      flags.push(`Pack size ${fromText} taken from the printed line — check`);
+      flags.push(`Pack size ${fromText} taken from the printed line. Check`);
     } else if (item.pack_size != null && fromText != null && fromText !== item.pack_size && item.line_text && !new RegExp(`\\b${item.pack_size}\\b`).test(item.line_text)) {
-      flags.push(`Pack size ${item.pack_size} not on the printed line (it shows ${fromText}) — check the PACK column`);
+      flags.push(`Pack size ${item.pack_size} not on the printed line (it shows ${fromText}): check the PACK column`);
       blocking = true;
     }
     if (item.packs != null && item.pack_size != null) {
       const q = item.packs * item.pack_size;
-      if (item.quantity && Math.abs(item.quantity - q) > 0.001) flags.push(`Reader said ${item.quantity}, packs × size gives ${q} — using ${q}`);
+      if (item.quantity && Math.abs(item.quantity - q) > 0.001) flags.push(`Reader said ${item.quantity}, packs × size gives ${q}: using ${q}`);
       return { quantity: q, source: 'packs_x_size', label: `${item.packs} pack${item.packs === 1 ? '' : 's'} × ${item.pack_size} = ${q}`, flags, blocking };
     }
-    if (item.packs != null && item.pack_size == null) flags.push('Pack size not found in the description — check units per pack');
+    if (item.packs != null && item.pack_size == null) flags.push('Pack size not found in the description. Check units per pack');
     return { quantity: item.quantity || null, source: item.quantity ? 'invoice_quantity' : 'none', label: item.quantity ? `${item.quantity} ${item.quantity_unit}` : 'No quantity read', flags, blocking: !item.quantity };
   }
 
@@ -100,28 +100,28 @@ export function decideQuantity(item: RawItem, kind: 'invoice' | 'prescription' |
     let source: QtySource = 'none';
     let label = '';
     if (fig != null && words != null) {
-      if (fig !== words) return { quantity: null, source: 'none', label: `Figures ${fig} ≠ words ${words}`, flags: [...flags, 'Words and figures disagree — the prescription is not valid for supply as written'], blocking: true };
+      if (fig !== words) return { quantity: null, source: 'none', label: `Figures ${fig} ≠ words ${words}`, flags: [...flags, 'Words and figures disagree: the prescription is not valid for supply as written'], blocking: true };
       total = fig; source = 'words_and_figures'; label = `${fig} (words and figures agree)`;
     } else if (fig != null) {
       total = fig; source = 'figures_only'; label = `${fig} (figures only)`;
-      flags.push('Total not written in words — a CD prescription needs words and figures');
+      flags.push('Total not written in words: a CD prescription needs words and figures');
     } else if (words != null) {
       total = words; source = 'words_only'; label = `${words} (“${item.quantity_words}”, words only)`;
-      flags.push('Total written in words only, no figures — check it meets CD prescription requirements');
+      flags.push('Total written in words only, no figures. Check it meets CD prescription requirements');
     }
     if (total == null) {
-      if (item.duration_text) flags.push(`Only a duration (“${item.duration_text}”) — total quantity must be written; not calculated`);
-      return { quantity: null, source: 'none', label: 'No total quantity written', flags: [...flags, 'No total in words and figures — check the prescription before supplying'], blocking: true };
+      if (item.duration_text) flags.push(`Only a duration (“${item.duration_text}”): total quantity must be written; not calculated`);
+      return { quantity: null, source: 'none', label: 'No total quantity written', flags: [...flags, 'No total in words and figures: check the prescription before supplying'], blocking: true };
     }
     // Total given as a number of doses: convert only with a stated units-per-dose.
     const inDoses = /dose/i.test(`${item.quantity_unit} ${item.quantity_words ?? ''} ${item.quantity_figures ?? ''}`);
     if (inDoses) {
       if (item.units_per_dose && item.units_per_dose > 0) {
         const q = total * item.units_per_dose;
-        flags.push(`Total written as ${total} doses — ${item.units_per_dose} per dose; check against the dose and strength`);
+        flags.push(`Total written as ${total} doses: ${item.units_per_dose} per dose; check against the dose and strength`);
         return { quantity: q, source, label: `${total} doses × ${item.units_per_dose} = ${q}`, flags, blocking: false };
       }
-      return { quantity: null, source: 'none', label: `${total} doses`, flags: [...flags, 'Total is in doses — enter the number of tablets/capsules/ml'], blocking: true };
+      return { quantity: null, source: 'none', label: `${total} doses`, flags: [...flags, 'Total is in doses: enter the number of tablets/capsules/ml'], blocking: true };
     }
     return { quantity: total, source, label, flags, blocking: false };
   }

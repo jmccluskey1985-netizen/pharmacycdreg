@@ -13,15 +13,15 @@ import { QuickFillInput } from '@/components/dashboard/quickfill-input';
 import type { QItem } from '@/components/dashboard/quarantine';
 
 const today = () => new Date().toISOString().slice(0, 10);
-const fmt = (d: string | null | undefined) => (d ? d.slice(0, 10).split('-').reverse().join('/') : '—');
+const fmt = (d: string | null | undefined) => (d ? d.slice(0, 10).split('-').reverse().join('/') : '-');
 const REASONS: Record<string, string> = { expired: 'Expired', damaged: 'Damaged', recalled: 'Recalled', other: 'Other' };
 
 /**
  * Two separate records, as in the paper system:
- *  1. Witnessed Destruction Record — the section at the back of the CD register: Schedule 2
+ *  1. Witnessed Destruction Record: the section at the back of the CD register: Schedule 2
  *     PHARMACY STOCK (expired / damaged), destroyed in front of an authorised person. Reduces
  *     the drug's register balance. Stock waits here, set aside, until the witness attends.
- *  2. CD Destruction Record Book — a separate book: PATIENT-RETURNED CDs (Sch 2–4) and expired
+ *  2. CD Destruction Record Book: a separate book: PATIENT-RETURNED CDs (Sch 2–4) and expired
  *     Schedule 3/4 stock. Never part of a register balance; no authorised witness needed.
  */
 export default function DestructionsPage() {
@@ -40,7 +40,7 @@ export default function DestructionsPage() {
         <button onClick={() => window.print()} className="btn-secondary no-print"><Printer className="h-4 w-4" /> Print</button>
       </div>
       <div className="no-print mb-5 grid max-w-2xl grid-cols-2 gap-2 rounded-xl bg-muted p-1">
-        <button onClick={() => setTab('witnessed')} className={`flex items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-sm font-semibold ${tab === 'witnessed' ? 'bg-card shadow-sm' : 'text-muted-foreground'}`}><ShieldCheck className="h-4 w-4 flex-shrink-0" /> Witnessed — Sch 2 stock</button>
+        <button onClick={() => setTab('witnessed')} className={`flex items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-sm font-semibold ${tab === 'witnessed' ? 'bg-card shadow-sm' : 'text-muted-foreground'}`}><ShieldCheck className="h-4 w-4 flex-shrink-0" /> Witnessed: Sch 2 stock</button>
         <button onClick={() => setTab('book')} className={`flex items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-sm font-semibold ${tab === 'book' ? 'bg-card shadow-sm' : 'text-muted-foreground'}`}><BookX className="h-4 w-4 flex-shrink-0" /> Destruction Record Book</button>
       </div>
       {tab === 'witnessed' ? <Witnessed /> : <DestructionBook />}
@@ -80,7 +80,7 @@ function Witnessed() {
             {awaiting.map((i) => (
               <label key={i.id} className="flex cursor-pointer items-center gap-3 px-3 py-2.5 text-sm hover:bg-muted/40">
                 {mayRecord && <input type="checkbox" className="h-5 w-5 accent-[#54BD50]" checked={picked.includes(i.id)} onChange={(e) => setPicked((p) => (e.target.checked ? [...p, i.id] : p.filter((x) => x !== i.id)))} />}
-                <span className="flex-1"><b>{i.label}</b> — {Number(i.quantity)} {i.unit} · {REASONS[i.reason] ?? i.reason}{i.batch ? ` · batch ${i.batch}` : ''}{i.expiry_date ? ` · exp ${fmt(i.expiry_date)}` : ''}</span>
+                <span className="flex-1"><b>{i.label}</b>, {Number(i.quantity)} {i.unit} · {REASONS[i.reason] ?? i.reason}{i.batch ? ` · batch ${i.batch}` : ''}{i.expiry_date ? ` · exp ${fmt(i.expiry_date)}` : ''}</span>
                 <span className="text-xs text-muted-foreground">set aside {fmt(i.created_at)}</span>
               </label>
             ))}
@@ -101,7 +101,7 @@ function Witnessed() {
                   <td className="tabular-nums">{fmt(r.transaction_date)}</td>
                   <td><Link href={`/dashboard/register/${r.register_id}`} className="text-primary hover:underline">{r.product ? `${brandOf(r.product) ?? r.product.drug_name} ${r.product.strength}` : ''}</Link></td>
                   <td className="text-right font-semibold tabular-nums">{Number(r.quantity)} {r.product?.unit}</td>
-                  <td>{r.witness_name}</td><td>{r.witness_role}</td><td>{r.destruction_method ?? '—'}</td>
+                  <td>{r.witness_name}</td><td>{r.witness_role}</td><td>{r.destruction_method ?? '-'}</td>
                   <td className="text-xs text-muted-foreground">{r.notes}</td>
                 </tr>
               ))}
@@ -131,7 +131,7 @@ function WitnessForm({ ids, items, onDone }: { ids: string[]; items: QItem[]; on
   }
   return (
     <form onSubmit={save} className="space-y-4">
-      <ul className="rounded-lg bg-secondary p-3 text-sm">{items.map((i) => <li key={i.id}><b>{i.label}</b> — {Number(i.quantity)} {i.unit}</li>)}</ul>
+      <ul className="rounded-lg bg-secondary p-3 text-sm">{items.map((i) => <li key={i.id}><b>{i.label}</b>, {Number(i.quantity)} {i.unit}</li>)}</ul>
       <p className="text-sm text-muted-foreground">Schedule 2 stock must be destroyed in the presence of an <b>authorised person</b>: a member of Garda personnel, a PSI inspector / authorised officer, or another person authorised under the Misuse of Drugs Regulations. One destruction line is written to each drug’s register.</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <div><label className="label">Authorised witness</label><QuickFillInput kind="witness" required value={f.witness_name} onChange={(v) => setF({ ...f, witness_name: v })} onPick={(p) => setF({ ...f, witness_name: p.name, witness_role: p.role ?? f.witness_role })} /></div>
@@ -168,7 +168,7 @@ function DestructionBook() {
   return (
     <div className="space-y-4">
       <div className="card flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm text-muted-foreground"><b className="text-foreground">Patient-returned CDs</b> (Schedules 2, 3 and 4) and <b className="text-foreground">expired Schedule 3/4 stock</b>. Kept apart from the CD register — returns were never pharmacy stock. No authorised witness is needed; a second pharmacist or staff member witnessing is good practice.</p>
+        <p className="max-w-2xl text-sm text-muted-foreground"><b className="text-foreground">Patient-returned CDs</b> (Schedules 2, 3 and 4) and <b className="text-foreground">expired Schedule 3/4 stock</b>. Kept apart from the CD register: returns were never pharmacy stock. No authorised witness is needed; a second pharmacist or staff member witnessing is good practice.</p>
         {mayRecord && (
           <div className="flex flex-wrap gap-2">
             <button onClick={() => setAdding('patient_return')} className="btn-primary"><Plus className="h-4 w-4" /> Patient return</button>
@@ -179,7 +179,7 @@ function DestructionBook() {
       {needsMigration && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">Needs a one-off database update: run migration 0011 in Supabase.</p>}
       {mayRecord && waiting.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
-          <span><b>{waiting.length}</b> waiting to be destroyed — tick them below, then record the destruction.</span>
+          <span><b>{waiting.length}</b> waiting to be destroyed: tick them below, then record the destruction.</span>
           <button onClick={() => setDestroying(true)} disabled={!picked.length} className="btn-primary py-1.5"><Flame className="h-4 w-4" /> Record destruction{picked.length ? ` (${picked.length})` : ''}</button>
         </div>
       )}
@@ -196,7 +196,7 @@ function DestructionBook() {
                 <td className="text-xs">{r.kind === 'patient_return' ? 'Patient return' : `Expired stock${r.schedule ? ` (Sch ${r.schedule})` : ''}`}</td>
                 <td><span className="font-medium">{r.drug}</span>{(r.batch || r.expiry_date) && <span className="block text-xs opacity-75">{[r.batch && `batch ${r.batch}`, r.expiry_date && `exp ${fmt(r.expiry_date)}`].filter(Boolean).join(' · ')}</span>}</td>
                 <td className="text-right font-semibold tabular-nums">{Number(r.quantity)} {r.unit}</td>
-                <td>{r.returned_by_name ?? '—'}{r.returned_by_address && <span className="block text-xs opacity-75">{r.returned_by_address}</span>}</td>
+                <td>{r.returned_by_name ?? '-'}{r.returned_by_address && <span className="block text-xs opacity-75">{r.returned_by_address}</span>}</td>
                 <td className="text-xs">{r.received_by_name}</td>
                 <td className="tabular-nums">{r.destroyed_date ? fmt(r.destroyed_date) : <span className="text-xs font-semibold text-amber-700">awaiting</span>}</td>
                 <td className="text-xs">{r.destroyed_by_name ?? ''}{r.destruction_method && <span className="block opacity-75">{r.destruction_method}</span>}</td>
@@ -270,7 +270,7 @@ function BookDestroyForm({ ids, rows, onDone }: { ids: string[]; rows: BookRow[]
   }
   return (
     <form onSubmit={save} className="space-y-4">
-      <ul className="rounded-lg bg-secondary p-3 text-sm">{rows.map((r) => <li key={r.id}><b>{r.drug}</b> — {Number(r.quantity)} {r.unit}{r.returned_by_name ? ` (returned by ${r.returned_by_name})` : ''}</li>)}</ul>
+      <ul className="rounded-lg bg-secondary p-3 text-sm">{rows.map((r) => <li key={r.id}><b>{r.drug}</b>, {Number(r.quantity)} {r.unit}{r.returned_by_name ? ` (returned by ${r.returned_by_name})` : ''}</li>)}</ul>
       <p className="text-sm text-muted-foreground">Destroyed by you (signed in). A second pharmacist or staff member as witness is good practice.</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <div><label className="label">Date destroyed</label><input className="input" type="date" required max={today()} value={f.destroyed_date} onChange={set('destroyed_date')} /></div>

@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     // Late entry (older than yesterday): needs a reason, which is written into the line itself.
     if (e.entry_type !== 'correction' && isLate(e.transaction_date)) {
       if (!late_reason || late_reason.trim().length < 5) {
-        return NextResponse.json({ error: 'This transaction is more than a day old — say why it’s being entered late (e.g. system down, entered from the paper fallback sheet).', code: 'LATE_ENTRY' }, { status: 400 });
+        return NextResponse.json({ error: 'This transaction is more than a day old, say why it’s being entered late (e.g. system down, entered from the paper fallback sheet).', code: 'LATE_ENTRY' }, { status: 400 });
       }
       (fields as any).notes = `${LATE_PREFIX}${late_reason.trim()}${fields.notes ? ` · ${fields.notes}` : ''}`;
     }

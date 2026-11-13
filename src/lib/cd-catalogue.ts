@@ -62,7 +62,7 @@ export const sameStrength = (a: string, b: string) => {
  * Products that do NOT go in the CD register (Schedule 5 / exempt preparations).
  * Checked in code after the reader, so a model that over-flags "CD" can't put them
  * in the register. Keep this list explicit and pharmacist-confirmed.
- *  - Oral morphine solution at ≤ 2 mg/ml (e.g. Oramorph 10mg/5ml) — confirmed by
+ *  - Oral morphine solution at ≤ 2 mg/ml (e.g. Oramorph 10mg/5ml): confirmed by
  *    the supervising pharmacist, Nov 2026. Oramorph Concentrated 20mg/ml IS registered.
  */
 export function registerExemption(name: string, strength: string, form?: string | null, brand?: string | null): string | null {
@@ -71,7 +71,7 @@ export function registerExemption(name: string, strength: string, form?: string 
   const f = (form || '').toLowerCase();
   if (g === 'morphine' && st?.endsWith('mg/ml') && !/tablet|capsule|inject|ampoule/.test(f)) {
     const mgPerMl = parseFloat(st);
-    if (mgPerMl <= 2) return 'Low-strength oral morphine (≤ 2 mg/ml, e.g. Oramorph 10mg/5ml) — no register entry needed';
+    if (mgPerMl <= 2) return 'Low-strength oral morphine (≤ 2 mg/ml, e.g. Oramorph 10mg/5ml): no register entry needed';
   }
   return null;
 }

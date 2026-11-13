@@ -48,22 +48,22 @@ function seedEntries() {
   // Oxycodone 5mg caps
   add('r1', 'receipt', 20, 56, 's1', BF('Paper register vol. 3, page 99'));
   add('r1', 'receipt', 12, 112, 's1', { ...UD, notes: 'Invoice 4471902', source: 'scan' });
-  add('r1', 'supply', 11, 28, 's2', { recipient_name: 'Mary Kelly', recipient_address: '14 Main St, Ennis, Co. Clare', prescriber_name: 'Dr A. Walsh', authority_to_possess: 'Prescription — Dr A. Walsh (Reg 012345)', prescription_ref: 'GMS 88213', collected_by: 'Patient', collector_id_checked: true });
-  const wrong = add('r1', 'supply', 9, 56, 's2', { recipient_name: 'John Murphy', recipient_address: '3 Church Rd, Ennis, Co. Clare', prescriber_name: 'Dr K. Ryan', authority_to_possess: 'Prescription — Dr K. Ryan', prescription_ref: 'Rx 10233' });
-  add('r1', 'correction', 9, 28, 's1', { corrects_entry_id: wrong.id, correction_reason: 'Entered 56 in error; 28 capsules dispensed (2 x 14)', recipient_name: 'John Murphy', recipient_address: '3 Church Rd, Ennis, Co. Clare', prescriber_name: 'Dr K. Ryan', authority_to_possess: 'Prescription — Dr K. Ryan', prescription_ref: 'Rx 10233' });
-  add('r1', 'supply', 6, 14, 's1', { recipient_name: 'Patrick Hayes', recipient_address: '22 Abbey St, Ennis, Co. Clare', prescriber_name: 'Dr A. Walsh', authority_to_possess: 'Prescription — Dr A. Walsh (Reg 012345)', prescription_ref: 'GMS 88252', collected_by: 'Representative', collector_id_checked: true });
+  add('r1', 'supply', 11, 28, 's2', { recipient_name: 'Mary Kelly', recipient_address: '14 Main St, Ennis, Co. Clare', prescriber_name: 'Dr A. Walsh', authority_to_possess: 'Prescription: Dr A. Walsh (Reg 012345)', prescription_ref: 'GMS 88213', collected_by: 'Patient', collector_id_checked: true });
+  const wrong = add('r1', 'supply', 9, 56, 's2', { recipient_name: 'John Murphy', recipient_address: '3 Church Rd, Ennis, Co. Clare', prescriber_name: 'Dr K. Ryan', authority_to_possess: 'Prescription: Dr K. Ryan', prescription_ref: 'Rx 10233' });
+  add('r1', 'correction', 9, 28, 's1', { corrects_entry_id: wrong.id, correction_reason: 'Entered 56 in error; 28 capsules dispensed (2 x 14)', recipient_name: 'John Murphy', recipient_address: '3 Church Rd, Ennis, Co. Clare', prescriber_name: 'Dr K. Ryan', authority_to_possess: 'Prescription: Dr K. Ryan', prescription_ref: 'Rx 10233' });
+  add('r1', 'supply', 6, 14, 's1', { recipient_name: 'Patrick Hayes', recipient_address: '22 Abbey St, Ennis, Co. Clare', prescriber_name: 'Dr A. Walsh', authority_to_possess: 'Prescription: Dr A. Walsh (Reg 012345)', prescription_ref: 'GMS 88252', collected_by: 'Representative', collector_id_checked: true });
   add('r1', 'patient_return', 5, 10, 's2', { recipient_name: 'Mary Kelly', recipient_address: '14 Main St, Ennis, Co. Clare' });
-  add('r1', 'supply', 2, 28, 's3', { recipient_name: "Seán O'Brien", recipient_address: '7 Quay St, Galway', prescriber_name: 'Dr L. Nolan', authority_to_possess: 'Prescription — Dr L. Nolan', prescription_ref: 'Rx 10261', source: 'pmr', notes: 'Halo HALO-8812-1' });
+  add('r1', 'supply', 2, 28, 's3', { recipient_name: "Seán O'Brien", recipient_address: '7 Quay St, Galway', prescriber_name: 'Dr L. Nolan', authority_to_possess: 'Prescription: Dr L. Nolan', prescription_ref: 'Rx 10261', source: 'pmr', notes: 'Halo HALO-8812-1' });
   // Oxycodone 10mg PR
   add('r2', 'receipt', 20, 140, 's1', BF('Paper register vol. 3, page 101'));
-  add('r2', 'supply', 8, 56, 's2', { recipient_name: 'Patrick Hayes', recipient_address: '22 Abbey St, Ennis', prescriber_name: 'Dr A. Walsh', authority_to_possess: 'Prescription — Dr A. Walsh', prescription_ref: 'GMS 88240' });
+  add('r2', 'supply', 8, 56, 's2', { recipient_name: 'Patrick Hayes', recipient_address: '22 Abbey St, Ennis', prescriber_name: 'Dr A. Walsh', authority_to_possess: 'Prescription: Dr A. Walsh', prescription_ref: 'GMS 88240' });
   // MST Continus 10mg
   add('r3', 'receipt', 20, 60, 's1', BF('Paper register vol. 2, page 40'));
   add('r3', 'receipt', 7, 60, 's1', { ...UN, notes: 'Invoice UW-22918' });
-  add('r3', 'supply', 3, 56, 's2', { recipient_name: 'Bridget Lynch', recipient_address: '9 Mill Rd, Ennis', prescriber_name: 'Dr K. Ryan', authority_to_possess: 'Prescription — Dr K. Ryan', prescription_ref: 'Rx 10250' });
+  add('r3', 'supply', 3, 56, 's2', { recipient_name: 'Bridget Lynch', recipient_address: '9 Mill Rd, Ennis', prescriber_name: 'Dr K. Ryan', authority_to_possess: 'Prescription: Dr K. Ryan', prescription_ref: 'Rx 10250' });
   // Fentanyl patches
   add('r4', 'receipt', 20, 15, 's1', BF('Paper register vol. 3, page 120'));
-  add('r4', 'supply', 4, 5, 's2', { recipient_name: 'Thomas Burke', recipient_address: 'Ard Na Gréine, Ennis', prescriber_name: 'Dr L. Nolan', authority_to_possess: 'Prescription — Dr L. Nolan', prescription_ref: 'Rx 10255' });
+  add('r4', 'supply', 4, 5, 's2', { recipient_name: 'Thomas Burke', recipient_address: 'Ard Na Gréine, Ennis', prescriber_name: 'Dr L. Nolan', authority_to_possess: 'Prescription: Dr L. Nolan', prescription_ref: 'Rx 10255' });
   // Methylphenidate
   add('r5', 'receipt', 20, 60, 's1', BF('Paper register vol. 1, page 12'));
   return out;
@@ -178,7 +178,7 @@ const REM = (): Json[] => {
   if (!X.reminders) {
     X.reminders = [];
     const e = [...S.entries].reverse().find((x) => x.entry_type === 'supply' && x.recipient_name);
-    if (e) X.reminders.push({ id: 'rem1', title: `${e.recipient_name} — weekly`, frequency: 'weekly', interval_days: null, next_due: today(), notes: null, active: true, last_done_on: null, last_done_by_name: null,
+    if (e) X.reminders.push({ id: 'rem1', title: `${e.recipient_name}: weekly`, frequency: 'weekly', interval_days: null, next_due: today(), notes: null, active: true, last_done_on: null, last_done_by_name: null,
       lines: [{ register_id: e.register_id, quantity: Number(e.quantity), recipient_name: e.recipient_name, recipient_address: e.recipient_address, prescriber_name: e.prescriber_name ?? null, prescriber_address: e.prescriber_address ?? null, authority_to_possess: null, patient_id: null }] });
   }
   return X.reminders;
@@ -266,8 +266,8 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     if (!can.record(st!.role)) return fail(403, 'Your role does not allow this action');
     const e = body;
     if (e.entry_type !== 'correction' && isLate(e.transaction_date)) {
-      if (!e.late_reason || String(e.late_reason).trim().length < 5) return fail(400, 'This transaction is more than a day old — say why it’s being entered late (e.g. system down, entered from the paper fallback sheet).', 'LATE_ENTRY');
-      e.notes = `Late entry — ${String(e.late_reason).trim()}${e.notes ? ` · ${e.notes}` : ''}`;
+      if (!e.late_reason || String(e.late_reason).trim().length < 5) return fail(400, 'This transaction is more than a day old, say why it’s being entered late (e.g. system down, entered from the paper fallback sheet).', 'LATE_ENTRY');
+      e.notes = `Late entry: ${String(e.late_reason).trim()}${e.notes ? ` · ${e.notes}` : ''}`;
     }
     delete e.late_reason; delete e.requisition;
     const bal = balance(e.register_id);
@@ -310,9 +310,9 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
   }
   if (path === '/api/settings/reader/models') return res({ models: [{ id: 'example/vision-model-a', name: 'Example vision model A', prompt_price: 1 }, { id: 'example/vision-model-b', name: 'Example vision model B', prompt_price: 0.5 }] });
   if (path === '/api/settings/reader') {
-    const R = ((S as any).reader ||= { needs_migration: false, provider: 'openrouter', has_key: false, hint: null, models: [], updated_at: null, environment_fallback: false, vertex: { has_key: false, client_email: null, project: null, location: 'eu' }, locations: [{ id: 'eu', label: 'EU multi-region (recommended — processing stays in the EU)' }, { id: 'europe-west1', label: 'Belgium (europe-west1)' }] });
+    const R = ((S as any).reader ||= { needs_migration: false, provider: 'openrouter', has_key: false, hint: null, models: [], updated_at: null, environment_fallback: false, vertex: { has_key: false, client_email: null, project: null, location: 'eu' }, locations: [{ id: 'eu', label: 'EU multi-region (recommended: processing stays in the EU)' }, { id: 'europe-west1', label: 'Belgium (europe-west1)' }] });
     if (method === 'PUT' && body.provider === 'vertex') {
-      if (body.service_account_json) { try { const j = JSON.parse(body.service_account_json); R.vertex = { has_key: true, client_email: j.client_email, project: j.project_id, location: body.location }; } catch { return fail(400, 'That isn’t a valid key file — paste the whole JSON file.'); } }
+      if (body.service_account_json) { try { const j = JSON.parse(body.service_account_json); R.vertex = { has_key: true, client_email: j.client_email, project: j.project_id, location: body.location }; } catch { return fail(400, 'That isn’t a valid key file: paste the whole JSON file.'); } }
       R.provider = 'vertex'; R.vertex.location = body.location;
     } else if (method === 'PUT') { if (body.api_key) { R.has_key = true; R.hint = `…${String(body.api_key).slice(-4)}`; } R.models = body.models; R.provider = 'openrouter'; }
     if (method === 'DELETE') { if (url.searchParams.get('provider') === 'vertex') { R.vertex = { has_key: false, client_email: null, project: null, location: 'eu' }; R.provider = 'openrouter'; } else { R.has_key = false; R.hint = null; } }
@@ -392,7 +392,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     if (needStaff()) return needStaff()!;
     const c = ((S as any).checks || []).find((x: Json) => x.id === m![1]); if (!c) return fail(404, 'Stock check not found');
     const bal = balance(c.register_id);
-    if (bal !== Number(c.register_balance)) return fail(409, 'The register has changed since this count — do a new stock check, then amend from that.');
+    if (bal !== Number(c.register_balance)) return fail(409, 'The register has changed since this count. Do a new stock check, then amend from that.');
     if (!body.investigation || body.investigation.trim().length < 10) return fail(400, 'Say what you did to investigate (at least a sentence)');
     const diff = Number(c.counted) - bal;
     const notes = `Stock check ${today().split('-').reverse().join('/')} by ${c.checked_by_name}: counted ${c.counted}, register ${bal} (${diff > 0 ? '+' : ''}${diff}). Investigation: ${body.investigation}`;
@@ -400,7 +400,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     const e = { id: uid(), register_id: c.register_id, seq, entry_type: diff > 0 ? 'adjustment_in' : 'adjustment_out', transaction_date: today(), recorded_at: new Date().toISOString(), quantity: String(Math.abs(diff)), notes, recorded_by_staff_id: st!.id, source: 'manual' };
     S.entries.push(e as any);
     let note = null;
-    if (body.save_note) { const p = productOf(c.register_id); note = { id: uid(), title: `Stock discrepancy — ${p.brand || p.drug_name} ${p.strength} (${diff > 0 ? '+' : ''}${diff})`, body: `${notes}\n\nRegister line ${seq} records the adjustment.`, category: 'Stock discrepancy', pinned: false, archived: false, register_id: c.register_id, stock_check_id: c.id, created_by_name: st!.full_name, updated_by_name: st!.full_name, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), attachments: [] }; NOTES().push(note); }
+    if (body.save_note) { const p = productOf(c.register_id); note = { id: uid(), title: `Stock discrepancy: ${p.brand || p.drug_name} ${p.strength} (${diff > 0 ? '+' : ''}${diff})`, body: `${notes}\n\nRegister line ${seq} records the adjustment.`, category: 'Stock discrepancy', pinned: false, archived: false, register_id: c.register_id, stock_check_id: c.id, created_by_name: st!.full_name, updated_by_name: st!.full_name, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), attachments: [] }; NOTES().push(note); }
     audit('stock_check.balance_amended', { diff });
     return res({ entry: { id: e.id, seq }, note, balance: Number(c.counted) });
   }
@@ -469,7 +469,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     if (method === 'GET') return res({ checks: list.filter((c) => c.register_id === url.searchParams.get('register_id')).reverse() });
     const bal = regList().find((r: Json) => r.id === body.register_id)?.balance ?? 0;
     const diff = Number(body.counted) - bal;
-    if (diff !== 0 && !body.notes) return fail(400, 'The count doesn’t match the register — add a note on what you found');
+    if (diff !== 0 && !body.notes) return fail(400, 'The count doesn’t match the register. Add a note on what you found');
     const c = { id: uid(), register_id: body.register_id, counted: Number(body.counted), register_balance: bal, notes: body.notes, checked_by_name: st!.full_name, checked_at: new Date().toISOString() };
     list.push(c);
     return res({ check: c, balance: bal, diff });
@@ -524,7 +524,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     const extraction = isRx
       ? { document_type: 'prescription', document_date: today(), reference: 'Rx 10302', supplier_name: null, supplier_address: null, patient_name: 'Eileen Moran', patient_address: '12 Bindon St, Ennis', prescriber_name: 'Dr A. Walsh', prescriber_address: 'Ennis Medical Centre', prescriber_registration: '012345', warnings: [], items: [{ drug_name: 'Oxycodone hydrochloride', strength: '5mg', form: 'capsule', quantity: 28, quantity_unit: 'capsules', pack_description: '28 (twenty-eight)', is_controlled_drug: true, likely_schedule: 2, confidence: 'high', notes: '', brand: 'OxyNorm', packs: null, pack_size: null, quantity_figures: '28', quantity_words: 'twenty-eight', duration_text: null, is_credit: false }] }
       : { document_type: 'invoice', document_date: today(), reference: 'Invoice 4472210', supplier_name: 'United Drug', supplier_address: 'Magna Business Park, Citywest, Dublin 24', patient_name: null, patient_address: null, prescriber_name: null, prescriber_address: null, prescriber_registration: null, warnings: [], items: [
-          { drug_name: 'Oxycodone hydrochloride', strength: '5mg', form: 'capsule', quantity: 112, quantity_unit: 'capsules', pack_description: 'OXYNORM CAPS 5MG 56 — CD2', is_controlled_drug: true, likely_schedule: 2, confidence: 'high', notes: '', brand: 'OxyNorm', packs: 2, pack_size: 56, quantity_figures: null, quantity_words: null, duration_text: null, is_credit: false },
+          { drug_name: 'Oxycodone hydrochloride', strength: '5mg', form: 'capsule', quantity: 112, quantity_unit: 'capsules', pack_description: 'OXYNORM CAPS 5MG 56: CD2', is_controlled_drug: true, likely_schedule: 2, confidence: 'high', notes: '', brand: 'OxyNorm', packs: 2, pack_size: 56, quantity_figures: null, quantity_words: null, duration_text: null, is_credit: false },
           { drug_name: 'Morphine sulfate', strength: '10mg', form: 'prolonged-release tablet', quantity: 60, quantity_unit: 'tablets', pack_description: 'MST CONTINUS 10MG PR TABLETS 60', is_controlled_drug: true, likely_schedule: 2, confidence: 'high', notes: '', brand: 'MST Continus', packs: 1, pack_size: 60, quantity_figures: null, quantity_words: null, duration_text: null, is_credit: false },
           { drug_name: 'Morphine sulfate', strength: '10mg/5ml', form: 'oral solution', quantity: 300, quantity_unit: 'ml', pack_description: 'ORAMORPH 10MG/5ML 100ML', is_controlled_drug: true, likely_schedule: 5, confidence: 'high', notes: '', brand: 'Oramorph', packs: 3, pack_size: 100, quantity_figures: null, quantity_words: null, duration_text: null, is_credit: false },
           { drug_name: 'Paracetamol', strength: '500mg', form: 'tablet', quantity: 100, quantity_unit: 'tablets', pack_description: '1 x 100', is_controlled_drug: false, likely_schedule: null, confidence: 'high', notes: '', brand: null, packs: 1, pack_size: 100, quantity_figures: null, quantity_words: null, duration_text: null, is_credit: false }] };
@@ -535,7 +535,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
       const exact = same.filter((r) => sameStrength(r.product.strength, item.strength));
       const match = exact.length === 1 ? exact[0] : null;
       const qty = decideQuantity(item, extraction.document_type as any);
-      return { item, qty, match_state: match ? 'your_register' : same.length ? 'pick_register' : 'no_register', register_id: match?.id ?? null, register_label: match ? productTitle(match.product) : null, current_balance: match?.balance ?? null, candidates: regs.filter((r) => norm(r.product.drug_name).includes(norm(item.drug_name))).map((r) => ({ id: r.id, label: productTitle(r.product) })), draft: { entry_type: isRx ? 'supply' : 'receipt', transaction_date: today(), quantity: qty.quantity ?? '', supplier_name: extraction.supplier_name, supplier_address: extraction.supplier_address, recipient_name: extraction.patient_name, recipient_address: extraction.patient_address, prescriber_name: extraction.prescriber_name, prescriber_address: extraction.prescriber_address, authority_to_possess: isRx ? `Prescription — ${extraction.prescriber_name}` : null, prescription_ref: extraction.reference, notes: isRx ? null : extraction.reference, scan_id: null } };
+      return { item, qty, match_state: match ? 'your_register' : same.length ? 'pick_register' : 'no_register', register_id: match?.id ?? null, register_label: match ? productTitle(match.product) : null, current_balance: match?.balance ?? null, candidates: regs.filter((r) => norm(r.product.drug_name).includes(norm(item.drug_name))).map((r) => ({ id: r.id, label: productTitle(r.product) })), draft: { entry_type: isRx ? 'supply' : 'receipt', transaction_date: today(), quantity: qty.quantity ?? '', supplier_name: extraction.supplier_name, supplier_address: extraction.supplier_address, recipient_name: extraction.patient_name, recipient_address: extraction.patient_address, prescriber_name: extraction.prescriber_name, prescriber_address: extraction.prescriber_address, authority_to_possess: isRx ? `Prescription: ${extraction.prescriber_name}` : null, prescription_ref: extraction.reference, notes: isRx ? null : extraction.reference, scan_id: null } };
     });
     audit('scan.read', { document_type: extraction.document_type });
     return res({ scan_id: 'demo', extraction, proposals, exempt, ignored: extraction.items.filter((i: any) => !i.is_controlled_drug).length });
@@ -600,7 +600,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     const r = browseGms(url.searchParams.get('q') || '', Number(url.searchParams.get('offset')) || 0, 50);
     return res({ ...r, list_date: GMS_LIST_DATE });
   }
-  if (path.startsWith('/api/billing/')) return res({ error: 'Billing opens Stripe in the live version — not available in the demo.' }, 400);
+  if (path.startsWith('/api/billing/')) return res({ error: 'Billing opens Stripe in the live version, not available in the demo.' }, 400);
   return fail(404, TRAINING ? 'Not available in training mode' : 'Not available in the demo');
 }
 

@@ -1,5 +1,5 @@
 /**
- * Common Schedule 2 controlled drug products in Irish community pharmacy — the ones that
+ * Common Schedule 2 controlled drug products in Irish community pharmacy. The ones that
  * need a register. Used to set up registers quickly and to search by brand
  * ("OxyContin" → oxycodone prolonged-release, 5/10/20 mg…).
  *
@@ -25,7 +25,7 @@ const f = (key: string, cls: string, generic: string, brands: string[], form: st
 /**
  * Product families. Each BRAND becomes its own product and its own register: brands are not
  * interchangeable (OxyNorm ≠ Shortec capsules; Durogesic ≠ Matrifen patches). An empty brand
- * list means a generic product (one register, named by the generic). Not exhaustive — any other
+ * list means a generic product (one register, named by the generic). Not exhaustive: any other
  * brand (e.g. Rowex) can be added when opening a CD book.
  */
 const FAMILIES: Family[] = [

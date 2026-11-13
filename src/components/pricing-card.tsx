@@ -21,7 +21,7 @@ export function PricingCard({ cta = true }: { cta?: boolean }) {
       <p className="mt-2 inline-block rounded-lg bg-white/10 px-3 py-1.5 text-sm font-semibold">
         First {FREE_TRIAL_DAYS === 30 ? 'month' : `${FREE_TRIAL_DAYS} days`} free · then {formatEuro(PLAN.price)}/{PLAN.period} · cancel any time
       </p>
-      {PLAN.launchOffer && <p className="mt-2 text-xs text-white/70">Limited-time launch price — lock in {formatEuro(PLAN.price)}/{PLAN.period} while it lasts.</p>}
+      {PLAN.launchOffer && <p className="mt-2 text-xs text-white/70">Limited-time launch price: lock in {formatEuro(PLAN.price)}/{PLAN.period} while it lasts.</p>}
       <ul className="mt-5 space-y-2">
         {PLAN_FEATURES.map((f) => (
           <li key={f} className="flex items-start gap-2 text-sm"><Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand" /> {f}</li>

@@ -30,7 +30,7 @@ export function QuarantinePanel({ registerId, unit, balance, canRecord, onChange
       {canRecord && <button onClick={() => setOpen(true)} className="btn-secondary" title="Expired or damaged stock awaiting witnessed destruction"><PackageX className="h-4 w-4" /> Set aside</button>}
       {awaiting.length > 0 && (
         <div className="no-print order-last basis-full rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
-          <p className="font-semibold">{total} {unit} set aside for destruction — still in the balance until destroyed</p>
+          <p className="font-semibold">{total} {unit} set aside for destruction: still in the balance until destroyed</p>
           <ul className="mt-1 space-y-1">
             {awaiting.map((i) => (
               <li key={i.id} className="flex flex-wrap items-center justify-between gap-2">
@@ -63,7 +63,7 @@ function QuarantineForm({ registerId, unit, available, needsMigration, onDone }:
   }
   return (
     <form onSubmit={save} className="space-y-4">
-      <p className="text-sm text-muted-foreground">Keep it in the CD safe, <b>segregated and labelled “CDs for destruction”</b>. It stays in the register balance until an authorised person (Garda, PSI authorised officer) witnesses its destruction. Destroy promptly — don’t let it build up.</p>
+      <p className="text-sm text-muted-foreground">Keep it in the CD safe, <b>segregated and labelled “CDs for destruction”</b>. It stays in the register balance until an authorised person (Garda, PSI authorised officer) witnesses its destruction. Destroy promptly: don’t let it build up.</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <div><label className="label">Amount ({unit})</label><input className="input text-lg font-semibold" type="number" min="0.001" max={available} step="any" inputMode="decimal" required value={f.quantity} onChange={set('quantity')} autoFocus /><p className="mt-1 text-xs text-muted-foreground">Up to {available} {unit}</p></div>
         <div><label className="label">Reason</label><select className="input" value={f.reason} onChange={set('reason')}>{Object.entries(REASONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
@@ -80,7 +80,7 @@ function QuarantineForm({ registerId, unit, available, needsMigration, onDone }:
 function ReleaseButton({ id, onDone }: { id: string; onDone: () => void }) {
   return (
     <button type="button" className="flex items-center gap-1 text-xs font-semibold underline" onClick={async () => {
-      const reason = prompt('Why is this going back into usable stock? (e.g. set aside by mistake — in date)');
+      const reason = prompt('Why is this going back into usable stock? (e.g. set aside by mistake: in date)');
       if (!reason || reason.trim().length < 5) return;
       try { await api(`/api/quarantine/${id}`, { method: 'PATCH', json: { reason } }); onDone(); } catch (e) { alert(e instanceof ApiError ? e.message : 'Could not release'); }
     }}><Undo2 className="h-3 w-3" /> Release</button>

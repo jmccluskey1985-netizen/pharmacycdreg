@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 /**
  * Training mode: a read-only copy of this pharmacy's registers for the browser to practise on.
- * Nothing done in training comes back here — the copy lives in the page and is gone on refresh.
+ * Nothing done in training comes back here. The copy lives in the page and is gone on refresh.
  * PIN hashes are never included.
  */
 export async function GET() {

@@ -12,7 +12,7 @@ page.on('console', (m) => { if (m.type() === 'error' && /Content Security Policy
 let failed = 0;
 const step = async (name, fn) => {
   try { await fn(); console.log('ok  ', name); }
-  catch (e) { failed++; console.log('FAIL', name, '—', String(e.message).split('\n')[0]); }
+  catch (e) { failed++; console.log('FAIL', name, '-', String(e.message).split('\n')[0]); }
 };
 const click = (sel) => page.click(sel, { timeout: 10000 });
 const see = (sel, timeout = 10000) => page.waitForSelector(sel, { timeout });
@@ -34,7 +34,7 @@ await step('late entry needs a reason', async () => {
   await click('button:has-text("New entry") >> nth=-1'); await see('text=Date of transaction');
   await click('button:has-text("Supplied")');
   await page.fill('input[type=date]', '2026-01-02');
-  await see('text=Late entry — this transaction is more than a day old');
+  await see('text=Late entry: this transaction is more than a day old');
   await page.keyboard.press('Escape');
 });
 await step('stock check → amend balance', async () => {

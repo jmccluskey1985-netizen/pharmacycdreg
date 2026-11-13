@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { PublicPage, H2, P, UL } from '@/components/public/public-page';
 import { COMPANY, SUBPROCESSORS } from '@/config/company';
 
-export const metadata: Metadata = { title: 'Privacy notice — PharmacyCDReg.ie' };
+export const metadata: Metadata = { title: 'Privacy notice: PharmacyCDReg.ie' };
 
 export default function PrivacyPage() {
   return (
@@ -18,12 +18,12 @@ export default function PrivacyPage() {
 
       <H2>What we use account data for, and why</H2>
       <UL>
-        <li>Providing the service and your account — contract (GDPR Art. 6(1)(b)).</li>
-        <li>Billing and keeping accounting records — contract and legal obligation (6(1)(b), 6(1)(c)).</li>
-        <li>Service emails (trial ending, reminders due, weekly integrity record) — contract.</li>
-        <li>Security, audit logs and preventing misuse — legitimate interests (6(1)(f)).</li>
-        <li>Anonymous, cookie-free page-view counts to improve the website — legitimate interests.</li>
-        <li>Waitlist and product updates — consent, which you can withdraw at any time.</li>
+        <li>Providing the service and your account, contract (GDPR Art. 6(1)(b)).</li>
+        <li>Billing and keeping accounting records, contract and legal obligation (6(1)(b), 6(1)(c)).</li>
+        <li>Service emails (trial ending, reminders due, weekly integrity record), contract.</li>
+        <li>Security, audit logs and preventing misuse, legitimate interests (6(1)(f)).</li>
+        <li>Anonymous, cookie-free page-view counts to improve the website, legitimate interests.</li>
+        <li>Waitlist and product updates: consent, which you can withdraw at any time.</li>
       </UL>
       <P>Register and patient data is health data (Art. 9). Pharmacies process it to meet their obligations under the Misuse of Drugs Regulations and for the provision of health care (Art. 9(2)(h) and (i)). We never use it for any purpose of our own, never sell it and never use it to train AI.</P>
 

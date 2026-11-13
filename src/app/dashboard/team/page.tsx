@@ -107,7 +107,7 @@ function StaffForm({ initial, onDone }: { initial: Partial<Member>; onDone: () =
       </div>
       {pharmacistRole && <div><label className="label">PSI registration number</label><input className="input" required inputMode="numeric" value={f.psi_number} onChange={(e) => setF({ ...f, psi_number: e.target.value })} /></div>}
       <div><label className="label">{initial.id ? 'New PIN (leave blank to keep)' : 'PIN (4–6 digits)'}</label><input className="input font-mono tracking-widest" type="password" inputMode="numeric" pattern="\d{4,6}" required={!initial.id} value={f.pin} onChange={(e) => setF({ ...f, pin: e.target.value.replace(/\D/g, '').slice(0, 6) })} /></div>
-      <div><label className="label">Access ends (optional — for locums)</label><input className="input" type="date" value={f.access_expires_at} onChange={(e) => setF({ ...f, access_expires_at: e.target.value })} /></div>
+      <div><label className="label">Access ends (optional: for locums)</label><input className="input" type="date" value={f.access_expires_at} onChange={(e) => setF({ ...f, access_expires_at: e.target.value })} /></div>
       {initial.id && (
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-5 w-5" checked={f.is_active} onChange={(e) => setF({ ...f, is_active: e.target.checked })} /> Active</label>
       )}

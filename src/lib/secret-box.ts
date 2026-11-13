@@ -3,7 +3,7 @@ import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from 'crypto'
 /**
  * Encrypt small secrets (e.g. a pharmacy's OpenRouter key) before they go in the database.
  * AES-256-GCM with a key derived from SECRETS_KEY (or STAFF_SESSION_SECRET if that isn't set).
- * Changing that secret makes stored keys unreadable — they'd need to be entered again.
+ * Changing that secret makes stored keys unreadable, they'd need to be entered again.
  */
 function key(): Buffer {
   const base = process.env.SECRETS_KEY || process.env.STAFF_SESSION_SECRET;

@@ -15,7 +15,7 @@ export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled'
 /**
  * Can this pharmacy make NEW register entries?
  * past_due keeps working during Stripe's retry window. Whatever the status,
- * the register itself stays readable, searchable and exportable — a CD register
+ * the register itself stays readable, searchable and exportable, a CD register
  * must remain available for inspection and retained for 2 years.
  */
 export function canWrite(status: string | null | undefined): boolean {

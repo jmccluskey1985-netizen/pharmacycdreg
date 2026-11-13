@@ -117,7 +117,7 @@ function InboxCard({ it, onDone }: { it: Item; onDone: () => void }) {
                   recipient_address: p.patient.address,
                   prescriber_name: p.prescriber?.name ?? null,
                   prescriber_address: p.prescriber?.address ?? null,
-                  authority_to_possess: p.prescriber?.name ? `Prescription — ${p.prescriber.name}${p.prescriber.registration ? ` (Reg ${p.prescriber.registration})` : ''}` : null,
+                  authority_to_possess: p.prescriber?.name ? `Prescription: ${p.prescriber.name}${p.prescriber.registration ? ` (Reg ${p.prescriber.registration})` : ''}` : null,
                   prescription_ref: p.prescription_ref ?? null,
                   collected_by: p.collected_by ?? null,
                   collector_id_checked: p.collector_id_checked ?? null,

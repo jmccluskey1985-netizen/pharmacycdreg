@@ -149,7 +149,7 @@ function StockChecks({ s, regs, onSaved }: { s: Settings; regs: Reg[]; onSaved: 
   useEffect(() => { setLevels(Object.fromEntries(regs.map((r) => [r.id, r.low_stock_level == null ? '' : String(r.low_stock_level)]))); }, [regs]);
   const { busy, saved, error, save } = useSaver(onSaved);
   return (
-    <Section icon={ClipboardCheck} title="Stock checks" text="Count the stock against the running balance. Each check is signed and kept — useful at inspection.">
+    <Section icon={ClipboardCheck} title="Stock checks" text="Count the stock against the running balance. Each check is signed and kept: useful at inspection.">
       <form onSubmit={(e) => { e.preventDefault(); save({ stock_check_frequency: freq, low_stock: regs.map((r) => ({ register_id: r.id, level: levels[r.id] === '' ? null : Number(levels[r.id]) })) }); }} className="space-y-4">
         <div><label className="label">Remind us to check each register</label>
           <select className="input sm:max-w-xs" value={freq} onChange={(e) => setFreq(e.target.value)}>
@@ -163,7 +163,7 @@ function StockChecks({ s, regs, onSaved }: { s: Settings; regs: Reg[]; onSaved: 
               {regs.map((r) => (
                 <div key={r.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
                   <span className="min-w-0"><span className="block truncate">{r.label}</span><span className="text-xs text-muted-foreground">Now {r.balance} {r.unit}</span></span>
-                  <span className="flex items-center gap-2"><span className="text-xs text-muted-foreground">at or below</span><input className="input w-24 py-1.5" type="number" min="0" step="any" inputMode="decimal" value={levels[r.id] ?? ''} onChange={(e) => setLevels({ ...levels, [r.id]: e.target.value })} placeholder="—" /></span>
+                  <span className="flex items-center gap-2"><span className="text-xs text-muted-foreground">at or below</span><input className="input w-24 py-1.5" type="number" min="0" step="any" inputMode="decimal" value={levels[r.id] ?? ''} onChange={(e) => setLevels({ ...levels, [r.id]: e.target.value })} placeholder="-" /></span>
                 </div>
               ))}
             </div>
@@ -193,7 +193,7 @@ function Data({ regs, reload }: { regs: Reg[]; reload: () => void }) {
         <a href="/api/backup" className="btn-secondary w-fit" title="Everything: registers, entries, destructions, patients, notes, audit trail"><Download className="h-4 w-4" /> Full backup (JSON)</a>
         <Link href="/dashboard/fallback-sheet" className="btn-secondary w-fit">Paper fallback sheet</Link>
       </div>
-      <p className="text-xs text-muted-foreground">Keep a monthly full backup somewhere safe outside the pharmacy system (e.g. an encrypted USB key in the safe). It contains patient details — store it securely.</p>
+      <p className="text-xs text-muted-foreground">Keep a monthly full backup somewhere safe outside the pharmacy system (e.g. an encrypted USB key in the safe). It contains patient details: store it securely.</p>
       <div>
         <p className="label">Close a register</p>
         <p className="mb-2 text-xs text-muted-foreground">For a product you no longer stock. Only registers at a nil balance can be closed.</p>

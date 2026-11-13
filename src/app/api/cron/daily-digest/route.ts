@@ -15,7 +15,7 @@ const wrap = (site: string, body: string) => `<div style="font-family:-apple-sys
 
 /**
  * Every morning (Vercel Cron, CRON_SECRET):
- *  - dispensing reminders due today — counts and reminder names only, no patient details;
+ *  - dispensing reminders due today, counts and reminder names only, no patient details;
  *  - on Mondays, an integrity record: the latest fingerprint of each register and of the audit
  *    trail. Kept in the pharmacy's mailbox (outside this system), it lets anyone later prove the
  *    register hasn't been rewritten since that date.
@@ -33,9 +33,9 @@ export async function GET(req: Request) {
     const parts: string[] = [];
     const { data: due } = await db.from('dispense_reminders').select('title, next_due, lines').eq('pharmacy_id', ph.id).eq('active', true).lte('next_due', today);
     if (due?.length) {
-      // Reminder names can contain a patient's name — send only how many, never the names.
+      // Reminder names can contain a patient's name: send only how many, never the names.
       const lines = due.reduce((n, r: any) => n + (r.lines?.length ?? 0), 0);
-      parts.push(`<p><b>${due.length} dispensing reminder${due.length === 1 ? '' : 's'} due today</b> (${lines} suppl${lines === 1 ? 'y' : 'ies'} to record).</p><p><a href="${site}/dashboard/reminders">Open reminders</a> — one click records them in the registers.</p>`);
+      parts.push(`<p><b>${due.length} dispensing reminder${due.length === 1 ? '' : 's'} due today</b> (${lines} suppl${lines === 1 ? 'y' : 'ies'} to record).</p><p><a href="${site}/dashboard/reminders">Open reminders</a>. One click records them in the registers.</p>`);
     }
     if (monday) {
       const { data: regs } = await db.from('cd_registers').select('id, product:cd_products(*)').eq('pharmacy_id', ph.id).is('closed_at', null);
@@ -48,12 +48,12 @@ export async function GET(req: Request) {
       const { data: a } = await db.rpc('verify_audit_chain', { ph: ph.id });
       const av: any = Array.isArray(a) ? a[0] : a;
       if (rows.length || av) {
-        parts.push(`<p><b>Weekly integrity record</b> — keep this email. These fingerprints seal every line written up to now; if any earlier line were ever altered, they could not be reproduced.</p><table style="font-size:13px;border-collapse:collapse">${rows.join('')}${av ? `<tr><td style="padding:2px 8px 2px 0">Audit trail</td><td style="font-family:monospace">${av.ok ? (av.head ?? '').slice(0, 16) : '<b style="color:#b91c1c">CHECK FAILED</b>'}</td><td>${av.checked} records</td></tr>` : ''}</table>`);
+        parts.push(`<p><b>Weekly integrity record</b>. Keep this email. These fingerprints seal every line written up to now; if any earlier line were ever altered, they could not be reproduced.</p><table style="font-size:13px;border-collapse:collapse">${rows.join('')}${av ? `<tr><td style="padding:2px 8px 2px 0">Audit trail</td><td style="font-family:monospace">${av.ok ? (av.head ?? '').slice(0, 16) : '<b style="color:#b91c1c">CHECK FAILED</b>'}</td><td>${av.checked} records</td></tr>` : ''}</table>`);
       }
     }
     if (!parts.length) continue;
     try {
-      await sendEmail({ to: ph.billing_email!, subject: monday ? `CD register — weekly integrity record${due?.length ? ' and reminders due' : ''}` : 'CD register — dispensing reminders due today', html: wrap(site, parts.join('')) });
+      await sendEmail({ to: ph.billing_email!, subject: monday ? `CD register: weekly integrity record${due?.length ? ' and reminders due' : ''}` : 'CD register: dispensing reminders due today', html: wrap(site, parts.join('')) });
       sent++;
     } catch { /* keep going for the other pharmacies */ }
   }

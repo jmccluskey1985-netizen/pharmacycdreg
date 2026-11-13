@@ -44,7 +44,7 @@ export async function GET() {
         e.witness_name ? `${e.witness_name} (${e.witness_role})` : '', corrects, e.correction_reason, who.get(e.recorded_by_staff_id) ?? '', e.source,
       ].map(csv).join(',');
     });
-    const title = `Register of Controlled Drugs — ${pharmacy?.name ?? ''}, ${pharmacy?.address ?? ''}${pharmacy?.psi_premises_number ? ` (PSI ${pharmacy.psi_premises_number})` : ''} — exported ${new Date().toISOString()}`;
+    const title = `Register of Controlled Drugs: ${pharmacy?.name ?? ''}, ${pharmacy?.address ?? ''}${pharmacy?.psi_premises_number ? ` (PSI ${pharmacy.psi_premises_number})` : ''}: exported ${new Date().toISOString()}`;
     await audit(account.pharmacyId, 'register.exported_all', staff, account.authUserId, { rows: lines.length });
     return new Response([csv(title), header.join(','), ...lines].join('\n'), {
       headers: {

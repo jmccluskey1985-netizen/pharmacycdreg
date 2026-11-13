@@ -12,7 +12,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
  *   - same patient + same quantity on the same day                        → BLOCK
  *   - same patient + same quantity within 3 days, same prescriber         → WARN
  *
- * BLOCK and WARN can both be overridden by the pharmacist with a reason (it's their call —
+ * BLOCK and WARN can both be overridden by the pharmacist with a reason (it's their call -
  * e.g. a genuine second supply), and the override is recorded in the audit trail.
  */
 export type DupLevel = 'block' | 'warn';
@@ -41,7 +41,7 @@ export async function findDuplicate(db: SupabaseClient, registerId: string, e: R
     for (const r of data ?? []) {
       const theirs = refTokens(r.notes);
       const hit = tokens.find((t) => theirs.includes(t));
-      if (hit) return { level: 'block', seq: r.seq, message: `Invoice/docket ${hit} is already recorded in this register (line ${r.seq}, ${Number(r.quantity)} received ${r.transaction_date}). An invoice and its CD docket list the same delivery — don’t add it twice.` };
+      if (hit) return { level: 'block', seq: r.seq, message: `Invoice/docket ${hit} is already recorded in this register (line ${r.seq}, ${Number(r.quantity)} received ${r.transaction_date}). An invoice and its CD docket list the same delivery. Don’t add it twice.` };
     }
     for (const r of data ?? []) {
       if (r.supplier_name === 'Balance brought forward') continue;
@@ -61,7 +61,7 @@ export async function findDuplicate(db: SupabaseClient, registerId: string, e: R
   for (const r of mine) {
     const theirs = [...refTokens(r.prescription_ref), ...refTokens(r.authority_to_possess)];
     const hit = tokens.find((t) => theirs.includes(t));
-    if (hit) return { level: 'block', seq: r.seq, message: `This prescription (${hit}) was already supplied to ${name} — line ${r.seq}, ${Number(r.quantity)} on ${r.transaction_date}.` };
+    if (hit) return { level: 'block', seq: r.seq, message: `This prescription (${hit}) was already supplied to ${name}: line ${r.seq}, ${Number(r.quantity)} on ${r.transaction_date}.` };
   }
   for (const r of mine) {
     if (Number(r.quantity) === qty && r.transaction_date === date) return { level: 'block', seq: r.seq, message: `${qty} were already supplied to ${name} today (line ${r.seq}). Is this the same prescription?` };

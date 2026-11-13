@@ -38,7 +38,7 @@ export default function WaitlistPage() {
                   <a href={`mailto:${r.email}`} className="flex items-center gap-1.5 text-primary hover:underline"><Mail className="h-3.5 w-3.5" /> {r.email}</a>
                   {r.phone && <a href={`tel:${r.phone}`} className="mt-0.5 flex items-center gap-1.5 text-muted-foreground"><Phone className="h-3.5 w-3.5" /> {r.phone}</a>}
                 </td>
-                <td className="px-4 py-2.5 text-muted-foreground">{r.dispensing_system || '—'}</td>
+                <td className="px-4 py-2.5 text-muted-foreground">{r.dispensing_system || '-'}</td>
                 <td className="px-4 py-2.5">{r.consent_contact ? 'Yes' : 'No'}</td>
               </tr>
             ))}

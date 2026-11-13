@@ -34,7 +34,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     if (!reg || reg.closed_at) return NextResponse.json({ error: 'This register is closed' }, { status: 409 });
     const balance = await currentBalance(reg.id);
     if (balance !== Number(check.register_balance)) {
-      return NextResponse.json({ error: 'The register has changed since this count — do a new stock check, then amend from that.' }, { status: 409 });
+      return NextResponse.json({ error: 'The register has changed since this count. Do a new stock check, then amend from that.' }, { status: 409 });
     }
     const diff = Number(check.counted) - balance;
     if (diff === 0) return NextResponse.json({ error: 'The count already matches the register' }, { status: 409 });
@@ -53,7 +53,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     let note: any = null;
     if (b.save_note) {
       note = await createNote(db, account.pharmacyId, staff, {
-        title: b.note_title || `Stock discrepancy — ${reg.product.brand || reg.product.drug_name} ${reg.product.strength} (${diff > 0 ? '+' : ''}${diff})`,
+        title: b.note_title || `Stock discrepancy: ${reg.product.brand || reg.product.drug_name} ${reg.product.strength} (${diff > 0 ? '+' : ''}${diff})`,
         body: `${notes}\n\nRegister line ${entry.seq} records the adjustment.`, category: 'Stock discrepancy',
         register_id: reg.id, stock_check_id: check.id, entry_id: entry.id,
       }).catch((e) => (missing0012(e?.message) ? null : Promise.reject(e)));

@@ -50,7 +50,7 @@ export default function RemindersPage() {
         <ul className="divide-y divide-border rounded-lg border border-border text-sm">
           {r.lines.map((l, i) => (
             <li key={i} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
-              <span><b>{l.label}</b> — {Number(l.quantity)} {l.unit} to {l.recipient_name}</span>
+              <span><b>{l.label}</b>, {Number(l.quantity)} {l.unit} to {l.recipient_name}</span>
               <span className={`text-xs ${l.balance < l.quantity ? 'font-semibold text-destructive' : 'text-muted-foreground'}`}>{l.closed ? 'register closed' : `in stock ${l.balance}`}</span>
             </li>
           ))}
@@ -59,7 +59,7 @@ export default function RemindersPage() {
         {r.due && (
           <div className="flex flex-wrap gap-2">
             <button onClick={() => setRecording(r)} className="btn-primary flex-1"><CheckCircle2 className="h-4 w-4" /> Record {r.lines.length > 1 ? `all ${r.lines.length}` : 'it'} now</button>
-            <button onClick={() => confirm('Skip this time? Nothing is recorded; the reminder moves to its next date.') && act(r, () => api(`/api/reminders/${r.id}/done`, { method: 'POST', json: { action: 'skipped' } }), 'Skipped — moved to the next date.')} className="btn-secondary"><SkipForward className="h-4 w-4" /> Skip this time</button>
+            <button onClick={() => confirm('Skip this time? Nothing is recorded; the reminder moves to its next date.') && act(r, () => api(`/api/reminders/${r.id}/done`, { method: 'POST', json: { action: 'skipped' } }), 'Skipped: moved to the next date.')} className="btn-secondary"><SkipForward className="h-4 w-4" /> Skip this time</button>
           </div>
         )}
       </div>
@@ -92,12 +92,12 @@ export default function RemindersPage() {
       <Modal open={!!editing} onClose={() => setEditing(null)} title={editing?.id ? 'Edit reminder' : 'New dispensing reminder'} wide>
         {editing && <ReminderForm initial={editing} onCancel={() => setEditing(null)} onSaved={() => { setEditing(null); setMsg('Saved.'); load(); }} />}
       </Modal>
-      <Modal open={!!recording} onClose={() => { setRecording(null); load(); }} title={recording ? `Record — ${recording.title}` : ''} wide>
+      <Modal open={!!recording} onClose={() => { setRecording(null); load(); }} title={recording ? `Record: ${recording.title}` : ''} wide>
         {recording && (
           <RepeatSupplies unit={recording.lines[0]?.unit ?? 'units'} balance={0}
             balances={Object.fromEntries(recording.lines.map((l) => [l.register_id, l.balance]))}
             lines={recording.lines.map((l, i): SupplyLine => ({ id: `${recording.id}-${i}`, seq: 0, transaction_date: '', quantity: l.quantity, recipient_name: l.recipient_name, recipient_address: l.recipient_address, prescriber_name: l.prescriber_name, prescriber_address: l.prescriber_address, authority_to_possess: l.authority_to_possess, prescription_ref: null, patient_id: l.patient_id, register_id: l.register_id, label: l.label, unit: l.unit }))}
-            onAllSaved={async (n) => { await api(`/api/reminders/${recording.id}/done`, { method: 'POST', json: { action: 'recorded', recorded: n } }); setMsg(`Recorded — “${recording.title}” moved to its next date.`); }}
+            onAllSaved={async (n) => { await api(`/api/reminders/${recording.id}/done`, { method: 'POST', json: { action: 'recorded', recorded: n } }); setMsg(`Recorded: “${recording.title}” moved to its next date.`); }}
             onCancel={() => { setRecording(null); load(); }} onDone={() => { setRecording(null); load(); }} />
         )}
       </Modal>

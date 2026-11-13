@@ -53,7 +53,7 @@ export default function NotesPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Notes</h1>
-          <p className="text-sm text-muted-foreground">Investigations, SOPs, inspection notes — with photos and scans. Link a note to a CD register.</p>
+          <p className="text-sm text-muted-foreground">Investigations, SOPs, inspection notes, with photos and scans. Link a note to a CD register.</p>
         </div>
         {canEdit && <button onClick={() => setOpen('new')} className="btn-primary"><Plus className="h-4 w-4" /> New note</button>}
       </div>
@@ -78,7 +78,7 @@ export default function NotesPage() {
           {shown.map((n) => (
             <button key={n.id} onClick={() => setOpen(n)} className="card flex flex-col gap-2 p-4 text-left transition hover:border-brand">
               <span className="flex items-start justify-between gap-2"><span className="font-semibold">{n.title}</span>{n.pinned && <Pin className="h-4 w-4 flex-shrink-0 text-brand" />}</span>
-              <span className="line-clamp-3 whitespace-pre-wrap text-sm text-muted-foreground">{n.body || '—'}</span>
+              <span className="line-clamp-3 whitespace-pre-wrap text-sm text-muted-foreground">{n.body || '-'}</span>
               <span className="mt-auto flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                 {n.category && <span className="badge bg-secondary">{n.category}</span>}
                 {n.register_label && <span className="badge bg-brand/10 text-primary"><BookOpen className="mr-1 h-3 w-3" />{n.register_label}</span>}
@@ -128,7 +128,7 @@ function NoteEditor({ note, categories, canEdit, defaultRegister, onSaved, onClo
         <div><label className="label">Category</label><input className="input" list="note-cats" value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} placeholder="Pick or type your own" /><datalist id="note-cats">{categories.map((c) => <option key={c} value={c} />)}</datalist></div>
         <div><label className="label">Linked register</label><select className="input" value={f.register_id} onChange={(e) => setF({ ...f, register_id: e.target.value })}><option value="">None</option>{regs.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}</select></div>
       </div>
-      <div><label className="label">Note</label><textarea className="input min-h-[160px]" value={f.body} onChange={(e) => setF({ ...f, body: e.target.value })} placeholder="Write anything — links (https://…) become clickable." /></div>
+      <div><label className="label">Note</label><textarea className="input min-h-[160px]" value={f.body} onChange={(e) => setF({ ...f, body: e.target.value })} placeholder="Write anything: links (https://…) become clickable." /></div>
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4 accent-[#54BD50]" checked={f.pinned} onChange={(e) => setF({ ...f, pinned: e.target.checked })} /> Pin to the top</label>
 
       <div className="rounded-lg border border-border p-3">

@@ -4,13 +4,13 @@ import { productTitle, genericLine } from '@/lib/product-name';
 import { openLink, Frame, fmtDate, fmtQty } from '../../shared';
 
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Register — inspection view', robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: 'Register: inspection view', robots: { index: false, follow: false } };
 
 const party = (r: any) =>
   r.entry_type === 'receipt' ? [r.supplier_name, r.supplier_address]
   : r.entry_type === 'destruction' ? ['DESTROYED', `Witness: ${r.witness_name} (${r.witness_role})${r.destruction_method ? ` · ${r.destruction_method}` : ''}`]
   : r.entry_type?.startsWith('adjustment') ? ['STOCK ADJUSTMENT', 'After stock check']
-  : r.entry_type === 'patient_return' ? [`Patient return — ${r.recipient_name}`, 'Not pharmacy stock']
+  : r.entry_type === 'patient_return' ? [`Patient return: ${r.recipient_name}`, 'Not pharmacy stock']
   : [r.recipient_name, r.recipient_address];
 
 export default async function InspectRegister({ params }: { params: { token: string; id: string } }) {
@@ -27,7 +27,7 @@ export default async function InspectRegister({ params }: { params: { token: str
   const integrity: any = chain.error ? null : Array.isArray(chain.data) ? chain.data[0] : chain.data;
   const notes = (rows ?? []).filter((r: any) => r.correction_count > 0);
   return (
-    <Frame token={params.token} pharmacy={pharmacy} expires={link.expires_at} title={`${p.class_name} — ${productTitle(p)}`}>
+    <Frame token={params.token} pharmacy={pharmacy} expires={link.expires_at} title={`${p.class_name}: ${productTitle(p)}`}>
       <p className="text-sm text-muted-foreground">{genericLine(p)} · Schedule {p.schedule}{p.schedule_paragraph ? ` (para ${p.schedule_paragraph})` : ''} · counted in {p.unit} · opened {fmtDate(reg.opened_at)}{reg.closed_at ? ` · closed ${fmtDate(reg.closed_at)}` : ''}</p>
       {integrity && <p className={`rounded-lg px-3 py-2 text-sm ${integrity.ok ? 'bg-brand/10' : 'bg-destructive/10 text-destructive'}`}>{integrity.ok ? `Integrity verified: all ${integrity.checked} lines match their fingerprints (latest ${String(integrity.head ?? '').slice(0, 16)}).` : `Integrity check failed at line ${integrity.broken_seq}: ${integrity.reason}.`}</p>}
       <div className="card overflow-x-auto p-0">
@@ -45,7 +45,7 @@ export default async function InspectRegister({ params }: { params: { token: str
                   <td className="tabular-nums">{r.seq}{r.correction_count > 0 && <sup className="font-bold text-red-600">*</sup>}</td>
                   <td className="tabular-nums">{fmtDate(r.transaction_date)}</td>
                   <td><span className="font-medium">{name}</span>{addr && <span className="block text-xs opacity-75">{addr}</span>}</td>
-                  <td className="text-xs">{[r.authority_to_possess, r.prescriber_name && !r.authority_to_possess ? `Rx — ${r.prescriber_name}` : null, r.prescription_ref, r.entry_type === 'receipt' || r.entry_type?.startsWith('adjustment') ? r.notes : null].filter(Boolean).join(' · ')}</td>
+                  <td className="text-xs">{[r.authority_to_possess, r.prescriber_name && !r.authority_to_possess ? `Rx: ${r.prescriber_name}` : null, r.prescription_ref, r.entry_type === 'receipt' || r.entry_type?.startsWith('adjustment') ? r.notes : null].filter(Boolean).join(' · ')}</td>
                   <td className="text-right font-semibold tabular-nums">{inQ}</td>
                   <td className="text-right font-semibold tabular-nums">{outQ}</td>
                   <td className="text-right font-semibold tabular-nums">{fmtQty(r.running_balance)}</td>

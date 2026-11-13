@@ -115,7 +115,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         )}
         {remindersDue > 0 && can.record(staff.role) && !path.startsWith('/dashboard/reminders') && (
           <Link href="/dashboard/reminders" className="no-print mb-4 flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
-            <BellRing className="h-5 w-5 flex-shrink-0" /> <span className="flex-1"><b>{remindersDue} dispensing reminder{remindersDue === 1 ? '' : 's'} due</b> — record {remindersDue === 1 ? 'it' : 'them'} in the registers in one click</span><span className="font-semibold underline">Open</span>
+            <BellRing className="h-5 w-5 flex-shrink-0" /> <span className="flex-1"><b>{remindersDue} dispensing reminder{remindersDue === 1 ? '' : 's'} due</b>. Record {remindersDue === 1 ? 'it' : 'them'} in the registers in one click</span><span className="font-semibold underline">Open</span>
           </Link>
         )}
         {children}

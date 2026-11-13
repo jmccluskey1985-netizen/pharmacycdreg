@@ -36,7 +36,7 @@ export function TrainingBar() {
   return (
     <div className="no-print fixed inset-x-0 top-0 z-[70] flex h-9 items-center justify-center gap-3 bg-orange-500 px-3 text-xs font-bold text-white shadow sm:text-sm">
       <GraduationCap className="h-4 w-4 flex-shrink-0" />
-      <span className="truncate">TRAINING MODE — practice only. Nothing is saved to the real register.</span>
+      <span className="truncate">TRAINING MODE: practice only. Nothing is saved to the real register.</span>
       <button onClick={() => window.location.reload()} className="flex-shrink-0 rounded-full bg-white/20 px-2.5 py-0.5 hover:bg-white/30">End training</button>
     </div>
   );
@@ -54,7 +54,7 @@ export function TrainingButton({ pharmacy, onStarted, className, compact }: { ph
       <button onClick={() => setOpen(true)} className={className ?? 'btn-ghost w-full text-sm'} title="Practise on a copy of your register"><GraduationCap className="h-4 w-4" /> {compact ? '' : 'Training mode'}</button>
       <Modal open={open} onClose={() => setOpen(false)} title="Training mode">
         <div className="space-y-3 text-sm">
-          <p>Practise on a <b>copy of your own registers</b> — scanning, entries, corrections, stock checks, new CD books.</p>
+          <p>Practise on a <b>copy of your own registers</b>. Scanning, entries, corrections, stock checks, new CD books.</p>
           <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
             <li>An orange <b className="text-orange-600">TRAINING MODE</b> bar shows on every page.</li>
             <li>Nothing goes into the real register. Photos are still read for real so you can practise scanning.</li>

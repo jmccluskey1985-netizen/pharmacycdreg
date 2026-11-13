@@ -13,4 +13,4 @@ export function isLate(transactionDate: string, today = irishToday()): boolean {
   return transactionDate < t.toISOString().slice(0, 10);
 }
 
-export const LATE_PREFIX = 'Late entry — ';
+export const LATE_PREFIX = 'Late entry: ';

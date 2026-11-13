@@ -15,14 +15,14 @@ export default function FallbackSheet() {
       <div className="no-print flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Paper fallback sheet</h1>
-          <p className="max-w-2xl text-sm text-muted-foreground">If the system or the internet is down, record CD transactions on this sheet. When it’s back, enter each line in the right register — it’s flagged as a late entry; give the reason “entered from paper fallback sheet” — tick the last column, and keep the sheet with your CD records.</p>
+          <p className="max-w-2xl text-sm text-muted-foreground">If the system or the internet is down, record CD transactions on this sheet. When it’s back, enter each line in the right register. It’s flagged as a late entry; give the reason “entered from paper fallback sheet”. Tick the last column, and keep the sheet with your CD records.</p>
         </div>
         <button onClick={() => window.print()} className="btn-primary"><Printer className="h-4 w-4" /> Print</button>
       </div>
       <div className="print-page rounded-xl bg-white p-6 text-black shadow-sm">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-2 border-b-2 border-black pb-2">
           <div>
-            <p className="text-lg font-bold">Controlled Drugs — paper fallback record</p>
+            <p className="text-lg font-bold">Controlled Drugs: paper fallback record</p>
             <p className="text-sm">{pharmacy?.name ?? 'Pharmacy'}{pharmacy?.address ? ` · ${pharmacy.address}` : ''}</p>
           </div>
           <p className="text-sm">Sheet no. ______ &nbsp; System down from ____/____ ____:____ to ____/____ ____:____</p>
@@ -39,7 +39,7 @@ export default function FallbackSheet() {
             ))}
           </tbody>
         </table>
-        <p className="mt-2 text-[10px]">Running balances are recalculated when the lines are entered. Destructions of Schedule 2 stock still need an authorised witness — record the witness’s name and capacity in the name column.</p>
+        <p className="mt-2 text-[10px]">Running balances are recalculated when the lines are entered. Destructions of Schedule 2 stock still need an authorised witness. Record the witness’s name and capacity in the name column.</p>
       </div>
     </div>
   );

@@ -55,8 +55,8 @@ export function ReaderSettings() {
       <div className="flex items-start gap-3">
         <ScanText className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand" />
         <div>
-          <h2 className="font-semibold">Document reading <span className={`ml-1 rounded-full px-2 py-0.5 text-xs ${active ? 'bg-brand/15 text-brand' : 'bg-muted text-muted-foreground'}`}>{active ? (st?.provider === 'vertex' ? 'On — Google Vertex AI (EU)' : 'On — OpenRouter') : 'Off'}</span></h2>
-          <p className="text-sm text-muted-foreground">Site owner only — one reader for invoices, prescriptions and paper register pages at <b>every pharmacy</b>. Other pharmacies never see this. Keys are encrypted and never shown again.</p>
+          <h2 className="font-semibold">Document reading <span className={`ml-1 rounded-full px-2 py-0.5 text-xs ${active ? 'bg-brand/15 text-brand' : 'bg-muted text-muted-foreground'}`}>{active ? (st?.provider === 'vertex' ? 'On: Google Vertex AI (EU)' : 'On: OpenRouter') : 'Off'}</span></h2>
+          <p className="text-sm text-muted-foreground">Site owner only: one reader for invoices, prescriptions and paper register pages at <b>every pharmacy</b>. Other pharmacies never see this. Keys are encrypted and never shown again.</p>
         </div>
       </div>
       {st?.needs_migration && <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">Needs a one-off database update: run migration 0009 in Supabase.</p>}
@@ -68,7 +68,7 @@ export function ReaderSettings() {
       </div>
 
       {tab === 'vertex' ? (
-        <form onSubmit={(e) => { e.preventDefault(); save({ provider: 'vertex', location, service_account_json: saJson.trim() || undefined, models: [] }, 'Saved — scanning now uses Google Vertex AI in the EU. Press Test to check.'); }} className="space-y-4">
+        <form onSubmit={(e) => { e.preventDefault(); save({ provider: 'vertex', location, service_account_json: saJson.trim() || undefined, models: [] }, 'Saved: scanning now uses Google Vertex AI in the EU. Press Test to check.'); }} className="space-y-4">
           <p className="flex items-start gap-2 rounded-lg bg-brand/10 p-3 text-sm"><ShieldCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand" /> Gemini, run by Google Cloud in the EU. Covered by the Google Cloud Data Processing Addendum; Google doesn’t use the data to train its models, and the photos are processed in the EU.</p>
           <div>
             <label className="label">Service-account key (JSON file)</label>
@@ -76,7 +76,7 @@ export function ReaderSettings() {
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => fileRef.current?.click()} className="btn-secondary"><Upload className="h-4 w-4" /> {st?.vertex?.has_key ? 'Replace key file' : 'Choose key file'}</button>
               <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={async (e) => { const f = e.target.files?.[0]; if (f) setSaJson(await f.text()); e.target.value = ''; }} />
-              {saJson && <span className="self-center text-sm text-brand">Key file loaded — press Save</span>}
+              {saJson && <span className="self-center text-sm text-brand">Key file loaded: press Save</span>}
             </div>
             <details className="mt-2 text-xs text-muted-foreground">
               <summary className="cursor-pointer font-semibold">How to get it (5 minutes, once)</summary>
@@ -84,7 +84,7 @@ export function ReaderSettings() {
                 <li>console.cloud.google.com → create a project (e.g. “pharmacycdreg”) and add billing.</li>
                 <li>APIs &amp; Services → enable <b>Vertex AI API</b>.</li>
                 <li>IAM &amp; Admin → Service accounts → Create → grant the role <b>Vertex AI User</b>.</li>
-                <li>Open it → Keys → Add key → JSON. A file downloads — choose it above, then delete it from your computer.</li>
+                <li>Open it → Keys → Add key → JSON. A file downloads: choose it above, then delete it from your computer.</li>
                 <li>Admin console / Cloud console → Legal: review and accept the Cloud Data Processing Addendum.</li>
               </ol>
             </details>
@@ -98,7 +98,7 @@ export function ReaderSettings() {
           </div>
         </form>
       ) : (
-        <form onSubmit={(e) => { e.preventDefault(); save({ provider: 'openrouter', api_key: key.trim() || undefined, models: [] }, 'Saved — scanning now uses OpenRouter.'); }} className="space-y-4">
+        <form onSubmit={(e) => { e.preventDefault(); save({ provider: 'openrouter', api_key: key.trim() || undefined, models: [] }, 'Saved: scanning now uses OpenRouter.'); }} className="space-y-4">
           <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">OpenRouter forwards photos to the model’s provider (zero-data-retention only), usually outside the EU. Its standard terms ask customers not to send sensitive data such as health records unless agreed, and a signed DPA needs its Enterprise plan. Prefer Google Vertex AI.</p>
           <div>
             <label className="label">OpenRouter API key</label>

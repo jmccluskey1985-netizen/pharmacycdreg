@@ -3,7 +3,7 @@ import { PublicPage, H2, P, UL } from '@/components/public/public-page';
 import { COMPANY } from '@/config/company';
 import { PLAN, formatEuro } from '@/config/pricing';
 
-export const metadata: Metadata = { title: 'Terms of service — PharmacyCDReg.ie' };
+export const metadata: Metadata = { title: 'Terms of service: PharmacyCDReg.ie' };
 
 export default function TermsPage() {
   return (
@@ -12,7 +12,7 @@ export default function TermsPage() {
       <P>An electronic Controlled Drug Register and related records for community pharmacies in Ireland, provided online as a subscription.</P>
       <H2>2. Your responsibilities</H2>
       <UL>
-        <li>The register is your legal record. You remain responsible for complying with the Misuse of Drugs Regulations, PSI guidance and your own procedures — including checking every entry, including any drafted from a scanned document, before signing it.</li>
+        <li>The register is your legal record. You remain responsible for complying with the Misuse of Drugs Regulations, PSI guidance and your own procedures, including checking every entry, including any drafted from a scanned document, before signing it.</li>
         <li>Keep your login, authenticator and staff PINs secure and give each person their own PIN. Remove staff who leave.</li>
         <li>Only record data you are entitled to process, and keep the paper records the law still requires (e.g. prescriptions, invoices, requisitions).</li>
       </UL>
@@ -22,7 +22,7 @@ export default function TermsPage() {
       <UL>
         <li>A free month, no card needed. Then {formatEuro(PLAN.price)} per month + VAT per premises, billed monthly in advance.</li>
         <li>Cancel any time from Billing; the subscription ends at the end of the paid month.</li>
-        <li>If you stop paying, the register becomes read-only — you can still view, print and export it. It is never deleted because of non-payment.</li>
+        <li>If you stop paying, the register becomes read-only. You can still view, print and export it. It is never deleted because of non-payment.</li>
       </UL>
       <H2>5. Availability</H2>
       <P>We aim for the service to be available 24/7 and announce planned maintenance in advance. Keep the paper fallback sheet available for outages and enter those transactions when the service returns.</P>

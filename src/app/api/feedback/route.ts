@@ -12,7 +12,7 @@ const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 
 /**
  * mine: this pharmacy's own feedback (with replies). ideas: ideas the site owner has shared for
- * everyone to vote on (title only — never another pharmacy's words or name). all: site owner only.
+ * everyone to vote on (title only, never another pharmacy's words or name). all: site owner only.
  */
 export async function GET() {
   try {
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     }
     await audit(account.pharmacyId, 'feedback.sent', staff, account.authUserId, { kind: parsed.data.kind }, { table: 'feedback', id: data.id });
     const to = feedbackRecipient();
-    if (to) await sendEmail({ to, subject: `New ${parsed.data.kind === 'problem' ? 'problem report' : parsed.data.kind === 'idea' ? 'feature idea' : 'feedback'} — ${ph?.name ?? 'a pharmacy'}`, html: `<p><b>${esc(ph?.name ?? '')}</b> — ${esc(staff.full_name)}</p><p style="white-space:pre-wrap">${esc(parsed.data.message)}</p><p><a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://pharmacycdreg.ie'}/dashboard/feedback">Open your feedback inbox</a></p>` }).catch(() => {});
+    if (to) await sendEmail({ to, subject: `New ${parsed.data.kind === 'problem' ? 'problem report' : parsed.data.kind === 'idea' ? 'feature idea' : 'feedback'}: ${ph?.name ?? 'a pharmacy'}`, html: `<p><b>${esc(ph?.name ?? '')}</b>, ${esc(staff.full_name)}</p><p style="white-space:pre-wrap">${esc(parsed.data.message)}</p><p><a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://pharmacycdreg.ie'}/dashboard/feedback">Open your feedback inbox</a></p>` }).catch(() => {});
     return NextResponse.json({ feedback: data });
   } catch (err) {
     return errorResponse(err);

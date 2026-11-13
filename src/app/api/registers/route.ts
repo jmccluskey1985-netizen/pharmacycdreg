@@ -65,7 +65,7 @@ const Body = z.object({
   stereoisomer_of_register_id: z.string().uuid().optional().nullable(),
 });
 
-// Open a new register (one live register per product per premises — FR13 is enforced by a unique index).
+// Open a new register (one live register per product per premises, FR13 is enforced by a unique index).
 export async function POST(req: Request) {
   try {
     const { account, staff } = await requireStaff(can.openRegister, { write: true });
@@ -90,7 +90,7 @@ export async function POST(req: Request) {
       b.schedule_paragraph = b.schedule_paragraph || pp.schedule_paragraph;
     }
 
-    // Reuse an identical product definition if one exists (shared catalogue) — same brand too.
+    // Reuse an identical product definition if one exists (shared catalogue), same brand too.
     const brand = b.brand?.trim() || null;
     const { data: candidates } = await db.from('cd_products').select('*').ilike('drug_name', b.drug_name).ilike('form', b.form).ilike('strength', b.strength).limit(20);
     const hasBrandColumn = (candidates ?? []).some((c: any) => 'brand' in c);

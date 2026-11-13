@@ -10,7 +10,7 @@ import { createSign } from 'crypto';
 export interface VertexCredentials { client_email: string; private_key: string; project_id: string }
 
 export const VERTEX_LOCATIONS = [
-  { id: 'eu', label: 'EU multi-region (recommended — processing stays in the EU)' },
+  { id: 'eu', label: 'EU multi-region (recommended: processing stays in the EU)' },
   { id: 'europe-west1', label: 'Belgium (europe-west1)' },
   { id: 'europe-west4', label: 'Netherlands (europe-west4)' },
   { id: 'europe-west3', label: 'Frankfurt (europe-west3)' },
@@ -31,7 +31,7 @@ export function vertexUrl(c: { project_id: string }, location: string, model: st
 /** Parse and sanity-check a pasted service-account key file. */
 export function parseServiceAccount(json: string): VertexCredentials {
   let d: any;
-  try { d = JSON.parse(json); } catch { throw new Error('That isn’t a valid key file — paste the whole JSON file.'); }
+  try { d = JSON.parse(json); } catch { throw new Error('That isn’t a valid key file: paste the whole JSON file.'); }
   if (d?.type !== 'service_account' || typeof d.client_email !== 'string' || typeof d.private_key !== 'string' || typeof d.project_id !== 'string' || !d.private_key.includes('PRIVATE KEY')) {
     throw new Error('That isn’t a Google Cloud service-account key (it needs type, project_id, client_email and private_key).');
   }

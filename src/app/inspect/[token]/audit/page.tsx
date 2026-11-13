@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { openLink, Frame } from '../shared';
 
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Audit trail — inspection view', robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: 'Audit trail: inspection view', robots: { index: false, follow: false } };
 
 export default async function InspectAudit({ params }: { params: { token: string } }) {
   const { link, pharmacy, db } = await openLink(params.token, 'audit');

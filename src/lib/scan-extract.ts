@@ -1,6 +1,6 @@
 /**
  * Read a photo/PDF of a prescription or wholesaler invoice with Claude and pull out
- * the controlled-drug lines. This produces DRAFTS only — the pharmacist reviews and
+ * the controlled-drug lines. This produces DRAFTS only: the pharmacist reviews and
  * confirms every line with their PIN before anything touches the register.
  */
 import Anthropic from '@anthropic-ai/sdk';
@@ -70,7 +70,7 @@ const JSON_SCHEMA = {
     document_date: { ...nullableString, description: 'Date on the document as YYYY-MM-DD' },
     reference: { ...nullableString, description: 'Invoices: the INVOICE / docket NUMBER only (never the account, customer, shop ref, "Your Ref", reference, run, group, order, tote or product number). Prescriptions: the Rx / order / GMS number (e.g. hospital "Order ID"), used to stop the same prescription being entered twice.' },
     reference_label: { ...nullableString, description: 'The label printed next to the reference exactly as written, e.g. "INVOICE", "Invoice No:", "NUMBER"' },
-    supplier_evidence: { ...nullableString, description: 'Where you read the supplier: logo, letterhead, footer address, "Registered in Ireland" line, or "return to" box — quote it briefly' },
+    supplier_evidence: { ...nullableString, description: 'Where you read the supplier: logo, letterhead, footer address, "Registered in Ireland" line, or "return to" box: quote it briefly' },
     supplier_name: { ...nullableString, description: 'Wholesaler/supplier (invoices only)' },
     supplier_address: nullableString,
     patient_name: { ...nullableString, description: 'Patient (prescriptions only)' },
@@ -116,7 +116,7 @@ const JSON_SCHEMA = {
 const SYSTEM = `You read Irish community-pharmacy documents and extract the controlled-drug lines so a pharmacist can record them in the Controlled Drugs Register. Most documents are wholesaler invoices or delivery dockets (e.g. United Drug, Uniphar, PCO, or a manufacturer direct); some are prescriptions.
 
 Invoices and delivery dockets:
-- They list many products; most are not controlled drugs. Return every line you can read but set is_controlled_drug accurately. Lines are often flagged "CD", "C/D", "CD2", "Sch 2" or printed on a separate CD docket — use that as a strong signal, but also recognise CDs by name (e.g. OxyNorm/OxyContin = oxycodone, MST/Zomorph = morphine (but Oramorph 10mg/5ml and other oral morphine ≤ 2mg/ml is Schedule 5 — not a register drug; Oramorph Concentrated 20mg/ml is), Durogesic/Matrifen = fentanyl, Palexia = tapentadol, Targin = oxycodone/naloxone, Ritalin/Concerta = methylphenidate, Elvanse = lisdexamfetamine, methadone, buprenorphine, pethidine, ketamine; benzodiazepines and Z-drugs are Schedule 4).
+- They list many products; most are not controlled drugs. Return every line you can read but set is_controlled_drug accurately. Lines are often flagged "CD", "C/D", "CD2", "Sch 2" or printed on a separate CD docket. Use that as a strong signal, but also recognise CDs by name (e.g. OxyNorm/OxyContin = oxycodone, MST/Zomorph = morphine (but Oramorph 10mg/5ml and other oral morphine ≤ 2mg/ml is Schedule 5, not a register drug; Oramorph Concentrated 20mg/ml is), Durogesic/Matrifen = fentanyl, Palexia = tapentadol, Targin = oxycodone/naloxone, Ritalin/Concerta = methylphenidate, Elvanse = lisdexamfetamine, methadone, buprenorphine, pethidine, ketamine; benzodiazepines and Z-drugs are Schedule 4).
 - Photos are often rotated 90° or 180°. Read them in the correct orientation.
 - The quantity column (QTY / Quantity) is the number of PACKS. The register needs base units, so quantity = packs × pack size. Pack size is EITHER in its own column (headed "Packsize" or "PACK") OR at the end of the description (e.g. "OXYCONTIN 10MG PROLONGED-RELEASE TABS 56" → 56). Put the arithmetic in pack_description, e.g. "2 packs x 56". A trailing manufacturer name (e.g. "28 TEVA") is not part of the pack size.
 - On dot-matrix invoices the PACK/PRICE columns can sit half a line above or below their description. Match columns by row order, and copy the whole line into line_text. If you can't be sure which pack size belongs to which line, set confidence low and say so.
@@ -126,7 +126,7 @@ Invoices and delivery dockets:
 - reference is the INVOICE or docket NUMBER: the value labelled "INVOICE", "Invoice No", or "NUMBER" on a CD docket. Never use ACCOUNT, Shop Ref, Your Ref, Reference, Run/Ref, Group, Rep Code, Order, Tote, Bin, PC Ref, Batch or Product numbers. Copy its printed label into reference_label.
 - document_date is the invoice/docket date (not the print/run time or expiry dates). Convert DD/MM/YY to YYYY-MM-DD (Irish day-first dates).
 - An invoice and its CD docket / MDA receipt for the same delivery are separate pages that list the same goods. Read what is on the page you are given.
-- If a line is a credit, return or negative quantity, add a warning and set confidence low — it is not a receipt.
+- If a line is a credit, return or negative quantity, add a warning and set confidence low. It is not a receipt.
 - If a page appears to be missing (page numbering, "continued"), add a warning.
 
 Prescriptions:
@@ -136,7 +136,7 @@ Prescriptions:
 - Add a warning if words and figures disagree, either is missing, or the script looks altered.
 
 Rules for everything:
-- Transcribe only what is on the document. If something is not visible, return null — never guess a name, address or quantity.
+- Transcribe only what is on the document. If something is not visible, return null, never guess a name, address or quantity.
 - Include every medicine line, but set is_controlled_drug correctly; the register only takes controlled drugs.
 - Quantities are what goes in the register: total base units. For invoices multiply packs by pack size (e.g. "2 x 28" tablets = 56). For prescriptions use the total quantity to be supplied, and add a warning if the quantity in words and figures disagree or a figure is missing.
 - Mark confidence low for anything partly illegible and say why in notes.
@@ -274,7 +274,7 @@ async function callOpenRouter(apiKey: string, models: string[], system: string, 
   if (res.ok && !data.error) return { ok: true, data };
   const status = res.ok ? Number(data?.error?.code) || 500 : res.status;
   const raw = data?.error?.metadata?.raw;
-  const message = [data?.error?.message, typeof raw === 'string' ? raw : raw ? JSON.stringify(raw) : ''].filter(Boolean).join(' — ').slice(0, 400) || `HTTP ${res.status}`;
+  const message = [data?.error?.message, typeof raw === 'string' ? raw : raw ? JSON.stringify(raw) : ''].filter(Boolean).join(', ').slice(0, 400) || `HTTP ${res.status}`;
   console.error('[scan] openrouter error', status, message);
   // Schema/format problems and "no endpoint supports these parameters" are worth one retry in JSON mode.
   const retryable = [400, 404, 422, 500, 502].includes(status) || /schema|response_format|structured|json|parameter|endpoint/i.test(message);
@@ -336,7 +336,7 @@ export async function extractViaVertex<T>(files: DocFile[], cfg: ReadConfig<T>, 
       if (res.status === 401 || res.status === 403) {
         throw new ScanError(/not been used|disabled|SERVICE_DISABLED/i.test(msg)
           ? 'The Vertex AI API isn’t switched on in the Google Cloud project. Enable “Vertex AI API”, then try again.'
-          : `Google refused the request — give the service account the “Vertex AI User” role. (Google: “${msg.slice(0, 160)}”)`);
+          : `Google refused the request: give the service account the “Vertex AI User” role. (Google: “${msg.slice(0, 160)}”)`);
       }
       if (res.status === 429) throw new ScanError('The document reader is busy. Wait a moment and try again.');
       if (res.status === 404) break; // model not served in this location → next model

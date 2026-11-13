@@ -2,7 +2,8 @@
 
 import { PublicFooter } from '@/components/public/public-page';
 import { Suspense, useEffect, useState } from 'react';
-import { ShieldCheck, ScanLine, BookOpen, Search, Loader2, CheckCircle2, Lock, X, Plug } from 'lucide-react';
+import { ShieldCheck, ScanLine, BookOpen, Search, Loader2, CheckCircle2, Lock, X, Plug, Clock, Target, BadgeCheck } from 'lucide-react';
+import { FadeIn, RotatingWords } from '@/components/fade-in';
 import { Logo } from '@/components/logo';
 import { PricingCard } from '@/components/pricing-card';
 import { LoginCard } from '@/components/login-card';
@@ -10,15 +11,17 @@ import { DEMO } from '@/lib/demo/flag';
 import { RegisterCoverPreview } from '@/components/register-cover-preview';
 
 const FEATURES = [
-  { icon: BookOpen, title: 'Looks like the register you know', text: 'One page per drug, same columns as the paper book — with the balance worked out for you.' },
-  { icon: ScanLine, title: 'Snap the wholesaler invoice', text: 'Take a photo on your phone. CD lines and pack quantities are read for you to check and confirm.' },
-  { icon: ShieldCheck, title: 'Nothing is ever overwritten', text: 'Corrections sit alongside the original with who, when and why — a full audit trail.' },
-  { icon: Search, title: 'Inspection ready', text: 'Search by drug, date, supplier, patient or prescriber, then print or export in seconds.' },
+  { icon: Clock, title: 'Saves time, every day', text: 'Balances work themselves out, entries take seconds and regular repeat supplies are one click. Stock checks are quicker too.' },
+  { icon: Target, title: 'More accurate records', text: 'No arithmetic slips carried down the page. Every entry is checked for duplicates and impossible balances before it’s signed.' },
+  { icon: Search, title: 'Find any entry in seconds', text: 'No more rooting through tattered CD books for the right page. Search by drug, patient, prescriber, supplier or date.' },
+  { icon: ScanLine, title: 'Photograph the wholesaler invoice', text: 'Take a photo on your phone. CD lines and pack quantities are read for you to check and confirm.' },
+  { icon: ShieldCheck, title: 'Nothing is ever overwritten', text: 'Corrections sit alongside the original with who, when and why. A tamper-evident audit trail backs every line.' },
+  { icon: BadgeCheck, title: 'Inspection ready', text: 'Print or export any register, or give the inspector a read-only link. Integrity checked in one click.' },
 ];
 
 const PREVIEWS = [
-  { src: '/previews/register-book.webp', alt: 'A register page laid out like the paper Controlled Drugs Register, with a correction struck through and footnoted', title: 'The register, page by page', text: 'Same columns as the paper register: date, name and address, authority, amount obtained or supplied, running balance, pharmacist. Corrections are struck through and footnoted — never hidden.' },
-  { src: '/previews/invoice-scan.webp', alt: 'Invoice scan result: OxyNorm 5mg capsules, 2 packs × 56 = 112, matched to the OxyNorm 5mg register', title: 'Invoices read for you', text: 'Photograph the wholesaler invoice. Controlled drug lines are picked out, packs × pack size worked out, matched to the right register — and Schedule 5 lines like Oramorph 10mg/5ml left out. You check and confirm each line.' },
+  { src: '/previews/register-book.webp', alt: 'A register page laid out like the paper Controlled Drugs Register, with a correction struck through and footnoted', title: 'The register, page by page', text: 'Same columns as the paper register: date, name and address, authority, amount obtained or supplied, running balance, pharmacist. Corrections are struck through and footnoted, never hidden.' },
+  { src: '/previews/invoice-scan.webp', alt: 'Invoice scan result: OxyNorm 5mg capsules, 2 packs × 56 = 112, matched to the OxyNorm 5mg register', title: 'Invoices read for you', text: 'Photograph the wholesaler invoice. Controlled drug lines are picked out, packs × pack size worked out, matched to the right register, and Schedule 5 lines like Oramorph 10mg/5ml left out. You check and confirm each line.' },
 ];
 
 function WaitlistForm() {
@@ -164,23 +167,27 @@ export default function LandingPage() {
 
         <div className="order-2 lg:order-1">
           <h1 className="text-3xl font-bold leading-tight tracking-tight text-brand-dark dark:text-white sm:text-4xl">
-            Your Controlled Drugs Register,<br className="hidden sm:block" /> on any device.
+            Your digital Controlled Drugs Register on any device.
           </h1>
-          <div className="mt-6 max-w-xl">
+          <FadeIn delay={100} as="p" className="mt-4 max-w-xl text-xl font-semibold text-foreground">
+            Spend less time on <RotatingWords className="text-brand" words={['CD record-keeping', 'running balances', 'stock checks', 'finding the right page', 'inspections']} />
+            <span className="block text-muted-foreground">and more time with your patients.</span>
+          </FadeIn>
+          <FadeIn delay={250} as="p" className="mt-3 max-w-xl text-lg text-muted-foreground">
+            More accurate records, quicker entries and no more rooting through tattered CD books to find the right page. Every receipt, supply and destruction of Schedule 2 drugs is recorded, balanced and searchable, built around the IPU eCDR requirements for Irish community pharmacies.
+          </FadeIn>
+          <FadeIn delay={350} className="mt-6 max-w-xl">
             <RegisterCoverPreview src="/previews/register-book.webp" alt="A register page laid out like the paper Controlled Drugs Register" delay={1500} />
-          </div>
-          <p className="mt-4 max-w-xl text-lg text-muted-foreground">
-            Record receipts, supplies and witnessed destructions of Schedule 2 controlled drugs, with running balances and a complete audit trail. Built around the IPU eCDR requirements for Irish community pharmacies.
-          </p>
+          </FadeIn>
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
-            {FEATURES.map((f) => (
-              <div key={f.title} className="flex gap-3 rounded-xl bg-card/70 p-4 ring-1 ring-border">
+            {FEATURES.map((f, i) => (
+              <FadeIn key={f.title} delay={i * 90} className="flex gap-3 rounded-xl bg-card/70 p-4 ring-1 ring-border">
                 <f.icon className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand" />
                 <div>
                   <p className="font-semibold">{f.title}</p>
                   <p className="text-sm text-muted-foreground">{f.text}</p>
                 </div>
-              </div>
+              </FadeIn>
             ))}
           </div>
         </div>
@@ -227,11 +234,11 @@ export default function LandingPage() {
           <div>
             <p className="text-sm font-semibold uppercase tracking-widest text-brand">Simple pricing</p>
             <h2 className="mt-2 text-3xl font-bold tracking-tight text-brand-dark dark:text-white">One price. Everything included.</h2>
-            <p className="mt-3 text-lg text-muted-foreground">No bundles, no modules you won&apos;t use — just your Controlled Drugs Register, done properly. Unlimited staff, registers and invoice scans.</p>
+            <p className="mt-3 text-lg text-muted-foreground">No bundles, no modules you won&apos;t use, just your Controlled Drugs Register, done properly. Unlimited staff, registers and invoice scans.</p>
             <ul className="mt-6 space-y-3 text-sm">
               <li className="flex gap-3"><BookOpen className="h-5 w-5 flex-shrink-0 text-brand" /> Bring forward balances from your paper book on day one.</li>
               <li className="flex gap-3"><Plug className="h-5 w-5 flex-shrink-0 text-brand" /> Works alongside your dispensing system.</li>
-              <li className="flex gap-3"><ShieldCheck className="h-5 w-5 flex-shrink-0 text-brand" /> Cancel any time — your register stays readable and exportable.</li>
+              <li className="flex gap-3"><ShieldCheck className="h-5 w-5 flex-shrink-0 text-brand" /> Cancel any time: your register stays readable and exportable.</li>
             </ul>
           </div>
           <PricingCard cta={false} />

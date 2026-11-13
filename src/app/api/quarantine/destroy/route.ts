@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     for (const [registerId, group] of byRegister) {
       const qty = group.reduce((n, i) => n + Number(i.quantity), 0);
       const balance = await currentBalance(registerId);
-      if (qty > balance) return NextResponse.json({ error: `The register balance (${balance}) is less than the ${qty} to destroy — check the register first.` }, { status: 409 });
+      if (qty > balance) return NextResponse.json({ error: `The register balance (${balance}) is less than the ${qty} to destroy: check the register first.` }, { status: 409 });
       const detail = group.map((i) => [i.reason, i.batch && `batch ${i.batch}`, i.expiry_date && `exp ${i.expiry_date.split('-').reverse().join('/')}`].filter(Boolean).join(' ')).join('; ');
       const { data: entry, error } = await db.from('cd_entries').insert({
         register_id: registerId, entry_type: 'destruction', transaction_date: b.transaction_date, quantity: qty,

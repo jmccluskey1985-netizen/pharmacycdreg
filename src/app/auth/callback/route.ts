@@ -8,7 +8,7 @@ const back = (origin: string, msg: string) => NextResponse.redirect(`${origin}/?
 /**
  * Google sign-in lands here. The Google account must belong to an existing pharmacy login
  * (Supabase links a Google account to the login with the same verified email). Anyone else
- * is signed straight back out — Google never creates a pharmacy.
+ * is signed straight back out: Google never creates a pharmacy.
  */
 export async function GET(req: Request) {
   const url = new URL(req.url);

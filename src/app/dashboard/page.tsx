@@ -83,14 +83,14 @@ export default function RegistersPage() {
           <h1 className="text-2xl font-bold">Controlled Drug Registers</h1>
         </div>
         <div className="flex min-w-0 flex-wrap gap-2">
-          <a href="/api/export" className="btn-secondary" title="Download every register as one file — keep a recent copy for business continuity"><Download className="h-4 w-4" /> <span className="hidden sm:inline">Export all</span></a>
+          <a href="/api/export" className="btn-secondary" title="Download every register as one file. Keep a recent copy for business continuity"><Download className="h-4 w-4" /> <span className="hidden sm:inline">Export all</span></a>
           {writable && staff && can.scan(staff.role) && <Link href="/dashboard/scan?type=invoice" className="btn-secondary"><ScanLine className="h-4 w-4" /> Invoice</Link>}
           {canOpen && view === 'shelf' && <button onClick={toggleAll} className={`btn-secondary ${showAll ? 'ring-2 ring-brand/40' : ''}`} aria-pressed={showAll} title="Show every common CD, including ones you haven't started">{showAll ? 'All CD types' : 'My books only'}</button>}
           <div className="flex rounded-lg border border-border bg-card p-0.5" role="group" aria-label="View">
             <button onClick={() => pickView('shelf')} className={`rounded-md px-2.5 py-1.5 ${view === 'shelf' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`} title="Shelf view" aria-pressed={view === 'shelf'}><GalleryHorizontal className="h-4 w-4" /></button>
             <button onClick={() => pickView('table')} className={`rounded-md px-2.5 py-1.5 ${view === 'table' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`} title="Table view" aria-pressed={view === 'table'}><Table2 className="h-4 w-4" /></button>
           </div>
-          {writable && staff && can.openRegister(staff.role) && <button onClick={() => setSnap(true)} className="btn-secondary" title="Photograph your paper register to start registers with their balance"><Camera className="h-4 w-4" /> <span className="hidden sm:inline">Snap paper register</span></button>}
+          {writable && staff && can.openRegister(staff.role) && <button onClick={() => setSnap(true)} className="btn-secondary" title="Photograph your paper register to start registers with their balance"><Camera className="h-4 w-4" /> <span className="hidden sm:inline">Photograph paper register</span></button>}
           {writable && staff && can.openRegister(staff.role) && <button onClick={() => setFromList(true)} className="btn-secondary"><ListChecks className="h-4 w-4" /> <span className="hidden sm:inline">From CD list</span></button>}
           {writable && staff && can.openRegister(staff.role) && <button onClick={() => setOpen(true)} className="btn-primary"><Plus className="h-4 w-4" /> New<span className="hidden sm:inline"> CD book</span></button>}
         </div>
@@ -99,7 +99,7 @@ export default function RegistersPage() {
       {regs && regs.length > 0 && (
         <div className="relative mb-6 max-w-xl">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input className="input pl-9 pr-9" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find a register — e.g. OxyContin, MST 30, fentanyl, Concerta" />
+          <input className="input pl-9 pr-9" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find a register: e.g. OxyContin, MST 30, fentanyl, Concerta" />
           {q && <button onClick={() => setQ('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label="Clear"><X className="h-4 w-4" /></button>}
         </div>
       )}
@@ -131,7 +131,7 @@ export default function RegistersPage() {
       <Modal open={!!starting} onClose={() => setStarting(null)} title="Start a CD book">
         {starting && <StartFromList g={starting} onDone={() => { setStarting(null); load(); }} />}
       </Modal>
-      <Modal open={snap} onClose={() => setSnap(false)} title="Snap your paper register" wide>
+      <Modal open={snap} onClose={() => setSnap(false)} title="Photograph your paper register" wide>
         <SnapPaperRegisters onChanged={load} />
       </Modal>
       <Modal open={fromList} onClose={() => setFromList(false)} title="Set up registers from the CD list" wide>
@@ -219,7 +219,7 @@ function NewRegisterForm({ onDone, registers, initialText = '' }: { onDone: () =
     <form onSubmit={save} className="grid gap-4 sm:grid-cols-2">
       <label className={`sm:col-span-2 flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-brand/50 bg-brand/5 p-4 text-sm hover:bg-brand/10 ${reading ? 'pointer-events-none opacity-70' : ''}`}>
         {reading ? <Loader2 className="h-6 w-6 flex-shrink-0 animate-spin text-brand" /> : <Camera className="h-6 w-6 flex-shrink-0 text-brand" />}
-        <span><b>{reading ? 'Reading the page…' : 'Snap the last page of your paper register'}</b><br /><span className="text-muted-foreground">Fills in the drug, balance brought forward and date. Sideways photos are fine. Names aren’t read.</span></span>
+        <span><b>{reading ? 'Reading the page…' : 'Photograph the last page of your paper register'}</b><br /><span className="text-muted-foreground">Fills in the drug, balance brought forward and date. Sideways photos are fine. Names aren’t read.</span></span>
         <input type="file" accept="image/*,application/pdf" capture="environment" multiple className="hidden" onChange={readPage} />
       </label>
       {paper && <PaperResult d={paper} chosen={f.opening_balance} onChoose={(n) => setF((x) => ({ ...x, opening_balance: String(n) }))} />}
@@ -247,7 +247,7 @@ function NewRegisterForm({ onDone, registers, initialText = '' }: { onDone: () =
         <div className="sm:col-span-2"><label className="label">Parent drug register</label>
           <select className="input" required value={f.stereoisomer_of_register_id} onChange={set('stereoisomer_of_register_id')}>
             <option value="">Choose…</option>
-            {registers.filter((r) => !r.product.is_stereoisomer_of).map((r) => <option key={r.id} value={r.id}>{r.product.class_name} — {r.product.drug_name} {r.product.strength} {r.product.form}</option>)}
+            {registers.filter((r) => !r.product.is_stereoisomer_of).map((r) => <option key={r.id} value={r.id}>{r.product.class_name}: {r.product.drug_name} {r.product.strength} {r.product.form}</option>)}
           </select>
         </div>
       ) : (
@@ -258,9 +258,9 @@ function NewRegisterForm({ onDone, registers, initialText = '' }: { onDone: () =
             <div className="sm:col-span-2"><label className="label">Schedule 2 paragraph</label>
               <select className="input" value={f.schedule_paragraph} onChange={set('schedule_paragraph')}>
                 <option value="">Not specified</option>
-                <option value="para 1">Paragraph 1 — listed drugs</option>
-                <option value="para 3">Paragraph 3 — salts of paragraph 1 drugs</option>
-                <option value="para 6">Paragraph 6 — preparations of paragraphs 1–5</option>
+                <option value="para 1">Paragraph 1: listed drugs</option>
+                <option value="para 3">Paragraph 3: salts of paragraph 1 drugs</option>
+                <option value="para 6">Paragraph 6: preparations of paragraphs 1–5</option>
                 <option value="other">Other paragraph</option>
               </select>
               <p className="mt-1 text-xs text-muted-foreground">Each paragraph gets its own part of the register.</p>
@@ -302,7 +302,7 @@ function PaperResult({ d, chosen, onChoose }: { d: any; chosen: string; onChoose
       {o.flags.length > 0 && <ul className="list-disc space-y-0.5 pl-5 text-xs">{o.flags.map((x: string, i: number) => <li key={i}>{x}</li>)}</ul>}
       {d.exempt && <p className="text-xs font-semibold">{d.exempt}</p>}
       {d.existing && (
-        <p className="text-xs">You already have a register for {d.existing.label} (balance {d.existing.balance}). <Link href={`/dashboard/register/${d.existing.id}`} className="font-semibold underline">Open it</Link> instead — a second live register for the same product isn’t allowed.</p>
+        <p className="text-xs">You already have a register for {d.existing.label} (balance {d.existing.balance}). <Link href={`/dashboard/register/${d.existing.id}`} className="font-semibold underline">Open it</Link> instead: a second live register for the same product isn’t allowed.</p>
       )}
     </div>
   );
@@ -325,7 +325,7 @@ function TypeTable({ items }: { items: Reg[] }) {
                 {!!r.quarantined && <span className="ml-2 rounded-full bg-orange-200 px-2 py-0.5 text-[11px] font-bold text-orange-950">{r.quarantined} for destruction</span>}</td>
               <td className="px-4 py-2.5 text-muted-foreground">{r.product.form}</td>
               <td className="px-4 py-2.5 text-right font-semibold tabular-nums">{r.balance} <span className="font-normal text-muted-foreground">{r.product.unit}</span></td>
-              <td className="hidden px-4 py-2.5 text-muted-foreground sm:table-cell">{r.last_checked_at ? new Date(r.last_checked_at).toLocaleDateString('en-IE') : '—'}</td>
+              <td className="hidden px-4 py-2.5 text-muted-foreground sm:table-cell">{r.last_checked_at ? new Date(r.last_checked_at).toLocaleDateString('en-IE') : '-'}</td>
               <td className="px-2 py-2.5 text-right"><Link href={`/dashboard/register/${r.id}`} className="inline-flex rounded-md p-1 text-muted-foreground hover:bg-muted" aria-label="Open register"><ChevronRight className="h-4 w-4" /></Link></td>
             </tr>
           ))}

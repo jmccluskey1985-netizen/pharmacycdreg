@@ -1,5 +1,5 @@
 /**
- * PharmacyCDReg.ie logo — same family as the PharmacyConsultation.ie mark:
+ * PharmacyCDReg.ie logo: same family as the PharmacyConsultation.ie mark:
  * green map-pin with a white disc + cross, then a two-tone wordmark
  * (dark "Pharmacy" / light "CDReg" / dark ".ie") and a grey tagline.
  * Pure SVG so it is crisp at any size and needs no image assets.

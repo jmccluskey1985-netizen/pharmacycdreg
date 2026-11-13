@@ -48,7 +48,7 @@ export function InspectorLinks() {
       {error && <p className="text-sm text-destructive">{error}</p>}
       {made && (
         <div className="space-y-1 rounded-lg border border-brand/40 bg-brand/5 p-3 text-sm">
-          <p className="font-semibold">Copy this link now — it won’t be shown again.</p>
+          <p className="font-semibold">Copy this link now: it won’t be shown again.</p>
           <div className="flex gap-2"><input readOnly className="input flex-1 font-mono text-xs" value={made.url} onFocus={(e) => e.target.select()} /><button type="button" onClick={() => navigator.clipboard?.writeText(made.url)} className="btn-secondary px-3" aria-label="Copy link"><Copy className="h-4 w-4" /></button></div>
           <p className="text-xs text-muted-foreground">Works until {fmt(made.expires_at)}. Anyone with the link can view the registers, so give it only to the inspector.</p>
         </div>

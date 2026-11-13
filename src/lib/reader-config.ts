@@ -13,7 +13,7 @@ export const VERTEX_MODELS = ['gemini-3.8-flash', 'gemini-2.5-flash'];
 
 const parseModels = (s: string | null | undefined) => (s || '').split(',').map((m) => m.trim()).filter(Boolean);
 
-// Fixed to Halo's chain (docs/RX_READER_SPEC.md §1) — not changeable in the app.
+// Fixed to Halo's chain (docs/RX_READER_SPEC.md §1), not changeable in the app.
 export const PRIMARY_MODEL = 'google/gemini-3.8-flash';
 export const HALO_BACKUPS = ['qwen/qwen3-vl-235b-a22b-instruct', 'qwen/qwen2.5-vl-72b-instruct'];
 export const MODEL_CHAIN = [PRIMARY_MODEL, ...HALO_BACKUPS];

@@ -37,7 +37,7 @@ export default function FeedbackPage() {
   async function send(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true); setNote(null);
-    try { await api('/api/feedback', { method: 'POST', json: { kind, message, page: document.referrer ? new URL(document.referrer).pathname : null } }); setMessage(''); setNote('Thank you — it’s been sent. You’ll see any reply below.'); load(); }
+    try { await api('/api/feedback', { method: 'POST', json: { kind, message, page: document.referrer ? new URL(document.referrer).pathname : null } }); setMessage(''); setNote('Thank you: it’s been sent. You’ll see any reply below.'); load(); }
     catch (err) { setNote(err instanceof ApiError ? err.message : 'Could not send'); }
     finally { setBusy(false); }
   }
@@ -69,7 +69,7 @@ export default function FeedbackPage() {
       {d && d.ideas.length > 0 && (
         <section className="space-y-2">
           <h2 className="font-semibold">Ideas board</h2>
-          <p className="text-sm text-muted-foreground">Vote for the ideas you’d use most — it helps decide what’s built next.</p>
+          <p className="text-sm text-muted-foreground">Vote for the ideas you’d use most. It helps decide what’s built next.</p>
           <div className="divide-y divide-border rounded-xl border border-border bg-card">
             {d.ideas.map((i) => (
               <div key={i.id} className="flex items-start gap-3 p-3">
@@ -112,7 +112,7 @@ function AdminList({ items, onChanged }: { items: Fb[]; onChanged: () => void })
   return (
     <section className="space-y-3 rounded-2xl border-2 border-brand/40 bg-brand/5 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">Inbox — from pharmacies {fresh > 0 && <span className="ml-1 rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">{fresh} new</span>}</h2>
+        <h2 className="text-lg font-semibold">Inbox: from pharmacies {fresh > 0 && <span className="ml-1 rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">{fresh} new</span>}</h2>
         <div className="flex flex-wrap gap-1.5">
           {([['new', 'New'], ['all', 'All'], ['idea', 'Ideas'], ['problem', 'Problems'], ['other', 'Other']] as const).map(([k, l]) => (
             <button key={k} onClick={() => setFilter(k)} className={`rounded-full border px-3 py-1 text-xs font-semibold ${filter === k ? 'border-brand bg-brand text-white' : 'border-border bg-card'}`}>{l}</button>

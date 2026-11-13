@@ -77,7 +77,7 @@ export async function POST(req: Request) {
   // A pack quantity ("1 OP", "2 packs") is not a register quantity. Never auto-post it.
   const PACK_UNIT = /^(op|o\.p\.|original pack|packs?|box(es)?|cartons?|x)\b/i;
   let staffId: string | null = null;
-  if (d.action === 'reverse') problem = 'Reversal from Halo — record a correction to the original supply';
+  if (d.action === 'reverse') problem = 'Reversal from Halo: record a correction to the original supply';
   else if (d.unit && PACK_UNIT.test(d.unit.trim())) problem = `Quantity was sent as ${d.quantity} ${d.unit}, not units. Enter the number of tablets/ml/patches`;
   else if (!match) problem = `No open register matches ${d.drug.name} ${d.drug.strength}${d.drug.form ? ` ${d.drug.form}` : ''}`;
 
@@ -86,14 +86,14 @@ export async function POST(req: Request) {
 
   if (!problem && k.auto_post) {
     const psi = d.pharmacist?.psi_number?.replace(/\D/g, '');
-    if (!psi) problem = 'No pharmacist PSI number sent — confirm manually';
+    if (!psi) problem = 'No pharmacist PSI number sent: confirm manually';
     else {
       const { data: st } = await db.from('staff').select('id, role, is_active, access_expires_at').eq('pharmacy_id', k.pharmacy_id).eq('psi_number', psi).eq('is_active', true).maybeSingle();
       const expired = st?.access_expires_at && new Date(st.access_expires_at) < new Date();
       if (!st || expired || !['supervising_pharmacist', 'pharmacist', 'locum_pharmacist'].includes(st.role)) problem = `Pharmacist PSI ${psi} isn't an active pharmacist on the Team page`;
       else staffId = st.id;
     }
-    if (!problem && match && (await currentBalance(match.id)) - d.quantity < 0) problem = 'Would take the balance below zero — check stock';
+    if (!problem && match && (await currentBalance(match.id)) - d.quantity < 0) problem = 'Would take the balance below zero. Check stock';
     // Same prescription already in the register (e.g. sent twice from Halo, or also typed in)? Never auto-post it.
     if (!problem && match) {
       const dup = await findDuplicate(db, match.id, { entry_type: 'supply', transaction_date: d.dispensed_at.slice(0, 10), quantity: d.quantity, recipient_name: d.patient.name, prescriber_name: d.prescriber?.name ?? null, prescription_ref: d.prescription_ref ?? null });
@@ -126,7 +126,7 @@ export async function POST(req: Request) {
         recipient_address: d.patient.address,
         prescriber_name: d.prescriber?.name ?? null,
         prescriber_address: d.prescriber?.address ?? null,
-        authority_to_possess: d.prescriber?.name ? `Prescription — ${d.prescriber.name}${d.prescriber.registration ? ` (Reg ${d.prescriber.registration})` : ''}` : null,
+        authority_to_possess: d.prescriber?.name ? `Prescription: ${d.prescriber.name}${d.prescriber.registration ? ` (Reg ${d.prescriber.registration})` : ''}` : null,
         prescription_ref: d.prescription_ref ?? null,
         collected_by: d.collected_by ?? null,
         collector_id_checked: d.collector_id_checked ?? null,
@@ -141,7 +141,7 @@ export async function POST(req: Request) {
       await db.from('pmr_inbox').update({ status: 'posted', entry_id: entry.id, resolved_by_staff_id: staffId, resolved_at: new Date().toISOString() }).eq('id', inbox.id);
       return NextResponse.json({ inbox_id: inbox.id, status: 'posted', entry_id: entry.id, line: entry.seq });
     }
-    await db.from('pmr_inbox').update({ problem: 'Auto-post failed — confirm manually' }).eq('id', inbox.id);
+    await db.from('pmr_inbox').update({ problem: 'Auto-post failed: confirm manually' }).eq('id', inbox.id);
   }
 
   return NextResponse.json({ inbox_id: inbox.id, status: 'pending', problem }, { status: 202 });

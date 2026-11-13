@@ -16,12 +16,12 @@ type Status = { state: 'idle' | 'saving' | 'saved' | 'dup' | 'error'; message?: 
 interface Row { src: SupplyLine; qty: string; ref: string; reason: string; status: Status }
 
 const today = () => new Date().toISOString().slice(0, 10);
-// "Prescription — Dr A. Walsh (Reg 012345), dated 05/11/26" → without the old date
+// "Prescription: Dr A. Walsh (Reg 012345), dated 05/11/26" → without the old date
 const cleanAuthority = (a: string | null) => (a ?? '').replace(/,?\s*dated \d{1,2}\/\d{1,2}\/\d{2,4}\s*$/i, '').trim() || null;
 
 /**
  * Repeat selected supplies for today (typical repeat prescriptions): one table to check,
- * each line signed with the user's PIN session. The prescription number is left blank —
+ * each line signed with the user's PIN session. The prescription number is left blank -
  * a Schedule 2 supply needs its own prescription, and re-using the old number would be
  * caught as a duplicate.
  */
@@ -130,7 +130,7 @@ export function RepeatSupplies({ registerId, unit, balance, balances, lines, onD
       {!done && multi && (
         <div className="space-y-1 rounded-lg bg-secondary px-4 py-3 text-sm">
           {Object.entries(afterBy).map(([id, a]) => (
-            <p key={id} className={`flex justify-between gap-2 ${a.after < 0 ? 'font-semibold text-destructive' : ''}`}><span>{a.label} — balance after</span><b className="tabular-nums">{a.after} {a.unit}</b></p>
+            <p key={id} className={`flex justify-between gap-2 ${a.after < 0 ? 'font-semibold text-destructive' : ''}`}><span>{a.label}: balance after</span><b className="tabular-nums">{a.after} {a.unit}</b></p>
           ))}
         </div>
       )}

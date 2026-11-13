@@ -1,6 +1,6 @@
 /**
  * Site owner (you, not every pharmacy): emails listed in the ADMIN_EMAILS environment
- * variable (comma-separated, set in Vercel — never in the code). Can see the waitlist.
+ * variable (comma-separated, set in Vercel, never in the code). Can see the waitlist.
  */
 export function isSiteAdmin(email: string | null | undefined): boolean {
   if (!email) return false;

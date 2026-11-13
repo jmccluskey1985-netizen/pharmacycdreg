@@ -7,7 +7,7 @@ export function brandOf(p: ProductLike): string | null {
   return (p.brand && p.brand.trim()) || productFor(p.drug_name, p.form)?.brands[0] || null;
 }
 
-/** "OxyNorm 5mg capsule" — brand first (CDs are prescribed by brand); generic if no brand known. */
+/** "OxyNorm 5mg capsule", brand first (CDs are prescribed by brand); generic if no brand known. */
 export function productTitle(p: ProductLike): string {
   const b = brandOf(p);
   return `${b ?? p.drug_name} ${p.strength} ${p.form}`;

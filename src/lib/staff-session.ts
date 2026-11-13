@@ -1,5 +1,5 @@
 /**
- * Active-staff session — the "sign-in number" layer.
+ * Active-staff session: the "sign-in number" layer.
  *
  * PharmacyConsultation.ie remembers the active staff member in localStorage. For a
  * CD register that isn't good enough: the server must KNOW who made each entry

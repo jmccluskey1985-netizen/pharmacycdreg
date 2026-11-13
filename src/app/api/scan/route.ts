@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   try {
     const { account, staff } = await requireStaff(can.scan, { write: true });
     const limit = checkRateLimit(`scan:${account.pharmacyId}`, 20, 60_000);
-    if (!limit.ok) return NextResponse.json({ error: 'Too many scans — wait a moment' }, { status: 429 });
+    if (!limit.ok) return NextResponse.json({ error: 'Too many scans: wait a moment' }, { status: 429 });
 
     const form = await req.formData();
     const files = form.getAll('file').filter((f): f is File => f instanceof File);
@@ -77,7 +77,7 @@ export async function POST(req: Request) {
         extraction.supplier_name = known.name;
         extraction.supplier_address = extraction.supplier_address && identifySupplier(extraction.supplier_address) ? extraction.supplier_address : known.address;
       }
-      if (!extraction.supplier_name) docFlags.push('Supplier not found on the page — enter who sent it');
+      if (!extraction.supplier_name) docFlags.push('Supplier not found on the page: enter who sent it');
       const refFlag = checkReference(extraction.reference, extraction.reference_label);
       if (refFlag) docFlags.push(refFlag);
     }
@@ -87,14 +87,14 @@ export async function POST(req: Request) {
       if (!isInvoice) return null;
       if (extraction.reference) {
         const { data } = await db.from('cd_entries').select('seq').eq('register_id', registerId).eq('entry_type', 'receipt').ilike('notes', `%${extraction.reference}%`).limit(1);
-        if (data?.length) return { blocking: true, text: `Invoice ${extraction.reference} is already recorded on line ${data[0].seq} of this register — don't add it twice` };
+        if (data?.length) return { blocking: true, text: `Invoice ${extraction.reference} is already recorded on line ${data[0].seq} of this register: don't add it twice` };
       }
       if (qty && extraction.document_date) {
         const d = new Date(extraction.document_date);
         const from = new Date(d.getTime() - 4 * 864e5).toISOString().slice(0, 10);
         const to = new Date(d.getTime() + 4 * 864e5).toISOString().slice(0, 10);
         const { data } = await db.from('cd_entries').select('seq, notes').eq('register_id', registerId).eq('entry_type', 'receipt').eq('quantity', qty).gte('transaction_date', from).lte('transaction_date', to).limit(1);
-        if (data?.length) return { blocking: false, text: `Same amount received within a few days on line ${data[0].seq}${data[0].notes ? ` (${data[0].notes})` : ''} — is this the same delivery?` };
+        if (data?.length) return { blocking: false, text: `Same amount received within a few days on line ${data[0].seq}${data[0].notes ? ` (${data[0].notes})` : ''}: is this the same delivery?` };
       }
       return null;
     };
@@ -102,7 +102,7 @@ export async function POST(req: Request) {
     const proposals = await Promise.all(extraction.items.filter((i) => i.is_controlled_drug && !registerExemption(i.drug_name, i.strength, i.form, i.brand)).map(async (item) => {
       const { match, candidates, state, otherBrands } = matchRegister(regs, item.drug_name, item.strength, item.form, item.brand);
       const qty = decideQuantity(item, extraction.document_type);
-      if (otherBrands?.length) qty.flags.unshift(`You have ${otherBrands.map((r) => r.label).join(', ')} — not ${item.brand}. Brands aren’t interchangeable: start a ${item.brand} book or check the brand dispensed.`);
+      if (otherBrands?.length) qty.flags.unshift(`You have ${otherBrands.map((r) => r.label).join(', ')}: not ${item.brand}. Brands aren’t interchangeable: start a ${item.brand} book or check the brand dispensed.`);
       qty.flags.push(...docFlags);
       const prior = match ? await priorFor(match.id, qty.quantity) : null;
       if (prior) { qty.flags.unshift(prior.text); if (prior.blocking) qty.blocking = true; }
@@ -126,7 +126,7 @@ export async function POST(req: Request) {
           patient_dob: extraction.patient_dob ?? null,
           prescriber_name: extraction.prescriber_name,
           prescriber_address: extraction.prescriber_address,
-          authority_to_possess: !isInvoice && extraction.prescriber_name ? `Prescription — ${extraction.prescriber_name}${extraction.prescriber_registration ? ` (Reg ${extraction.prescriber_registration})` : ''}${extraction.document_date ? `, dated ${extraction.document_date.split('-').reverse().join('/')}` : ''}` : null,
+          authority_to_possess: !isInvoice && extraction.prescriber_name ? `Prescription: ${extraction.prescriber_name}${extraction.prescriber_registration ? ` (Reg ${extraction.prescriber_registration})` : ''}${extraction.document_date ? `, dated ${extraction.document_date.split('-').reverse().join('/')}` : ''}` : null,
           prescription_ref: isInvoice ? null : extraction.reference,
           notes: isInvoice && extraction.reference ? `Invoice ${extraction.reference}` : null,
           scan_id: scan.id,

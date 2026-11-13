@@ -43,7 +43,7 @@ export function ReminderForm({ initial, onSaved, onCancel }: { initial?: Partial
   return (
     <form onSubmit={save} className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="sm:col-span-3"><label className="label">Name</label><input className="input" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder={title || 'e.g. Mary Byrne — weekly methadone'} /></div>
+        <div className="sm:col-span-3"><label className="label">Name</label><input className="input" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder={title || 'e.g. Mary Byrne: weekly methadone'} /></div>
         <div><label className="label">How often</label><select className="input" value={f.frequency} onChange={(e) => setF({ ...f, frequency: e.target.value as Frequency })}>{Object.entries(FREQUENCIES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
         {f.frequency === 'custom' && <div><label className="label">Every (days)</label><input className="input" type="number" min={1} max={366} required value={f.interval_days ?? ''} onChange={(e) => setF({ ...f, interval_days: Number(e.target.value) })} /></div>}
         <div><label className="label">{initial?.id ? 'Next due' : 'First due'}</label><input className="input" type="date" required value={f.next_due} onChange={(e) => setF({ ...f, next_due: e.target.value })} /></div>
@@ -70,7 +70,7 @@ export function ReminderForm({ initial, onSaved, onCancel }: { initial?: Partial
         <button type="button" onClick={() => setF({ ...f, lines: [...f.lines, blank(f.lines[f.lines.length - 1]?.register_id)] })} className="btn-ghost text-sm"><Plus className="h-4 w-4" /> Add another supply</button>
       </div>
       <div><label className="label">Notes <span className="font-normal text-muted-foreground">(optional)</span></label><input className="input" value={f.notes ?? ''} onChange={(e) => setF({ ...f, notes: e.target.value })} placeholder="e.g. Collected by daughter; check new Rx every 4 weeks" /></div>
-      <p className="text-xs text-muted-foreground">When it’s due, you’ll see a reminder. One click records every supply — each one still signed by you and checked for balance and duplicates.</p>
+      <p className="text-xs text-muted-foreground">When it’s due, you’ll see a reminder. One click records every supply: each one still signed by you and checked for balance and duplicates.</p>
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex gap-3">
         <button type="button" onClick={onCancel} className="btn-secondary flex-1">Cancel</button>

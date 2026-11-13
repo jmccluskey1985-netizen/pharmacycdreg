@@ -1,5 +1,5 @@
 /**
- * Email via Gmail API + Google service account with domain-wide delegation —
+ * Email via Gmail API + Google service account with domain-wide delegation -
  * the same setup PharmacyConsultation.ie uses. If it isn't configured the email
  * is skipped (logged), never fatal: billing and the register must not depend on it.
  */
@@ -16,7 +16,7 @@ export async function sendEmail({ to, subject, html }: { to: string; subject: st
   const key = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n');
   const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   if (!to || !from || !key || !clientEmail) {
-    console.warn('[email] not configured — skipped:', subject);
+    console.warn('[email] not configured: skipped:', subject);
     return { sent: false };
   }
   try {

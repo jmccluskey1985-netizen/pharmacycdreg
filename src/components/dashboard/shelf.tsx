@@ -116,7 +116,7 @@ function ShelfRow({ cls, types, onStart, onRemove }: { cls: string; types: TypeG
                   <div className="mt-auto">
                     {(r.low_stock || r.check_due || !!r.quarantined) && (
                       <div className="mb-1.5 flex flex-wrap gap-1">
-                        {!!r.quarantined && <span className="rounded-full bg-orange-300 px-1.5 py-0.5 text-[10px] font-bold text-orange-950" title="Set aside for destruction — still in the balance">{r.quarantined} for destruction</span>}
+                        {!!r.quarantined && <span className="rounded-full bg-orange-300 px-1.5 py-0.5 text-[10px] font-bold text-orange-950" title="Set aside for destruction: still in the balance">{r.quarantined} for destruction</span>}
                         {r.low_stock && <span className="rounded-full bg-amber-300 px-1.5 py-0.5 text-[10px] font-bold text-amber-950">Low</span>}
                         {r.check_due && <span className="rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-brand-deep">Check due</span>}
                       </div>

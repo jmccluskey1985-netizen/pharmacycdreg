@@ -53,7 +53,7 @@ export function SetupFromList({ registers, onDone }: { registers: Existing[]; on
     }
     setBusy(false);
     if (!failed.length) { onDone(); return; }
-    setMsg(`Opened ${ok}. Not opened — ${failed.join('; ')}`);
+    setMsg(`Opened ${ok}. Not opened: ${failed.join('; ')}`);
   }
 
   return (
@@ -85,12 +85,12 @@ export function SetupFromList({ registers, onDone }: { registers: Existing[]; on
             </div>
           </div>
         ))}
-        {shown.length === 0 && <p className="text-sm text-muted-foreground">Not in the list — use “New register” to add it by hand.</p>}
+        {shown.length === 0 && <p className="text-sm text-muted-foreground">Not in the list: use “New register” to add it by hand.</p>}
       </div>
 
       {list.length > 0 && (
         <div className="space-y-2 rounded-xl border border-brand/40 bg-brand/5 p-3">
-          <p className="text-sm font-semibold">{list.length} to open — balance brought forward from your paper book (leave blank for nil)</p>
+          <p className="text-sm font-semibold">{list.length} to open: balance brought forward from your paper book (leave blank for nil)</p>
           <div className="max-h-40 space-y-1.5 overflow-y-auto">
             {list.map(([k, x]) => (
               <div key={k} className="flex items-center justify-between gap-2 text-sm">
