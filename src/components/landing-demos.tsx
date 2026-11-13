@@ -88,7 +88,7 @@ function RxScanDemo() {
   ];
   const recorded = phase >= 5;
   return (
-    <div ref={ref} className="overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border md:col-span-2">
+    <div ref={ref} className="overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border">
       <div className="grid gap-6 bg-gradient-to-b from-secondary/70 to-background p-5 md:grid-cols-[minmax(0,15rem)_1fr] md:p-8" aria-hidden="true">
         {/* Phone */}
         <div className="mx-auto w-[15rem] rounded-[2.2rem] bg-slate-900 p-2 shadow-xl">
@@ -172,6 +172,59 @@ function RxScanDemo() {
   );
 }
 
+
+/* Invoice photographed: a real wholesaler invoice (customer details replaced), CD lines read */
+function InvoiceDemo() {
+  const { ref, phase } = usePhases([1300, 1900, 2900, 800, 3200, 700]);
+  const lines = [
+    { top: '78.6%', cd: false },
+    { top: '83.2%', cd: false },
+    { top: '86.9%', cd: true },
+  ];
+  const recorded = phase >= 4;
+  return (
+    <div ref={ref} className="overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border">
+      <div className="grid gap-6 bg-gradient-to-b from-secondary/70 to-background p-5 md:grid-cols-[minmax(0,1.35fr)_1fr] md:p-8" aria-hidden="true">
+        <div className="relative self-start overflow-hidden rounded-xl shadow-xl ring-1 ring-black/10">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/previews/invoice-photo.webp" alt="" loading="lazy" className="block w-full" />
+          {phase === 1 && <span className="demo-sweep absolute inset-x-0 h-1 bg-brand/80 shadow-[0_0_16px_4px_rgba(84,189,80,.6)]" />}
+          {phase === 0 && <span className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-medium text-white"><Camera className="h-3.5 w-3.5" /> Photo taken</span>}
+          {phase >= 2 && lines.map((l, i) => (
+            <span key={i} className={`absolute left-[6%] w-[90%] rounded transition-all duration-500 ${l.cd ? 'bg-brand/25 ring-2 ring-brand' : 'bg-slate-400/15 ring-1 ring-slate-400/50'}`}
+              style={{ top: l.top, height: '4.6%', transform: 'rotate(-2.4deg)', transformOrigin: 'left center', transitionDelay: `${i * 200}ms` }} />
+          ))}
+        </div>
+        <div className="flex min-w-0 flex-col">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Read from the invoice</p>
+          <div className={`mt-2 rounded-lg bg-white px-3 py-2 text-xs text-slate-700 shadow ring-1 ring-slate-200 ${fade(phase >= 2)}`}>
+            <b>Uniphar</b> · Invoice <b>0974471902</b> · 05/11/2026 <span className="block text-[10px] text-slate-500">Invoice number used, not the account number. Already-recorded invoices are caught.</span>
+          </div>
+          <div className={`mt-2 rounded-lg bg-white p-3 text-sm shadow ring-2 ring-brand/60 ${fade(phase >= 2)}`} style={{ transitionDelay: '250ms' }}>
+            <div className="flex items-start justify-between gap-2">
+              <div><p className="font-bold text-slate-800">OxyNorm 5mg capsule</p><p className="text-xs text-slate-500">2 packs × 56 = <b className="text-slate-800">112 capsules</b></p></div>
+              <span className="rounded-full bg-brand/15 px-2 py-0.5 text-[10px] font-bold text-brand-dark">YOUR REGISTER</span>
+            </div>
+            <div className="mt-2 h-8">
+              {!recorded ? (
+                <span className={`flex h-8 items-center justify-center rounded-lg bg-brand-dark text-xs font-semibold text-white transition-transform duration-150 ${phase === 3 ? 'scale-95 ring-4 ring-brand/30' : ''}`}>Check details &amp; record</span>
+              ) : (
+                <span className="flex h-8 items-center gap-1.5 text-xs font-semibold text-brand-dark"><CheckCircle2 className="h-4 w-4 text-brand" /> Received: balance <Counter value={recorded ? 182 : 70} className="mx-0.5" /> capsules</span>
+              )}
+            </div>
+          </div>
+          <ul className={`mt-2 space-y-1 text-xs text-slate-500 ${fade(phase >= 2)}`} style={{ transitionDelay: '500ms' }}>
+            <li className="flex items-center gap-1.5"><ScanLine className="h-3.5 w-3.5" /> Lycimor (pregabalin) 300mg: no register entry needed</li>
+            <li className="flex items-center gap-1.5"><ScanLine className="h-3.5 w-3.5" /> NovoRapid FlexPen: not a controlled drug</li>
+          </ul>
+          <h3 className="mt-6 text-2xl font-bold">Photograph the wholesaler invoice</h3>
+          <p className="mt-1 text-muted-foreground">Uniphar, United Drug, PCO and others. Controlled drug lines are picked out, packs × pack size worked out and matched to the right register for you to check. Nothing is recorded until you sign.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* 1. Running balance */
 function BalanceDemo() {
   const { ref, phase } = usePhases([1400, 900, 2600, 600]);
@@ -194,34 +247,6 @@ function BalanceDemo() {
       </div>
       <div className={`mt-3 flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-semibold shadow ring-1 ring-slate-200 ${fade(phase === 2)}`}>
         <CheckCircle2 className="h-4 w-4 text-brand" /> Signed by Aoife Byrne (PSI 12345)
-      </div>
-    </Card>
-  );
-}
-
-/* 2. Invoice read */
-function ScanDemo() {
-  const { ref, phase } = usePhases([900, 1700, 2800, 500]);
-  return (
-    <Card refEl={ref} title="Photograph the invoice" text="Controlled drug lines are picked out and packs × pack size worked out for you to check. Nothing is recorded until you sign.">
-      <div className="flex h-full gap-3">
-        <div className="relative w-[44%] overflow-hidden rounded-lg bg-white p-2.5 shadow ring-1 ring-slate-200">
-          <p className="text-[8px] font-bold text-slate-500">UNITED DRUG · INVOICE 4471902</p>
-          {['PARACETAMOL 500MG 100', 'OXYNORM 5MG CAPS  2 × 56', 'LANSOPRAZOLE 30MG 28', 'MST CONTINUS 10MG  1 × 60', 'ORAMORPH 10MG/5ML 100ML'].map((l, i) => (
-            <p key={l} className={`mt-1.5 rounded px-1 text-[8px] leading-tight transition-colors duration-500 ${phase >= 2 && (i === 1 || i === 3) ? 'bg-brand/20 font-bold text-brand-dark' : 'text-slate-500'}`}>{l}</p>
-          ))}
-          {phase === 1 && <span className="scan-sweep absolute inset-x-0 h-8 bg-gradient-to-b from-transparent via-brand/40 to-transparent" />}
-          <Camera className={`absolute bottom-2 right-2 h-4 w-4 text-slate-400 ${phase === 0 ? 'animate-pulse' : ''}`} />
-        </div>
-        <div className="flex flex-1 flex-col justify-center gap-2">
-          {[{ n: 'OxyNorm 5mg capsule', q: '2 × 56 = 112' }, { n: 'MST Continus 10mg', q: '1 × 60 = 60' }].map((x, i) => (
-            <div key={x.n} className={`rounded-lg bg-white p-2 text-[11px] shadow ring-1 ring-slate-200 ${fade(phase >= 2)}`} style={{ transitionDelay: `${i * 250}ms` }}>
-              <p className="font-bold text-slate-800">{x.n}</p>
-              <p className="text-slate-500">{x.q} <span className="ml-1 rounded-full bg-brand/15 px-1.5 text-[9px] font-bold text-brand-dark">YOUR REGISTER</span></p>
-            </div>
-          ))}
-          <p className={`text-[10px] text-slate-500 ${fade(phase >= 2)}`} style={{ transitionDelay: '500ms' }}><ScanLine className="mr-1 inline h-3 w-3" />Oramorph 10mg/5ml: no register needed</p>
-        </div>
       </div>
     </Card>
   );
@@ -285,12 +310,14 @@ function IntegrityDemo() {
 
 export function LandingDemos() {
   return (
-    <div className="grid gap-6 md:grid-cols-2">
-      <RxScanDemo />
-      <BalanceDemo />
-      <ScanDemo />
-      <ReminderDemo />
-      <IntegrityDemo />
+    <div className="space-y-6">
+      <div className="grid gap-6"><RxScanDemo /></div>
+      <InvoiceDemo />
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <BalanceDemo />
+        <ReminderDemo />
+        <IntegrityDemo />
+      </div>
     </div>
   );
 }
