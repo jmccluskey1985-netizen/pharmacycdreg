@@ -8,7 +8,7 @@ import { brandOf } from '@/lib/product-name';
 
 export interface Ghost { product: CdProduct; strength: string }
 interface Reg {
-  id: string; balance: number; low_stock?: boolean; check_due?: boolean; entry_count?: number; ghost?: Ghost;
+  id: string; balance: number; low_stock?: boolean; check_due?: boolean; entry_count?: number; quarantined?: number; ghost?: Ghost;
   product: { drug_name: string; class_name: string; strength: string; form: string; unit: string; brand?: string | null; parent?: { drug_name: string } | null };
 }
 interface TypeGroup { key: string; brand: string; form: string; order: number; regs: Reg[] }
@@ -114,8 +114,9 @@ function ShelfRow({ cls, types, onStart, onRemove }: { cls: string; types: TypeG
                   <p className="mt-1 line-clamp-2 text-xs text-white/75">{r.product.form}</p>
                   {r.product.parent && <p className="mt-1 text-[10px] text-white/70">Stereoisomer of {r.product.parent.drug_name}</p>}
                   <div className="mt-auto">
-                    {(r.low_stock || r.check_due) && (
+                    {(r.low_stock || r.check_due || !!r.quarantined) && (
                       <div className="mb-1.5 flex flex-wrap gap-1">
+                        {!!r.quarantined && <span className="rounded-full bg-orange-300 px-1.5 py-0.5 text-[10px] font-bold text-orange-950" title="Set aside for destruction — still in the balance">{r.quarantined} for destruction</span>}
                         {r.low_stock && <span className="rounded-full bg-amber-300 px-1.5 py-0.5 text-[10px] font-bold text-amber-950">Low</span>}
                         {r.check_due && <span className="rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-brand-deep">Check due</span>}
                       </div>

@@ -12,6 +12,7 @@ import { Modal } from '@/components/modal';
 import { useStaff } from '@/components/dashboard/staff-context';
 import { EntryForm, type EntryType } from '@/components/dashboard/entry-form';
 import { StockCheckButton } from '@/components/dashboard/stock-check';
+import { QuarantinePanel } from '@/components/dashboard/quarantine';
 import { RepeatSupplies, type SupplyLine } from '@/components/dashboard/repeat-supplies';
 
 const LINES_PER_PAGE = 16;
@@ -164,6 +165,7 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
             }} className="btn-ghost text-destructive"><Trash2 className="h-4 w-4" /> Remove book</button>
           )}
           <StockCheckButton registerId={params.id} unit={p.unit} balance={Number(balance)} canRecord={!!mayRecord} />
+          <QuarantinePanel registerId={params.id} unit={p.unit} balance={Number(balance)} canRecord={!!mayRecord} onChanged={load} />
           {mayRecord && <button onClick={() => setAdding(true)} className="btn-primary"><Plus className="h-4 w-4" /> New entry</button>}
         </div>
       </div>

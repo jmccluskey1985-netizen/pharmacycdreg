@@ -15,8 +15,8 @@ interface Reg { id: string; balance: number; closed_at: string | null; product: 
 const SOURCES: { key: Source; title: string; text: string; icon: any; entry: string; scan?: 'prescription' | 'invoice' }[] = [
   { key: 'dispensing', title: 'From a dispensing', text: 'Supplied to a patient on a prescription', icon: PackageMinus, entry: 'supply', scan: 'prescription' },
   { key: 'invoice', title: 'From an invoice', text: 'Stock received from a wholesaler', icon: PackagePlus, entry: 'receipt', scan: 'invoice' },
-  { key: 'destruction', title: 'Destruction', text: 'Witnessed destruction of stock', icon: Flame, entry: 'destruction' },
-  { key: 'patient_return', title: 'Patient return', text: 'Returned by a patient', icon: Undo2, entry: 'patient_return' },
+  { key: 'destruction', title: 'Destruction', text: 'Expired / damaged stock — set aside or destroy', icon: Flame, entry: 'destruction' },
+  { key: 'patient_return', title: 'Patient return', text: 'Into the CD Destruction Record Book — not the register', icon: Undo2, entry: 'patient_return' },
 ];
 
 /** Top-left "New entry": pick where the details come from, then scan it or type it in. */
@@ -44,7 +44,7 @@ export function NewEntryButton() {
         {!source && (
           <div className="grid gap-2 sm:grid-cols-2">
             {SOURCES.map((s) => (
-              <button key={s.key} onClick={() => (s.scan ? setSource(s) : (setSource(s), setTyping(true)))} className="flex items-start gap-3 rounded-xl border border-border p-4 text-left transition hover:border-brand hover:bg-brand/5">
+              <button key={s.key} onClick={() => (s.key === 'patient_return' ? go('/dashboard/destructions?tab=book&new=return') : s.key === 'destruction' ? go('/dashboard/destructions') : s.scan ? setSource(s) : (setSource(s), setTyping(true)))} className="flex items-start gap-3 rounded-xl border border-border p-4 text-left transition hover:border-brand hover:bg-brand/5">
                 <s.icon className="mt-0.5 h-6 w-6 flex-shrink-0 text-brand" />
                 <span><span className="block font-semibold">{s.title}</span><span className="block text-sm text-muted-foreground">{s.text}</span></span>
               </button>

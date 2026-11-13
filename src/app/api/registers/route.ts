@@ -5,6 +5,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { balancesFor, ledgerSummary } from '@/lib/registers';
 import { can } from '@/lib/roles';
 import { getSettings, FREQ_DAYS } from '@/lib/settings';
+import { quarantinedFor } from '@/lib/quarantine';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,7 @@ export async function GET() {
     regs.sort((a, b) => a.product.schedule - b.product.schedule || (a.product.schedule_paragraph ?? '').localeCompare(b.product.schedule_paragraph ?? '') || a.product.class_name.localeCompare(b.product.class_name) || Number(!!a.product.is_stereoisomer_of) - Number(!!b.product.is_stereoisomer_of) || a.product.strength.localeCompare(b.product.strength));
     // Stock-check due + low stock (Settings). Quietly skipped until migration 0007 is run.
     const settings = await getSettings(db, account.pharmacyId);
+    const quarantined = await quarantinedFor(db, account.pharmacyId);
     const lastCheck: Record<string, string> = {};
     if (regs.length) {
       const { data: checks } = await db.from('stock_checks').select('register_id, checked_at').eq('pharmacy_id', account.pharmacyId).order('checked_at', { ascending: false }).limit(2000);
@@ -39,7 +41,7 @@ export async function GET() {
       registers: regs.map((r) => {
         const balance = balances[r.id] ?? 0;
         const { low_stock_level, ...rest } = r;
-        return { ...rest, balance, entry_count: summary[r.id]?.entries ?? 0, low_stock_level: low_stock_level ?? null, low_stock: low_stock_level != null && balance <= Number(low_stock_level), last_checked_at: lastCheck[r.id] ?? null, check_due: due(r) };
+        return { ...rest, balance, quarantined: quarantined[r.id] ?? 0, entry_count: summary[r.id]?.entries ?? 0, low_stock_level: low_stock_level ?? null, low_stock: low_stock_level != null && balance <= Number(low_stock_level), last_checked_at: lastCheck[r.id] ?? null, check_due: due(r) };
       }),
     });
   } catch (err) {

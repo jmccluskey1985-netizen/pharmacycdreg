@@ -46,7 +46,7 @@ export function StockCheckButton({ registerId, unit, balance, canRecord }: { reg
           {canRecord && (
             <form onSubmit={save} className="space-y-3">
               <div className="flex items-center justify-between rounded-lg bg-secondary px-4 py-3 text-sm"><span>Register balance</span><b className="text-lg tabular-nums">{balance} {unit}</b></div>
-              <div><label className="label">Counted on the shelf ({unit})</label><input className="input text-lg font-semibold" type="number" min="0" step="any" inputMode="decimal" required value={counted} onChange={(e) => setCounted(e.target.value)} autoFocus /></div>
+              <div><label className="label">Counted in the CD safe ({unit})</label><input className="input text-lg font-semibold" type="number" min="0" step="any" inputMode="decimal" required value={counted} onChange={(e) => setCounted(e.target.value)} autoFocus /><p className="mt-1 text-xs text-muted-foreground">Include any stock set aside for destruction — it stays in the balance until destroyed.</p></div>
               {diff !== null && diff !== 0 && (
                 <p className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100"><AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" /> {diff > 0 ? `${diff} more` : `${-diff} fewer`} than the register. Recount, then note what you found.</p>
               )}

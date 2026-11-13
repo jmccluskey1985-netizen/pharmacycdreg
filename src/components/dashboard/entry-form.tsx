@@ -39,7 +39,6 @@ const TYPES: { value: EntryType; label: string; icon: any; hint: string }[] = [
   { value: 'receipt', label: 'Obtained', icon: PackagePlus, hint: 'Received into stock (e.g. from wholesaler)' },
   { value: 'supply', label: 'Supplied', icon: PackageMinus, hint: 'Supplied to a patient or other person' },
   { value: 'destruction', label: 'Destroyed', icon: Flame, hint: 'Witnessed destruction of pharmacy stock' },
-  { value: 'patient_return', label: 'Patient return', icon: Undo2, hint: 'Returned by patient — kept separate from stock' },
 ];
 
 export const today = () => new Date().toISOString().slice(0, 10);

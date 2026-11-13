@@ -20,6 +20,7 @@ interface Reg {
   id: string;
   balance: number;
   entry_count?: number;
+  quarantined?: number;
   ghost?: Ghost;
   low_stock?: boolean;
   check_due?: boolean;
@@ -318,7 +319,8 @@ function TypeTable({ items }: { items: Reg[] }) {
             <tr key={r.id} className="hover:bg-muted/40">
               <td className="px-4 py-2.5 font-medium"><Link href={`/dashboard/register/${r.id}`} className="hover:underline">{brandOf(r.product) ?? r.product.drug_name} {r.product.strength}</Link>{genericLine(r.product) && <span className="block text-xs font-normal text-muted-foreground">{genericLine(r.product)}</span>}
                 {r.low_stock && <span className="ml-2 rounded-full bg-amber-200 px-2 py-0.5 text-[11px] font-bold text-amber-950">Low</span>}
-                {r.check_due && <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-bold text-secondary-foreground">Check due</span>}</td>
+                {r.check_due && <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-bold text-secondary-foreground">Check due</span>}
+                {!!r.quarantined && <span className="ml-2 rounded-full bg-orange-200 px-2 py-0.5 text-[11px] font-bold text-orange-950">{r.quarantined} for destruction</span>}</td>
               <td className="px-4 py-2.5 text-muted-foreground">{r.product.form}</td>
               <td className="px-4 py-2.5 text-right font-semibold tabular-nums">{r.balance} <span className="font-normal text-muted-foreground">{r.product.unit}</span></td>
               <td className="hidden px-4 py-2.5 text-muted-foreground sm:table-cell">{r.last_checked_at ? new Date(r.last_checked_at).toLocaleDateString('en-IE') : '—'}</td>

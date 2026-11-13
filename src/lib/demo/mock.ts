@@ -163,7 +163,10 @@ const patientMatch = (p: Json, q: string) => {
   if (/^\d{4,}/.test(t)) return (p.gms_number || '').startsWith(t);
   return t.split(/\s+/).every((w) => `${p.first_name} ${p.surname}`.toLowerCase().includes(w));
 };
-const regList = () => S.registers.filter((r) => !r.closed_at).map((r) => ({ id: r.id, opened_at: r.opened_at, closed_at: null, product: productOf(r.id), balance: balance(r.id), entry_count: S.entries.filter((e) => e.register_id === r.id).length }));
+const Q = (): Json[] => ((S as any).quarantine ||= []);
+const BOOK = (): Json[] => ((S as any).destructionBook ||= []);
+const qFor = (regId: string) => Q().filter((i) => i.register_id === regId && i.status === 'awaiting').reduce((n, i) => n + Number(i.quantity), 0);
+const regList = () => S.registers.filter((r) => !r.closed_at).map((r) => ({ id: r.id, opened_at: r.opened_at, closed_at: null, product: productOf(r.id), balance: balance(r.id), quarantined: qFor(r.id), entry_count: S.entries.filter((e) => e.register_id === r.id).length }));
 const norm = (s: string) => s.toLowerCase().replace(/hydrochloride|sulfate|sulphate|[^a-z0-9]/g, '');
 
 function csvFile(name: string, rows: (string | number | null)[][]) {
@@ -287,6 +290,48 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     if (method === 'PUT') { if (body.api_key) { R.has_key = true; R.hint = `…${String(body.api_key).slice(-4)}`; } R.models = body.models; }
     if (method === 'DELETE') { R.has_key = false; R.hint = null; }
     return res(R);
+  }
+  if (path === '/api/quarantine') {
+    if (needStaff()) return needStaff()!;
+    const rid = url.searchParams.get('register_id');
+    if (method === 'GET') return res({ items: Q().filter((i) => !rid || i.register_id === rid).map((i) => ({ ...i, label: productTitle(productOf(i.register_id)), unit: productOf(i.register_id).unit })).reverse() });
+    const avail = balance(body.register_id) - qFor(body.register_id);
+    if (!(Number(body.quantity) > 0) || Number(body.quantity) > avail) return fail(400, `Only ${avail} available to set aside`);
+    Q().push({ id: uid(), register_id: body.register_id, quantity: Number(body.quantity), reason: body.reason, batch: body.batch, expiry_date: body.expiry_date, notes: body.notes, status: 'awaiting', created_at: new Date().toISOString() });
+    audit('quarantine.added', { quantity: body.quantity });
+    return res({ ok: true });
+  }
+  if ((m = path.match(/^\/api\/quarantine\/([^/]+)$/)) && m[1] !== 'destroy' && method === 'PATCH') {
+    const it = Q().find((i) => i.id === m![1]); if (!it || it.status !== 'awaiting') return fail(404, 'Not found');
+    Object.assign(it, { status: 'released', release_reason: body.reason }); audit('quarantine.released');
+    return res({ ok: true });
+  }
+  if (path === '/api/quarantine/destroy' && method === 'POST') {
+    if (needStaff()) return needStaff()!;
+    const items = Q().filter((i) => body.ids.includes(i.id) && i.status === 'awaiting');
+    const by: Record<string, Json[]> = {};
+    for (const i of items) (by[i.register_id] ||= []).push(i);
+    for (const [rid, list] of Object.entries(by)) {
+      const qty = list.reduce((n, i) => n + Number(i.quantity), 0);
+      const seq = S.entries.filter((x) => x.register_id === rid).length + 1;
+      const id = uid();
+      S.entries.push({ id, register_id: rid, seq, entry_type: 'destruction', transaction_date: body.transaction_date, recorded_at: new Date().toISOString(), quantity: String(qty), witness_name: body.witness_name, witness_role: body.witness_role, destruction_method: body.destruction_method, notes: 'Quarantined stock: ' + list.map((i) => `${i.reason}${i.batch ? ` batch ${i.batch}` : ''}`).join('; '), recorded_by_staff_id: st!.id, source: 'manual' } as any);
+      for (const i of list) Object.assign(i, { status: 'destroyed', destroyed_entry_id: id });
+    }
+    audit('quarantine.destroyed', { count: items.length });
+    return res({ ok: true });
+  }
+  if (path === '/api/destruction-book') {
+    if (needStaff()) return needStaff()!;
+    if (method === 'GET') return res({ rows: [...BOOK()].reverse() });
+    if (body.kind === 'patient_return' && !body.returned_by_name) return fail(400, 'Who returned it?');
+    BOOK().push({ ...body, id: uid(), received_by_name: st!.full_name, destroyed_date: null, destroyed_by_name: null, witness_name: null, witness_role: null, destruction_method: null });
+    return res({ ok: true });
+  }
+  if (path === '/api/destruction-book/destroy' && method === 'POST') {
+    if (needStaff()) return needStaff()!;
+    for (const r of BOOK()) if (body.ids.includes(r.id) && !r.destroyed_date) Object.assign(r, { destroyed_date: body.destroyed_date, destroyed_by_name: st!.full_name, witness_name: body.witness_name || null, witness_role: body.witness_role || null, destruction_method: body.destruction_method || null });
+    return res({ ok: true });
   }
   if (path === '/api/stock-checks') {
     if (needStaff()) return needStaff()!;
