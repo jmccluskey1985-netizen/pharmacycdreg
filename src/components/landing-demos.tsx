@@ -252,11 +252,50 @@ function BalanceDemo() {
   );
 }
 
+
+/* Copy last week's lines to today (Repeat for today) */
+function RepeatDemo() {
+  const { ref, phase } = usePhases([1100, 450, 450, 450, 1000, 3200, 600]);
+  const last = [
+    { n: 'Thomas Burke', q: 7 },
+    { n: 'Mary Kelly', q: 14 },
+    { n: 'Seán O’Brien', q: 7 },
+  ];
+  const selected = Math.max(0, Math.min(3, phase - 0)); // rows 1..3 get selected in phases 1-3
+  const copied = phase >= 5;
+  const start = 140;
+  const after = start - last.reduce((n, r) => n + r.q, 0);
+  return (
+    <Card refEl={ref} title="Copy last week’s lines to today" text="Select a few lines from last week, press Repeat for today, add the new prescription numbers and sign. Done for every regular patient at once.">
+      <div className="relative overflow-hidden rounded-lg bg-white text-[11px] text-slate-800 shadow ring-1 ring-slate-200">
+        <div className="grid grid-cols-[3rem_1fr_2.5rem_3rem] bg-slate-100 px-2 py-1.5 text-[9px] font-bold uppercase tracking-wide text-slate-500"><span>Date</span><span>Supplied to</span><span className="text-right">Out</span><span className="text-right">Bal.</span></div>
+        {last.map((r, i) => (
+          <div key={r.n} className={`grid grid-cols-[3rem_1fr_2.5rem_3rem] border-t border-slate-100 px-2 py-1 transition-colors duration-200 ${phase >= 1 && phase <= 4 && i < selected ? 'bg-brand/15 outline outline-2 -outline-offset-2 outline-brand' : ''}`}>
+            <span>06/11</span><span>{r.n}</span><span className="text-right font-semibold">{r.q}</span><span className="text-right">{start + 28 - last.slice(0, i + 1).reduce((n, x) => n + x.q, 0)}</span>
+          </div>
+        ))}
+        {last.map((r, i) => (
+          <div key={r.n + 'new'} className={`grid grid-cols-[3rem_1fr_2.5rem_3rem] border-t border-slate-100 px-2 transition-all duration-500 ease-out ${copied ? 'max-h-8 py-1 opacity-100 bg-brand/10' : 'max-h-0 py-0 opacity-0'}`} style={{ transitionDelay: copied ? `${i * 220}ms` : '0ms' }}>
+            <span className="font-semibold">13/11</span><span>{r.n}</span><span className="text-right font-semibold">{r.q}</span><span className="text-right font-bold text-brand-dark">{i === 2 ? <Counter value={copied ? after : start} /> : start - last.slice(0, i + 1).reduce((n, x) => n + x.q, 0)}</span>
+          </div>
+        ))}
+      </div>
+      <div className="relative mt-2 h-7">
+        <div className={`absolute left-1/2 top-0 flex -translate-x-1/2 items-center gap-2 rounded-full bg-slate-900 px-3 py-1 text-[10px] text-white shadow-lg transition-all duration-300 ${phase >= 2 && phase <= 4 ? 'opacity-100' : 'pointer-events-none opacity-0'}`}>
+          <span className="font-semibold">{Math.max(1, selected)} selected</span>
+          <span className={`rounded-full bg-brand px-2 py-0.5 font-semibold transition-transform duration-150 ${phase === 4 ? 'scale-90 ring-2 ring-white/40' : ''}`}>Repeat for today</span>
+        </div>
+        <p className={`absolute inset-x-0 top-0 flex items-center gap-1.5 text-xs font-semibold text-brand-dark ${fade(copied)}`} style={{ transitionDelay: copied ? '700ms' : '0ms' }}><CheckCircle2 className="h-4 w-4 text-brand" /> 3 supplies recorded for today</p>
+      </div>
+    </Card>
+  );
+}
+
 /* 3. Reminder recorded */
 function ReminderDemo() {
   const { ref, phase } = usePhases([1800, 900, 2600, 500]);
   return (
-    <Card refEl={ref} title="Weekly supplies in one click" text="Set a reminder for regular patients. When it’s due, one click records it in the right register.">
+    <Card refEl={ref} title="Weekly dispensing, registered in one click" text="Set a reminder for regular weekly patients. When it’s due, one click writes the supply into the right register.">
       <div className="space-y-3">
         <div className="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950">
           <BellRing className={`h-4 w-4 ${phase === 0 ? 'bell-ring' : ''}`} />
@@ -313,8 +352,9 @@ export function LandingDemos() {
     <div className="space-y-6">
       <div className="grid gap-6"><RxScanDemo /></div>
       <InvoiceDemo />
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2">
         <BalanceDemo />
+        <RepeatDemo />
         <ReminderDemo />
         <IntegrityDemo />
       </div>
