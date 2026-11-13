@@ -166,6 +166,9 @@ export default function LandingPage() {
           <h1 className="text-3xl font-bold leading-tight tracking-tight text-brand-dark dark:text-white sm:text-4xl">
             Your Controlled Drugs Register,<br className="hidden sm:block" /> on any device.
           </h1>
+          <div className="mt-6 max-w-xl">
+            <RegisterCoverPreview src="/previews/register-book.webp" alt="A register page laid out like the paper Controlled Drugs Register" delay={1500} />
+          </div>
           <p className="mt-4 max-w-xl text-lg text-muted-foreground">
             Record receipts, supplies and witnessed destructions of Schedule 2 controlled drugs, with running balances and a complete audit trail. Built around the IPU eCDR requirements for Irish community pharmacies.
           </p>
