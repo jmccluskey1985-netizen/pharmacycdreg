@@ -7,7 +7,7 @@ import { isSiteAdmin } from '@/lib/admin';
 export const dynamic = 'force-dynamic';
 
 const Patch = z.object({
-  status: z.enum(['new', 'planned', 'in_progress', 'done', 'declined']).optional(),
+  status: z.enum(['new', 'read', 'planned', 'in_progress', 'done', 'declined']).optional(),
   reply: z.string().trim().max(4000).optional().nullable(),
   shared: z.boolean().optional(),
   shared_title: z.string().trim().max(200).optional().nullable(),

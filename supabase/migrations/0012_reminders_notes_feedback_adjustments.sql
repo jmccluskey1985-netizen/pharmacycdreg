@@ -141,7 +141,7 @@ create table if not exists feedback (
   kind text not null check (kind in ('idea', 'problem', 'other')),
   message text not null check (length(message) between 3 and 4000),
   page text,
-  status text not null default 'new' check (status in ('new', 'planned', 'in_progress', 'done', 'declined')),
+  status text not null default 'new' check (status in ('new', 'read', 'planned', 'in_progress', 'done', 'declined')),
   reply text,
   shared boolean not null default false,  -- site owner shares an idea (wording tidied) for everyone to vote on
   shared_title text,

@@ -212,7 +212,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
   const needStaff = () => (st ? null : fail(423, 'Enter your PIN to continue', 'LOCKED'));
 
   if (path === '/api/staff/me') {
-    return res({ pharmacy: S.pharmacy, staff: st && { id: st.id, full_name: st.full_name, role: st.role, psi_number: st.psi_number }, locked: !st, hasPins: true, inboxCount: S.inbox.filter((i) => i.status === 'pending').length, remindersDue: st ? REM().filter((r) => r.active && r.next_due <= today()).length : 0 });
+    return res({ pharmacy: S.pharmacy, staff: st && { id: st.id, full_name: st.full_name, role: st.role, psi_number: st.psi_number }, locked: !st, hasPins: true, inboxCount: S.inbox.filter((i) => i.status === 'pending').length, remindersDue: st ? REM().filter((r) => r.active && r.next_due <= today()).length : 0, feedbackNew: 0 });
   }
   if (path === '/api/staff/unlock' && method === 'POST') {
     const s = S.staff.find((x) => x.is_active && x.pin === String(body.pin));
@@ -367,9 +367,17 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     return res({ entry: { id: e.id, seq }, note, balance: Number(c.counted) });
   }
   if (path === '/api/feedback') {
-    if (method === 'GET') return res({ mine: FB().filter((f) => !f.shared), ideas: FB().filter((f) => f.shared), all: null, is_admin: false });
+    if (method === 'GET') {
+      // Preview of the site owner's inbox (developer check only): localStorage cdreg-demo-owner = 1
+      const owner = (() => { try { return localStorage.getItem('cdreg-demo-owner') === '1'; } catch { return false; } })();
+      return res({ mine: FB().filter((f) => !f.shared), ideas: FB().filter((f) => f.shared), all: owner ? FB().map((f) => ({ ...f, pharmacy_name: f.pharmacy_name ?? 'Quayside Pharmacy (demo)' })) : null, is_admin: owner });
+    }
     FB().unshift({ ...body, id: uid(), status: 'new', reply: null, shared: false, created_at: new Date().toISOString(), staff_name: st?.full_name });
     return res({ ok: true });
+  }
+  if ((m = path.match(/^\/api\/feedback\/([^/]+)$/)) && method === 'PATCH') {
+    const f = FB().find((x) => x.id === m![1]); if (!f) return fail(404, 'Not found');
+    Object.assign(f, body); return res({ feedback: f });
   }
   if ((m = path.match(/^\/api\/feedback\/([^/]+)\/vote$/))) {
     const f = FB().find((x) => x.id === m![1]); if (!f) return fail(404, 'Not found');

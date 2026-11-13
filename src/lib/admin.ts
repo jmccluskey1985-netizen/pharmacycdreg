@@ -8,3 +8,9 @@ export function isSiteAdmin(email: string | null | undefined): boolean {
   const norm = email.trim().toLowerCase().replace(/@googlemail\.com$/, '@gmail.com');
   return list.some((e) => e.replace(/@googlemail\.com$/, '@gmail.com') === norm);
 }
+
+/** Where feedback and ideas are emailed: ADMIN_NOTIFY_EMAIL, else the first site owner. */
+export function feedbackRecipient(): string {
+  const first = (process.env.ADMIN_EMAILS || '').split(',').map((e) => e.trim()).find(Boolean);
+  return process.env.ADMIN_NOTIFY_EMAIL || first || process.env.EMAIL_FROM || '';
+}

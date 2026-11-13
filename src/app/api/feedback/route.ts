@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireStaff, errorResponse, audit } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase/server';
-import { isSiteAdmin } from '@/lib/admin';
-import { adminEmail, sendEmail } from '@/lib/email';
+import { isSiteAdmin, feedbackRecipient } from '@/lib/admin';
+import { sendEmail } from '@/lib/email';
 import { missing0012, NEEDS_0012 } from '@/lib/notes';
 
 export const dynamic = 'force-dynamic';
@@ -56,8 +56,8 @@ export async function POST(req: Request) {
       throw error;
     }
     await audit(account.pharmacyId, 'feedback.sent', staff, account.authUserId, { kind: parsed.data.kind }, { table: 'feedback', id: data.id });
-    const to = adminEmail();
-    if (to) await sendEmail({ to, subject: `CDReg ${parsed.data.kind}: ${parsed.data.message.slice(0, 60)}`, html: `<p><b>${esc(ph?.name ?? '')}</b> — ${esc(staff.full_name)}</p><p style="white-space:pre-wrap">${esc(parsed.data.message)}</p>` }).catch(() => {});
+    const to = feedbackRecipient();
+    if (to) await sendEmail({ to, subject: `New ${parsed.data.kind === 'problem' ? 'problem report' : parsed.data.kind === 'idea' ? 'feature idea' : 'feedback'} — ${ph?.name ?? 'a pharmacy'}`, html: `<p><b>${esc(ph?.name ?? '')}</b> — ${esc(staff.full_name)}</p><p style="white-space:pre-wrap">${esc(parsed.data.message)}</p><p><a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://pharmacycdreg.ie'}/dashboard/feedback">Open your feedback inbox</a></p>` }).catch(() => {});
     return NextResponse.json({ feedback: data });
   } catch (err) {
     return errorResponse(err);

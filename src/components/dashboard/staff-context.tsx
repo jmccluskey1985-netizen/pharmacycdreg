@@ -18,6 +18,7 @@ interface Ctx {
   hasPins: boolean;
   inboxCount: number;
   remindersDue: number;
+  feedbackNew: number;
   refresh: () => Promise<void>;
   lock: () => Promise<void>;
   setStaff: (s: ActiveStaff) => void;
@@ -26,12 +27,12 @@ interface Ctx {
 const StaffContext = createContext<Ctx | null>(null);
 
 export function StaffProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState({ loading: true, pharmacy: null as Pharmacy | null, staff: null as ActiveStaff | null, locked: true, hasPins: true, inboxCount: 0, remindersDue: 0 });
+  const [state, setState] = useState({ loading: true, pharmacy: null as Pharmacy | null, staff: null as ActiveStaff | null, locked: true, hasPins: true, inboxCount: 0, remindersDue: 0, feedbackNew: 0 });
 
   const refresh = useCallback(async () => {
     try {
       const d = await api('/api/staff/me');
-      setState({ loading: false, pharmacy: d.pharmacy, staff: d.staff, locked: d.locked, hasPins: d.hasPins, inboxCount: d.inboxCount ?? 0, remindersDue: d.remindersDue ?? 0 });
+      setState({ loading: false, pharmacy: d.pharmacy, staff: d.staff, locked: d.locked, hasPins: d.hasPins, inboxCount: d.inboxCount ?? 0, remindersDue: d.remindersDue ?? 0, feedbackNew: d.feedbackNew ?? 0 });
     } catch {
       setState((s) => ({ ...s, loading: false }));
     }

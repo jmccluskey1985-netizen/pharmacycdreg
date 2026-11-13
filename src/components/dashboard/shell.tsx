@@ -29,13 +29,13 @@ const NAV = [
   { href: '/dashboard/integrations', label: 'Halo connection', icon: Plug, show: can.manageStaff, halo: true },
   { href: '/dashboard/billing', label: 'Billing', icon: CreditCard, show: can.manageStaff },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings, show: can.manageStaff },
-  { href: '/dashboard/feedback', label: 'Feedback & ideas', icon: MessageSquarePlus, show: () => true },
+  { href: '/dashboard/feedback', label: 'Feedback & ideas', icon: MessageSquarePlus, show: () => true, badge: 'feedback' },
   { href: '/dashboard/waitlist', label: 'Waitlist', icon: ListOrdered, show: () => true, admin: true },
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {
-  const { loading, staff, locked, hasPins, pharmacy, lock, inboxCount, remindersDue, refresh } = useStaff();
-  const badgeOf = (n: any) => (n.badge === 'inbox' ? inboxCount : n.badge === 'reminders' ? remindersDue : 0);
+  const { loading, staff, locked, hasPins, pharmacy, lock, inboxCount, remindersDue, feedbackNew, refresh } = useStaff();
+  const badgeOf = (n: any) => (n.badge === 'inbox' ? inboxCount : n.badge === 'reminders' ? remindersDue : n.badge === 'feedback' ? feedbackNew : 0);
   const training = useTraining();
   const path = usePathname();
   const [hidden, setHidden] = useState(false);

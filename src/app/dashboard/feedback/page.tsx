@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Lightbulb, Bug, MessageSquare, Loader2, ThumbsUp, Send } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
+import { useStaff } from '@/components/dashboard/staff-context';
 
 type Kind = 'idea' | 'problem' | 'other';
 interface Fb { id: string; kind: Kind; message: string; status: string; reply: string | null; created_at: string; pharmacy_name?: string | null; staff_name?: string | null; shared?: boolean; shared_title?: string | null; votes?: number }
@@ -14,7 +15,8 @@ const KINDS: { k: Kind; label: string; icon: any; hint: string }[] = [
   { k: 'other', label: 'Something else', icon: MessageSquare, hint: 'Anything you want to tell us' },
 ];
 const STATUS: Record<string, { label: string; cls: string }> = {
-  new: { label: 'Received', cls: 'bg-secondary' },
+  new: { label: 'New', cls: 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-100' },
+  read: { label: 'Received', cls: 'bg-secondary' },
   planned: { label: 'Planned', cls: 'bg-sky-100 text-sky-900 dark:bg-sky-950 dark:text-sky-100' },
   in_progress: { label: 'In progress', cls: 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-100' },
   done: { label: 'Done', cls: 'bg-brand/15 text-primary' },
@@ -28,7 +30,8 @@ export default function FeedbackPage() {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
-  const load = useCallback(() => api('/api/feedback').then(setD).catch(() => setD({ mine: [], ideas: [], all: null, is_admin: false })), []);
+  const { refresh } = useStaff();
+  const load = useCallback(() => api('/api/feedback').then((x) => { setD(x); refresh(); }).catch(() => setD({ mine: [], ideas: [], all: null, is_admin: false })), [refresh]);
   useEffect(() => { load(); }, [load]);
 
   async function send(e: React.FormEvent) {
@@ -44,8 +47,9 @@ export default function FeedbackPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Feedback &amp; ideas</h1>
-        <p className="text-sm text-muted-foreground">Tell us what would help, report a problem, and vote on ideas from other pharmacies.</p>
+        <p className="text-sm text-muted-foreground">{d?.is_admin ? 'Everything pharmacies send comes here, and to your email.' : 'Goes straight to the PharmacyCDReg.ie team. Tell us what would help, report a problem, and vote on ideas from other pharmacies.'}</p>
       </div>
+      {d?.is_admin && d.all && <AdminList items={d.all} onChanged={load} />}
       {d?.needs_migration && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">Needs a one-off database update: run migration 0012 in Supabase.</p>}
 
       <form onSubmit={send} className="card space-y-3">
@@ -97,16 +101,25 @@ export default function FeedbackPage() {
         )}
       </section>
 
-      {d?.is_admin && d.all && <AdminList items={d.all} onChanged={load} />}
     </div>
   );
 }
 
 function AdminList({ items, onChanged }: { items: Fb[]; onChanged: () => void }) {
+  const [filter, setFilter] = useState<'new' | 'all' | Kind>('new');
+  const fresh = items.filter((f) => f.status === 'new').length;
+  const shown = items.filter((f) => (filter === 'new' ? f.status === 'new' : filter === 'all' ? true : f.kind === filter));
   return (
-    <section className="space-y-2">
-      <h2 className="font-semibold">All feedback <span className="font-normal text-muted-foreground">(site owner)</span></h2>
-      <div className="space-y-2">{items.map((f) => <AdminRow key={f.id} f={f} onChanged={onChanged} />)}</div>
+    <section className="space-y-3 rounded-2xl border-2 border-brand/40 bg-brand/5 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold">Inbox — from pharmacies {fresh > 0 && <span className="ml-1 rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">{fresh} new</span>}</h2>
+        <div className="flex flex-wrap gap-1.5">
+          {([['new', 'New'], ['all', 'All'], ['idea', 'Ideas'], ['problem', 'Problems'], ['other', 'Other']] as const).map(([k, l]) => (
+            <button key={k} onClick={() => setFilter(k)} className={`rounded-full border px-3 py-1 text-xs font-semibold ${filter === k ? 'border-brand bg-brand text-white' : 'border-border bg-card'}`}>{l}</button>
+          ))}
+        </div>
+      </div>
+      {shown.length === 0 ? <p className="text-sm text-muted-foreground">{filter === 'new' ? 'You’re all caught up.' : 'Nothing here.'}</p> : <div className="space-y-2">{shown.map((f) => <AdminRow key={f.id} f={f} onChanged={onChanged} />)}</div>}
     </section>
   );
 }
@@ -117,13 +130,16 @@ function AdminRow({ f, onChanged }: { f: Fb; onChanged: () => void }) {
   const [err, setErr] = useState<string | null>(null);
   async function save() {
     setBusy(true); setErr(null);
-    try { await api(`/api/feedback/${f.id}`, { method: 'PATCH', json: { ...x, reply: x.reply || null, shared_title: x.shared_title || null } }); onChanged(); }
+    try { await api(`/api/feedback/${f.id}`, { method: 'PATCH', json: { ...x, status: x.status === 'new' ? 'read' : x.status, reply: x.reply || null, shared_title: x.shared_title || null } }); onChanged(); }
     catch (e) { setErr(e instanceof ApiError ? e.message : 'Could not save'); }
     finally { setBusy(false); }
   }
   return (
     <div className="card space-y-2 p-4 text-sm">
-      <p className="text-xs text-muted-foreground">{f.pharmacy_name} · {f.staff_name} · {when(f.created_at)} · {f.kind}{f.shared ? ` · ${f.votes ?? 0} votes` : ''}</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground"><b className="text-foreground">{f.pharmacy_name}</b> · {f.staff_name} · {when(f.created_at)} · {KINDS.find((k) => k.k === f.kind)?.label}{f.shared ? ` · ${f.votes ?? 0} votes` : ''}</p>
+        {f.status === 'new' ? <button onClick={async () => { await api(`/api/feedback/${f.id}`, { method: 'PATCH', json: { status: 'read' } }).catch(() => {}); onChanged(); }} className="btn-ghost py-1 text-xs">Mark as read</button> : <span className={`badge ${STATUS[f.status]?.cls}`}>{STATUS[f.status]?.label}</span>}
+      </div>
       <p className="whitespace-pre-wrap">{f.message}</p>
       <div className="grid gap-2 sm:grid-cols-[10rem_1fr]">
         <select className="input py-1.5" value={x.status} onChange={(e) => setX({ ...x, status: e.target.value })}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select>
