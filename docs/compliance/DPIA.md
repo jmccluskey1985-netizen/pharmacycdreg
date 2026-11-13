@@ -28,8 +28,8 @@
 | Register falsification (to hide diversion) | Possible / High | Append-only DB triggers, SHA-256 hash chain with verification, weekly off-system fingerprint email, corrections visible | Low |
 | Data loss (provider failure, error) | Unlikely / High | Daily provider backups, customer full backups, append-only design, restore runbook | Low |
 | Unavailability during dispensing | Possible / Medium | Paper fallback sheet with late-entry flag, health monitoring, EU-region hosting | Low |
-| AI reading provider retains or reuses images | Unlikely / High | Zero-data-retention endpoints only, provider data collection denied, scans optional, results are drafts | Low |
-| Transfer outside the EEA | Possible / Medium | EU hosting for stored data; SCCs for sub-processors; only scan images (transiently) leave the EEA | Low |
+| AI reading provider retains or reuses images | Unlikely / High | Google Vertex AI under the Cloud DPA (no training on customer data), scans optional, results are drafts | Low |
+| Transfer outside the EEA | Unlikely / Medium | EU hosting for stored data; scans processed in the Vertex AI EU multi-region; SCCs for any non-EEA sub-processor | Low |
 | Inspector link leaked | Unlikely / Medium | Time-limited (max 14 days), revocable, read-only, every view audited, token stored only as a hash | Low |
 | Breach not detected | Possible / High | Error reporting, server logs, integrity verification, audit trail | Medium (improve with an external monitoring service) |
 

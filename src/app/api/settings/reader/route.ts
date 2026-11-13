@@ -5,6 +5,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { seal } from '@/lib/secret-box';
 import { isSiteAdmin } from '@/lib/admin';
 import { HttpError } from '@/lib/access';
+import { parseServiceAccount, vertexAccessToken, VERTEX_LOCATIONS } from '@/lib/vertex';
 
 export const dynamic = 'force-dynamic';
 // Site owner only (ADMIN_EMAILS): one key for every pharmacy's scanning.
@@ -20,9 +21,13 @@ export async function GET() {
   try {
     const { account } = await owner();
     const db = createServiceClient();
-    const { data, error } = await db.from('site_secrets').select('openrouter_key_hint, openrouter_models, updated_at').eq('id', 'reader').maybeSingle();
+    const { data, error } = await db.from('site_secrets').select('*').eq('id', 'reader').maybeSingle();
     return NextResponse.json({
       needs_migration: !!error,
+      needs_vertex_migration: !error && !!data && !('reader_provider' in data),
+      provider: data?.reader_provider ?? 'openrouter',
+      vertex: { has_key: !!data?.vertex_sa_enc, client_email: data?.vertex_client_email ?? null, project: data?.vertex_project ?? null, location: data?.vertex_location ?? 'eu' },
+      locations: VERTEX_LOCATIONS,
       has_key: !!data?.openrouter_key_hint,
       hint: data?.openrouter_key_hint ?? null,
       models: (data?.openrouter_models || '').split(',').map((m: string) => m.trim()).filter(Boolean),
@@ -35,6 +40,9 @@ export async function GET() {
 }
 
 const Body = z.object({
+  provider: z.enum(['openrouter', 'vertex']).optional(),
+  service_account_json: z.string().trim().max(10000).optional(),
+  location: z.string().trim().max(40).optional(),
   api_key: z.string().trim().min(20).max(300).optional(),
   models: z.array(z.string().trim().min(3).max(120).regex(/^[\w.\-:/]+$/)).max(4).default([]),
 });
@@ -57,7 +65,27 @@ export async function PUT(req: Request) {
     const parsed = Body.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) return NextResponse.json({ error: 'Paste the full key and choose at least one model' }, { status: 400 });
     const db = createServiceClient();
+    // Google Vertex AI (EU): check the key by signing in to Google before saving it.
+    if (parsed.data.provider === 'vertex') {
+      const location = parsed.data.location || 'eu';
+      if (!VERTEX_LOCATIONS.some((l) => l.id === location)) return NextResponse.json({ error: 'Choose an EU location' }, { status: 400 });
+      const vrow: Record<string, unknown> = { id: 'reader', reader_provider: 'vertex', vertex_location: location, updated_at: new Date().toISOString() };
+      if (parsed.data.service_account_json) {
+        let creds;
+        try { creds = parseServiceAccount(parsed.data.service_account_json); } catch (e) { return NextResponse.json({ error: (e as Error).message }, { status: 400 }); }
+        try { await vertexAccessToken(creds); } catch (e) { return NextResponse.json({ error: `Google didn’t accept that key: ${(e as Error).message.slice(0, 160)}` }, { status: 400 }); }
+        Object.assign(vrow, { vertex_sa_enc: seal(parsed.data.service_account_json), vertex_client_email: creds.client_email, vertex_project: creds.project_id });
+      } else {
+        const { data: existing } = await db.from('site_secrets').select('vertex_sa_enc').eq('id', 'reader').maybeSingle();
+        if (!existing?.vertex_sa_enc) return NextResponse.json({ error: 'Paste the service-account key file (JSON)' }, { status: 400 });
+      }
+      const { error } = await db.from('site_secrets').upsert(vrow, { onConflict: 'id' });
+      if (error) return NextResponse.json({ error: /column|relation|does not exist/i.test(error.message) ? 'Needs a one-off database update first (run migration 0014 in Supabase).' : 'Could not save' }, { status: 409 });
+      await audit(account.pharmacyId, 'settings.reader_updated', staff, account.authUserId, { provider: 'vertex', location, key_changed: !!parsed.data.service_account_json });
+      return NextResponse.json({ ok: true });
+    }
     const row: Record<string, unknown> = { id: 'reader', openrouter_models: parsed.data.models.join(','), updated_at: new Date().toISOString() };
+    if (parsed.data.provider === 'openrouter') row.reader_provider = 'openrouter';
     if (parsed.data.api_key) {
       const check = await checkKey(parsed.data.api_key);
       if (!check.ok) return NextResponse.json({ error: check.message }, { status: 400 });
@@ -76,10 +104,15 @@ export async function PUT(req: Request) {
   }
 }
 
-export async function DELETE() {
+export async function DELETE(req: Request) {
   try {
     const { account, staff } = await owner();
     const db = createServiceClient();
+    if (new URL(req.url).searchParams.get('provider') === 'vertex') {
+      await db.from('site_secrets').update({ vertex_sa_enc: null, vertex_client_email: null, vertex_project: null, reader_provider: 'openrouter', updated_at: new Date().toISOString() }).eq('id', 'reader');
+      await audit(account.pharmacyId, 'settings.reader_key_removed', staff, account.authUserId, { provider: 'vertex' });
+      return NextResponse.json({ ok: true });
+    }
     await db.from('site_secrets').update({ openrouter_key_enc: null, openrouter_key_hint: null, updated_at: new Date().toISOString() }).eq('id', 'reader');
     await audit(account.pharmacyId, 'settings.reader_key_removed', staff, account.authUserId);
     return NextResponse.json({ ok: true });

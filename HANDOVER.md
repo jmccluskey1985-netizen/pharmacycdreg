@@ -22,7 +22,7 @@ Read this first, then:
 | Data / auth | Supabase: Postgres (EU), Auth (password, Google OAuth, TOTP MFA). RLS on with **no client policies**; every read and write goes through server routes using the service key after `requireAccount` / `requireStaff`. |
 | Hosting | Vercel (`main` auto-deploys). Domain `pharmacycdreg.ie`. Daily cron for trial reminders. |
 | Billing | Stripe Checkout, Customer Portal and webhook (€19/month launch price, free month without a card) |
-| Document reading | OpenRouter, zero data retention, fixed model chain led by Gemini 3.8 Flash |
+| Document reading | Google Vertex AI (Gemini) in the EU, under the Google Cloud DPA. OpenRouter is still available as an alternative |
 
 ## 2. Code map
 
@@ -50,7 +50,7 @@ src/lib/
   demo/                     demo mode + training mode (in-browser mock of the API)
 src/data/cd-products.ts     CD catalogue: one product per brand, strengths, schedule paragraph
 src/components/dashboard/   shell (sidebar / icon rail), entry form, new-entry chooser, shelf, …
-supabase/migrations/        0001–0013 (see docs/OPERATIONS.md)
+supabase/migrations/        0001–0014 (see docs/OPERATIONS.md)
 scripts/                    create-pharmacy.mjs, rule tests, GMS list parser
 ```
 
@@ -124,7 +124,8 @@ GitHub Actions (`.github/workflows/ci.yml`) runs all of the above on every push.
 
 - [ ] **Stripe:** create the product and price, webhook and portal (README → Stripe setup); set `STRIPE_*` and `CRON_SECRET`.
 - [ ] **Google sign-in:** finish the Google Cloud client and Supabase provider set-up (docs/OPERATIONS.md §3).
-- [ ] **Migrations:** confirm 0009–0013 have been run in production.
+- [ ] **Migrations:** confirm 0009–0014 have been run in production.
+- [ ] **Document reader:** set up Google Vertex AI (Settings → Document reading) and accept the Google Cloud DPA. File the sub-processor DPAs (`docs/compliance/SUBPROCESSOR_DPAS.md`).
 - [ ] **Company details:** set `NEXT_PUBLIC_COMPANY_NAME`, `NEXT_PUBLIC_COMPANY_ADDRESS` and `NEXT_PUBLIC_CONTACT_EMAIL`. Have a solicitor review /privacy, /terms and `docs/compliance/DPA_TEMPLATE.md`.
 - [ ] **Hardening checklist:** `docs/OPERATIONS.md` §6 (uptime monitor, leaked-password protection, backups and restore test).
 - [ ] **Multi-premises groups:** one login across several pharmacies, with a switcher and group pricing. Not built yet; the data model is one pharmacy per login.

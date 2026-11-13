@@ -4,6 +4,17 @@ Scanning only **reads**. A pharmacist checks and signs every entry before it rea
 
 ## 1. Reader and privacy
 
+**Recommended reader: Google Vertex AI in the EU** (migration 0014, Settings → Document reading → Google Vertex AI).
+- **Where it runs:** Gemini on Google Cloud. The EU multi-region endpoint (`https://aiplatform.eu.rep.googleapis.com`, location `eu`) keeps ML processing in the EU. Single EU regions can be chosen instead.
+- **Contract:** covered by the Google Cloud Data Processing Addendum. Customer data isn't used for training.
+- **Models:** `gemini-3.8-flash` first, then `gemini-2.5-flash` if 3.8 isn't served in that location (`VERTEX_MODELS` in `src/lib/reader-config.ts`). **Test** shows which one answered.
+- **Auth:** a service account with the role *Vertex AI User*. Its JSON key is uploaded once by the site owner and stored encrypted (`site_secrets.vertex_sa_enc`). The app signs a JWT and swaps it for an access token (`src/lib/vertex.ts`).
+- **Request:** `generateContent` with the photos as inline data and `responseMimeType: application/json`, plus `responseJsonSchema`. If the schema is rejected, it retries with plain JSON and the schema in the instructions. Either way the reply is validated.
+- **Tests:** `tests/unit/vertex.test.mts` runs against a fake Google: URLs, token, model fallback, schema fallback, error messages.
+
+**Alternative: OpenRouter** (below). Its standard DPA asks customers not to send sensitive data unless agreed, and a signed DPA needs its Enterprise plan. It's kept only as a fallback option.
+
+
 - **Provider:** OpenRouter, with the same account set-up and privacy settings as Halo.
 - **Every call sends:**
   ```json

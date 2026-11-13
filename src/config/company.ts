@@ -13,7 +13,7 @@ export const COMPANY = {
 export const SUBPROCESSORS = [
   { name: 'Supabase Inc.', purpose: 'Database, sign-in and file storage (register, patients, notes, photos)', location: 'EU (Ireland / Frankfurt region)', safeguard: 'EU hosting; DPA with Standard Contractual Clauses' },
   { name: 'Vercel Inc.', purpose: 'Web hosting and the app’s servers', location: 'Servers pinned to Dublin (dub1)', safeguard: 'DPA with Standard Contractual Clauses' },
-  { name: 'OpenRouter, Inc.', purpose: 'Routes photos of prescriptions / invoices to an AI reading model — only when you scan', location: 'USA / model provider', safeguard: 'Zero-data-retention endpoints only: nothing is stored or used for training; DPA with SCCs' },
+  { name: 'Google Cloud EMEA Ltd. (Vertex AI)', purpose: 'Reads photos of prescriptions, invoices and register pages with an AI model — only when you scan', location: 'EU (Vertex AI EU multi-region)', safeguard: 'Cloud Data Processing Addendum; data not used to train models; processed in the EU' },
   { name: 'Stripe Payments Europe Ltd.', purpose: 'Subscription billing (no patient data)', location: 'Ireland / EU', safeguard: 'DPA' },
   { name: 'Google Ireland Ltd. (Workspace)', purpose: 'Sending service emails (no patient data)', location: 'EU', safeguard: 'DPA with SCCs' },
 ];

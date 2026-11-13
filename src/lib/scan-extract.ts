@@ -143,13 +143,15 @@ Rules for everything:
 - A human pharmacist verifies every line before it is recorded.`;
 
 export class ScanError extends Error {}
+import type { ReaderConfig } from './reader-config';
+import { vertexAccessToken, vertexUrl, type VertexCredentials } from './vertex';
 
 export type DocFile = { base64: string; mediaType: string };
 
 const userText = (n: number, hint: string) =>
   `${n > 1 ? `These ${n} images are pages of one document. ` : ''}The pharmacist says this is a ${hint}. Extract the controlled-drug lines.`;
 
-export interface ReadConfig<T> { system: string; schema: object; name: string; prompt: string; parse: (raw: string | null | undefined) => T; reader?: { apiKey: string; models: string[] } | null }
+export interface ReadConfig<T> { system: string; schema: object; name: string; prompt: string; parse: (raw: string | null | undefined) => T; reader?: ReaderConfig | null }
 
 export function parseJsonWith<S extends z.ZodTypeAny>(schema: S) {
   return (raw: string | null | undefined): z.output<S> => {
@@ -185,14 +187,15 @@ function parseResult(raw: string | null | undefined): Extraction {
  * Which reader to use. OpenRouter (same account and privacy settings as Halo) when
  * OPENROUTER_API_KEY is set; otherwise Claude directly via ANTHROPIC_API_KEY.
  */
-export async function extractFromDocument(files: DocFile[], hint: 'invoice' | 'prescription' = 'invoice', reader?: { apiKey: string; models: string[] } | null): Promise<{ extraction: Extraction; model: string }> {
+export async function extractFromDocument(files: DocFile[], hint: 'invoice' | 'prescription' = 'invoice', reader?: ReaderConfig | null): Promise<{ extraction: Extraction; model: string }> {
   const { result, model } = await readDocument(files, { system: SYSTEM, schema: JSON_SCHEMA, name: 'cd_extraction', prompt: userText(files.length, hint), parse: parseResult, reader });
   return { extraction: result, model };
 }
 
 /** Read a document with any prompt + JSON schema, using the configured reader. */
 export async function readDocument<T>(files: DocFile[], cfg: ReadConfig<T>): Promise<{ result: T; model: string }> {
-  if (cfg.reader?.apiKey || process.env.OPENROUTER_API_KEY) return extractViaOpenRouter(files, cfg);
+  if (cfg.reader?.provider === 'vertex') return extractViaVertex(files, cfg, cfg.reader);
+  if (cfg.reader?.provider === 'openrouter' || process.env.OPENROUTER_API_KEY) return extractViaOpenRouter(files, cfg);
   if (process.env.ANTHROPIC_API_KEY) return extractViaAnthropic(files, cfg);
   throw new ScanError('Reading documents isn’t available right now. Please enter it by hand.');
 }
@@ -204,8 +207,9 @@ export async function readDocument<T>(files: DocFile[], cfg: ReadConfig<T>): Pro
  * used. Structured JSON output is required of the provider.
  */
 async function extractViaOpenRouter<T>(files: DocFile[], cfg: ReadConfig<T>): Promise<{ result: T; model: string }> {
-  const models = cfg.reader?.models?.length ? cfg.reader.models : (process.env.OPENROUTER_MODELS || '').split(',').map((m) => m.trim()).filter(Boolean);
-  const apiKey = cfg.reader?.apiKey || process.env.OPENROUTER_API_KEY;
+  const r0 = cfg.reader?.provider === 'openrouter' ? cfg.reader : null;
+  const models = r0?.models?.length ? r0.models : (process.env.OPENROUTER_MODELS || '').split(',').map((m) => m.trim()).filter(Boolean);
+  const apiKey = r0?.apiKey || process.env.OPENROUTER_API_KEY;
   if (!models.length) throw new ScanError('Reading documents isn’t available right now. Please enter it by hand.');
 
   const parts = files.map((f) =>
@@ -286,6 +290,62 @@ function explainOpenRouter(f: OpenRouterFailure, models: string[]): string {
   if (/model.*(not|n't) (found|exist|valid)|invalid model|not a valid model/i.test(f.message)) return `OpenRouter doesn’t recognise the model “${models[0]}”. Choose it again from the list in Settings → Document reading.${said}`;
   if (/image|vision|modalit/i.test(f.message)) return `The chosen model can’t read photos. Pick a model from the list in Settings → Document reading (it only shows ones that can).${said}`;
   return `The document could not be read. Please enter it by hand.${said}`;
+}
+
+/**
+ * Google Vertex AI (Gemini) in the EU. Covered by the Google Cloud Data Processing Addendum;
+ * Google doesn't use the data to train its models. Same two-step approach as OpenRouter: ask
+ * for JSON matching the schema; if the API rejects the schema, ask for plain JSON with the
+ * schema in the instructions. The reply is always validated before use.
+ */
+export async function extractViaVertex<T>(files: DocFile[], cfg: ReadConfig<T>, v: { credentials: VertexCredentials; location: string; models: string[] }, fetcher: typeof fetch = fetch): Promise<{ result: T; model: string }> {
+  let token: string;
+  try { token = await vertexAccessToken(v.credentials, fetcher); }
+  catch (e) { throw new ScanError(`Google didn’t accept the service-account key. The site owner can check it in Settings → Document reading. (${e instanceof Error ? e.message.slice(0, 160) : 'sign-in failed'})`); }
+  const parts = [
+    ...files.map((f) => ({ inlineData: { mimeType: f.mediaType, data: f.base64 } })),
+    { text: cfg.prompt },
+  ];
+  const looseSystem = `${cfg.system}\n\nReply with ONLY one JSON object (no prose, no code fences) that matches this JSON Schema exactly, using null where something isn't on the document:\n${JSON.stringify(cfg.schema)}`;
+  let lastMsg = '';
+  for (const model of v.models) {
+    for (const strict of [true, false]) {
+      const body = {
+        systemInstruction: { parts: [{ text: strict ? cfg.system : looseSystem }] },
+        contents: [{ role: 'user', parts }],
+        generationConfig: { temperature: 0, maxOutputTokens: 8192, responseMimeType: 'application/json', ...(strict ? { responseJsonSchema: cfg.schema } : {}) },
+      };
+      let res: Response;
+      try {
+        res = await fetcher(vertexUrl(v.credentials, v.location, model), {
+          method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(body), signal: AbortSignal.timeout(100_000),
+        });
+      } catch { throw new ScanError('Could not reach the document reader. Check the connection and try again.'); }
+      const d: any = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const c = d.candidates?.[0];
+        if (c?.finishReason === 'MAX_TOKENS') throw new ScanError('The document was too long to read in one go. Try one page at a time.');
+        if (!c || ['SAFETY', 'PROHIBITED_CONTENT', 'BLOCKLIST', 'SPII'].includes(c.finishReason)) throw new ScanError('The document could not be read. Please enter it by hand.');
+        const text = (c.content?.parts ?? []).map((p: any) => p.text ?? '').join('');
+        return { result: cfg.parse(text), model: `vertex:${d.modelVersion ?? model}@${v.location}${strict ? '' : ' (json mode)'}` };
+      }
+      const msg = String(d?.error?.message ?? `HTTP ${res.status}`).slice(0, 300);
+      lastMsg = msg;
+      console.error('[scan] vertex error', res.status, model, msg);
+      if (res.status === 401 || res.status === 403) {
+        throw new ScanError(/not been used|disabled|SERVICE_DISABLED/i.test(msg)
+          ? 'The Vertex AI API isn’t switched on in the Google Cloud project. Enable “Vertex AI API”, then try again.'
+          : `Google refused the request — give the service account the “Vertex AI User” role. (Google: “${msg.slice(0, 160)}”)`);
+      }
+      if (res.status === 429) throw new ScanError('The document reader is busy. Wait a moment and try again.');
+      if (res.status === 404) break; // model not served in this location → next model
+      if (res.status === 400 && strict) continue; // e.g. schema not accepted → retry with plain JSON
+      if (res.status >= 500) continue;
+      break;
+    }
+  }
+  throw new ScanError(`The document could not be read. Please enter it by hand. (Google: “${lastMsg.slice(0, 200)}”)`);
 }
 
 async function extractViaAnthropic<T>(files: DocFile[], cfg: ReadConfig<T>): Promise<{ result: T; model: string }> {

@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test:unit": "tsx tests/unit/rules.test.ts",
+    "test:unit": "tsx tests/unit/rules.test.ts && tsx tests/unit/vertex.test.mts",
     "test:rules": "tsx scripts/test-invoice-rules.ts",
     "test:e2e": "node tests/e2e/demo.mjs"
   },

@@ -310,9 +310,12 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
   }
   if (path === '/api/settings/reader/models') return res({ models: [{ id: 'example/vision-model-a', name: 'Example vision model A', prompt_price: 1 }, { id: 'example/vision-model-b', name: 'Example vision model B', prompt_price: 0.5 }] });
   if (path === '/api/settings/reader') {
-    const R = ((S as any).reader ||= { needs_migration: false, has_key: false, hint: null, models: [], updated_at: null, environment_fallback: false });
-    if (method === 'PUT') { if (body.api_key) { R.has_key = true; R.hint = `…${String(body.api_key).slice(-4)}`; } R.models = body.models; }
-    if (method === 'DELETE') { R.has_key = false; R.hint = null; }
+    const R = ((S as any).reader ||= { needs_migration: false, provider: 'openrouter', has_key: false, hint: null, models: [], updated_at: null, environment_fallback: false, vertex: { has_key: false, client_email: null, project: null, location: 'eu' }, locations: [{ id: 'eu', label: 'EU multi-region (recommended — processing stays in the EU)' }, { id: 'europe-west1', label: 'Belgium (europe-west1)' }] });
+    if (method === 'PUT' && body.provider === 'vertex') {
+      if (body.service_account_json) { try { const j = JSON.parse(body.service_account_json); R.vertex = { has_key: true, client_email: j.client_email, project: j.project_id, location: body.location }; } catch { return fail(400, 'That isn’t a valid key file — paste the whole JSON file.'); } }
+      R.provider = 'vertex'; R.vertex.location = body.location;
+    } else if (method === 'PUT') { if (body.api_key) { R.has_key = true; R.hint = `…${String(body.api_key).slice(-4)}`; } R.models = body.models; R.provider = 'openrouter'; }
+    if (method === 'DELETE') { if (url.searchParams.get('provider') === 'vertex') { R.vertex = { has_key: false, client_email: null, project: null, location: 'eu' }; R.provider = 'openrouter'; } else { R.has_key = false; R.hint = null; } }
     return res(R);
   }
   if (path === '/api/integrity') {

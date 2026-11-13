@@ -11,7 +11,7 @@ export default function SecurityPage() {
       <UL>
         <li>The database (registers, patients, notes, photos) is hosted in the EU.</li>
         <li>The app’s servers run in Dublin.</li>
-        <li>Prescription and invoice photos you choose to scan are read by an AI model over a zero-data-retention connection: nothing is stored by the model provider or used for training.</li>
+        <li>Prescription and invoice photos you choose to scan are read by Google’s Gemini model on Google Cloud in the EU, under Google’s Cloud Data Processing Addendum. Google doesn’t use them to train its models.</li>
       </UL>
       <H2>A register that can’t be quietly changed</H2>
       <UL>

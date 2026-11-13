@@ -46,7 +46,8 @@ The Processor will:
 
 ## 6. International transfers
 - Register data is stored in the EU.
-- Where a sub-processor is outside the EEA (e.g. the AI reading model provider, used only for scans and on a zero-data-retention basis), the transfer relies on the EU Standard Contractual Clauses and supplementary measures.
+- Document reading (scans) uses Google Vertex AI in the EU multi-region, so the photos are processed in the EU.
+- Where any sub-processor is established outside the EEA, transfers rely on the EU Standard Contractual Clauses and supplementary measures.
 
 ## 7. Controller obligations
 The Controller:
@@ -84,8 +85,8 @@ The Controller:
   - A paper fallback procedure.
   - Health endpoint monitoring.
 - **AI reading:**
-  - Zero-data-retention endpoints only.
-  - Data collection by the provider denied.
+  - Google Vertex AI in the EU multi-region, under the Cloud Data Processing Addendum.
+  - Customer data isn't used for model training.
   - Results are drafts until a pharmacist signs them.
 - **People:** confidentiality obligations; least-privilege access to production systems.
 

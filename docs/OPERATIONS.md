@@ -42,6 +42,7 @@ Run them in order. Each one is safe to re-run (`if not exists`).
 | 0009_reader_settings | `site_secrets` (encrypted site-wide reader key) |
 | 0010_product_brand | `cd_products.brand` (one register per brand) |
 | 0011_quarantine_destruction_book | `quarantine_items`, `destruction_book` |
+| 0014_vertex_reader | `site_secrets` columns for Google Vertex AI (`reader_provider`, encrypted service-account key, project, location) |
 | 0013_integrity_inspector_2fa | SHA-256 hash chain on `cd_entries` and `audit_log` (backfills existing rows), `verify_register_chain()` / `verify_audit_chain()`, `inspector_links`, `pharmacies.require_2fa` |
 | 0012_reminders_notes_feedback_adjustments | `dispense_reminders`, `notes` + `note_attachments` (private storage bucket `cd-notes`), `feedback` + `feedback_votes`, entry types `adjustment_in` / `adjustment_out` and the updated `cd_ledger` view |
 
