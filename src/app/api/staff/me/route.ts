@@ -3,6 +3,7 @@ import { requireAccount, requireStaff, errorResponse, HttpError } from '@/lib/ac
 import { createServiceClient } from '@/lib/supabase/server';
 import { getSettings } from '@/lib/settings';
 import { isSiteAdmin } from '@/lib/admin';
+import { effectiveStatus } from '@/lib/stripe';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,10 +12,12 @@ export async function GET() {
   try {
     const account = await requireAccount();
     const db = createServiceClient();
-    const { data: pharmacy } = await db.from('pharmacies').select('id, name, address, psi_premises_number, subscription_status, trial_ends_at, current_period_end, cancel_at_period_end').eq('id', account.pharmacyId).single();
+    const { data: pharmacy } = await db.from('pharmacies').select('id, name, address, psi_premises_number, subscription_status, subscription_id, trial_ends_at, current_period_end, cancel_at_period_end').eq('id', account.pharmacyId).single();
     const st = await getSettings(db, account.pharmacyId);
     const halo = st.halo_enabled;
     const owner = isSiteAdmin(account.email);
+    // Free month without a card: show 'trial_ended' once it runs out; never send the Stripe id itself.
+    if (pharmacy) { const p = pharmacy as any; Object.assign(p, { subscription_status: effectiveStatus(p), has_subscription: !!p.subscription_id }); delete p.subscription_id; }
     // The site owner's pharmacy is a permanent subscription: no trial, no billing prompts.
     if (pharmacy && owner) Object.assign(pharmacy, { subscription_status: 'complimentary', trial_ends_at: null, cancel_at_period_end: false });
     if (pharmacy) Object.assign(pharmacy, { is_site_admin: owner, halo_enabled: halo, lock_minutes: st.lock_minutes, locum_default_days: st.locum_default_days });

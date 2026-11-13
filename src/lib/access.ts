@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceClient } from '@/lib/supabase/server';
 import { STAFF_COOKIE, decodeStaffSession, encodeStaffSession, cookieOptionsFor } from '@/lib/staff-session';
 import type { StaffRole } from '@/lib/roles';
-import { canWrite } from '@/lib/stripe';
+import { canWrite, effectiveStatus } from '@/lib/stripe';
 import { isSiteAdmin } from '@/lib/admin';
 
 export class HttpError extends Error {
@@ -67,9 +67,10 @@ export async function requireStaff(allowed?: (r: StaffRole) => boolean, opts: { 
     throw new HttpError(403, 'Your role does not allow this action', 'FORBIDDEN');
   }
   if (opts.write) {
-    const { data: ph } = await db.from('pharmacies').select('subscription_status').eq('id', account.pharmacyId).single();
-    if (!canWrite(ph?.subscription_status) && !isSiteAdmin(account.email)) {
-      throw new HttpError(402, ph?.subscription_status ? 'Your subscription has ended. The register is read-only until it is reactivated.' : 'Start your free month to begin recording entries.', 'READ_ONLY');
+    const { data: ph } = await db.from('pharmacies').select('subscription_status, trial_ends_at, subscription_id').eq('id', account.pharmacyId).single();
+    const st = effectiveStatus(ph);
+    if (!canWrite(st) && !isSiteAdmin(account.email)) {
+      throw new HttpError(402, st === 'trial_ended' ? 'Your free month has ended. Subscribe in Billing to keep recording — your register stays readable.' : st ? 'Your subscription has ended. The register is read-only until it is reactivated.' : 'Start your free month to begin recording entries.', 'READ_ONLY');
     }
   }
   // Sliding idle timeout: any authenticated activity extends the lock timer.

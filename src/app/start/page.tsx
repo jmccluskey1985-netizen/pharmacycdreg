@@ -8,7 +8,7 @@ import { PricingCard } from '@/components/pricing-card';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { DEMO } from '@/lib/demo/flag';
 
-// "Start your free month": create pharmacy + login → sign in → Stripe Checkout.
+// "Start your free month": create pharmacy + login → sign in → dashboard (no card needed).
 export default function StartPage() {
   const [f, setF] = useState({ pharmacy_name: '', address: '', psi_premises_number: '', contact_name: '', contact_phone: '', email: '', password: '', accept_terms: false });
   const [busy, setBusy] = useState(false);
@@ -30,14 +30,8 @@ export default function StartPage() {
       const { error: signInErr } = await supabase.auth.signInWithPassword({ email: f.email, password: f.password });
       if (signInErr) throw new Error('Account created — please sign in on the home page to continue.');
 
-      const co = await fetch('/api/billing/checkout', { method: 'POST' });
-      const cd = await co.json().catch(() => ({}));
-      if (!co.ok || !cd.url) {
-        // Account exists; let them finish billing from inside the dashboard.
-        window.location.href = '/dashboard/billing';
-        return;
-      }
-      window.location.href = cd.url;
+      // No card: straight into the register; the countdown and Subscribe button are in the dashboard.
+      window.location.href = '/dashboard';
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Something went wrong';
       setError(/failed to fetch|network/i.test(msg) ? 'Could not reach the login server. The site\'s Supabase address (SUPABASE_URL in Vercel) is missing or wrong.' : msg);
@@ -56,7 +50,7 @@ export default function StartPage() {
         <form onSubmit={submit} className="card space-y-4 sm:p-8">
           <div>
             <h1 className="text-2xl font-bold">Start your free month</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Set up your pharmacy in two minutes. You&apos;ll add your card on the next screen — nothing is charged for 30 days.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Set up your pharmacy in two minutes. No card needed — your free month starts now, and you subscribe from Billing when you&apos;re ready.</p>
           </div>
           {error && <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
 
@@ -85,7 +79,7 @@ export default function StartPage() {
           <button className="btn-primary w-full text-base" disabled={busy}>
             {busy ? <><Loader2 className="h-5 w-5 animate-spin" /> Setting up…</> : 'Continue to free month'}
           </button>
-          <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground"><Lock className="h-3.5 w-3.5" /> Secure card setup by Stripe · €0 today</p>
+          <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground"><Lock className="h-3.5 w-3.5" /> No card needed · 30 days free</p>
         </form>
 
         <div className="lg:sticky lg:top-6 lg:self-start">

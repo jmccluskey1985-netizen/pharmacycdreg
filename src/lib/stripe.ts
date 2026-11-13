@@ -23,6 +23,18 @@ export function canWrite(status: string | null | undefined): boolean {
   return status === 'trialing' || status === 'active' || status === 'past_due' || status === 'complimentary';
 }
 
+/**
+ * The status that counts today. The free month starts at sign-up with no card: it's
+ * 'trialing' with no Stripe subscription, and once trial_ends_at passes it becomes
+ * 'trial_ended' (read-only) until the pharmacy subscribes.
+ */
+export function effectiveStatus(ph: { subscription_status?: string | null; trial_ends_at?: string | null; subscription_id?: string | null } | null | undefined): string | null {
+  if (!ph) return null;
+  const s = ph.subscription_status ?? null;
+  if (s === 'trialing' && !ph.subscription_id && ph.trial_ends_at && new Date(ph.trial_ends_at).getTime() < Date.now()) return 'trial_ended';
+  return s;
+}
+
 export function mapStripeStatus(s: string): SubscriptionStatus {
   return (['trialing', 'active', 'past_due', 'canceled', 'unpaid', 'incomplete', 'incomplete_expired', 'paused'].includes(s) ? s : 'canceled') as SubscriptionStatus;
 }

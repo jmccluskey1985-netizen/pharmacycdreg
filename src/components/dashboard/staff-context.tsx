@@ -7,7 +7,7 @@ import type { StaffRole } from '@/lib/roles';
 export interface ActiveStaff { id: string; full_name: string; role: StaffRole; psi_number: string | null }
 export interface Pharmacy {
   id: string; name: string; address: string; psi_premises_number: string | null;
-  subscription_status: string | null; trial_ends_at: string | null; current_period_end: string | null; cancel_at_period_end: boolean; halo_enabled?: boolean; is_site_admin?: boolean; lock_minutes?: number; locum_default_days?: number;
+  subscription_status: string | null; trial_ends_at: string | null; current_period_end: string | null; cancel_at_period_end: boolean; halo_enabled?: boolean; is_site_admin?: boolean; has_subscription?: boolean; lock_minutes?: number; locum_default_days?: number;
 }
 
 interface Ctx {

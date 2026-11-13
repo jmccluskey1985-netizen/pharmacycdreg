@@ -18,8 +18,14 @@ export async function startCheckout() {
 }
 
 // Never locks the register. Shows: start trial → trial countdown → payment issue → read-only.
+export async function startFreeMonth() {
+  const res = await fetch('/api/billing/start-trial', { method: 'POST' });
+  const d = await res.json().catch(() => ({}));
+  if (!res.ok) alert(d.error || 'Could not start the free month');
+}
+
 export function BillingBanner() {
-  const { pharmacy, staff } = useStaff();
+  const { pharmacy, staff, refresh } = useStaff();
   const path = usePathname();
   const [busy, setBusy] = useState(false);
   if (!pharmacy || !staff || path.startsWith('/dashboard/billing')) return null;
@@ -33,11 +39,37 @@ export function BillingBanner() {
         <Sparkles className="h-6 w-6 flex-shrink-0 text-brand" />
         <div className="flex-1">
           <p className="font-semibold">Start your free month to begin recording</p>
-          <p className="text-sm text-white/75">€0 today · then {formatEuro(PLAN.price)}/month{PLAN.originalPrice ? <> (<s>{formatEuro(PLAN.originalPrice)}</s> launch price)</> : null} · cancel any time</p>
+          <p className="text-sm text-white/75">No card needed · then {formatEuro(PLAN.price)}/month{PLAN.originalPrice ? <> (<s>{formatEuro(PLAN.originalPrice)}</s> launch price)</> : null} if you subscribe</p>
         </div>
         {manager ? (
-          <button onClick={go} disabled={busy} className="btn bg-brand font-semibold text-white hover:bg-brand/90">{busy && <Loader2 className="h-4 w-4 animate-spin" />} Start {FREE_TRIAL_DAYS}-day free trial</button>
+          <button onClick={async () => { setBusy(true); await startFreeMonth(); await refresh(); setBusy(false); }} disabled={busy} className="btn bg-brand font-semibold text-white hover:bg-brand/90">{busy && <Loader2 className="h-4 w-4 animate-spin" />} Start {FREE_TRIAL_DAYS}-day free month</button>
         ) : <p className="text-sm text-white/75">Ask your supervising pharmacist to start it.</p>}
+      </div>
+    );
+  }
+  // Free month with no card yet: always show the countdown with a Subscribe button.
+  if (s === 'trialing' && pharmacy.trial_ends_at && !pharmacy.has_subscription) {
+    const d = Math.max(0, daysUntil(pharmacy.trial_ends_at));
+    const urgent = d <= 7;
+    return (
+      <div className={`no-print mb-6 flex flex-wrap items-center gap-3 rounded-xl px-4 py-3 text-sm ${urgent ? 'bg-gradient-to-r from-brand-dark to-brand-deep text-white' : 'border border-brand/40 bg-brand/10'}`}>
+        <Sparkles className={`h-4 w-4 ${urgent ? 'text-brand' : 'text-brand'}`} />
+        <span className="flex-1">
+          Free month: <b>{d === 0 ? 'ends today' : `${d} day${d === 1 ? '' : 's'} left`}</b>
+          {' '}· then {formatEuro(PLAN.price)}/month{PLAN.originalPrice ? <> (launch price, normally {formatEuro(PLAN.originalPrice)})</> : null}.
+          {' '}{urgent ? 'Subscribe to keep recording after it ends.' : 'Subscribe any time — you won’t be charged until the free month ends.'}
+        </span>
+        {manager ? <button onClick={go} disabled={busy} className={`btn py-1.5 font-semibold ${urgent ? 'bg-brand text-white hover:bg-brand/90' : 'btn-primary'}`}>{busy && <Loader2 className="h-4 w-4 animate-spin" />} Subscribe</button>
+          : <span className={urgent ? 'text-white/75' : 'text-muted-foreground'}>Ask your supervising pharmacist to subscribe.</span>}
+      </div>
+    );
+  }
+  if (s === 'trial_ended') {
+    return (
+      <div className="no-print mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-muted px-4 py-3 text-sm">
+        <Eye className="h-4 w-4" />
+        <span className="flex-1"><b>Your free month has ended.</b> The register is read-only — you can still view, search, print and export it. Subscribe to keep recording; everything you entered is kept.</span>
+        {manager && <button onClick={go} disabled={busy} className="btn-primary py-2 text-sm">{busy && <Loader2 className="h-4 w-4 animate-spin" />} Subscribe</button>}
       </div>
     );
   }

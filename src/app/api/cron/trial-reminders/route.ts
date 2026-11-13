@@ -10,9 +10,12 @@ const BOUNDARIES: Record<number, string> = { 7: 't_minus_7', 3: 't_minus_3', 1: 
 const daysUntil = (iso: string) => Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' });
 
-function reminderHtml(name: string, days: number, endsAt: string, cancelling: boolean, site: string) {
+function reminderHtml(name: string, days: number, endsAt: string, cancelling: boolean, site: string, noCard = false) {
   const when = days === 0 ? 'today' : days === 1 ? 'tomorrow' : `in ${days} days`;
-  const body = cancelling
+  // Free month started without a card: nudge to subscribe (nothing renews by itself).
+  const body = noCard
+    ? `<p>Your PharmacyCDReg free month for <b>${name}</b> ends ${when} (${fmtDate(endsAt)}).</p><p>To keep recording after that, subscribe for <b>${formatEuro(PLAN.price)}/month + VAT</b>${PLAN.originalPrice ? ` (launch price, normally ${formatEuro(PLAN.originalPrice)})` : ''}. Subscribe now and you won't be charged until the free month ends.</p><p><a href="${site}/dashboard/billing">Subscribe in Billing</a>. If you don't, your register simply becomes read-only — you can still view, print and export it, and nothing is deleted.</p>`
+    : cancelling
     ? `<p>Your PharmacyCDReg free month for <b>${name}</b> ends ${when} (${fmtDate(endsAt)}) and is set not to renew. After that your register becomes <b>read-only</b> — you can still view, print and export it, but not add entries.</p><p>Changed your mind? Keep it running from <a href="${site}/dashboard/billing">Billing</a>.</p>`
     : `<p>Your PharmacyCDReg free month for <b>${name}</b> ends ${when} (${fmtDate(endsAt)}).</p><p>You don't need to do anything to keep going — your card will be charged <b>${formatEuro(PLAN.price)}/month + VAT</b>${PLAN.originalPrice ? ` (launch price, normally ${formatEuro(PLAN.originalPrice)})` : ''}.</p><p>Not for you? Cancel any time before then from <a href="${site}/dashboard/billing">Billing</a> and you won't be charged. Your register is never deleted.</p>`;
   return `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#0f172a">
@@ -31,7 +34,7 @@ export async function GET(req: Request) {
   const db = createServiceClient();
   const { data, error } = await db
     .from('pharmacies')
-    .select('id, name, billing_email, trial_ends_at, cancel_at_period_end, last_reminder_key')
+    .select('id, name, billing_email, trial_ends_at, cancel_at_period_end, last_reminder_key, subscription_id')
     .eq('subscription_status', 'trialing')
     .not('trial_ends_at', 'is', null)
     .not('billing_email', 'is', null);
@@ -46,7 +49,7 @@ export async function GET(req: Request) {
     const key = `${kind}:${today}`;
     if (ph.last_reminder_key === key) continue;
     const subject = days === 0 ? 'Your PharmacyCDReg free month ends today' : `Your PharmacyCDReg free month ends in ${days} day${days === 1 ? '' : 's'}`;
-    const r = await sendEmail({ to: ph.billing_email!, subject, html: reminderHtml(ph.name, days, ph.trial_ends_at!, ph.cancel_at_period_end, site) });
+    const r = await sendEmail({ to: ph.billing_email!, subject, html: reminderHtml(ph.name, days, ph.trial_ends_at!, ph.cancel_at_period_end, site, !(ph as any).subscription_id) });
     if (r.sent) await db.from('pharmacies').update({ last_reminder_key: key }).eq('id', ph.id);
     results.push({ id: ph.id, kind, sent: r.sent });
   }

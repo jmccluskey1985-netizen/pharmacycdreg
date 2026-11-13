@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { CreditCard, ExternalLink, Loader2, ShieldCheck } from 'lucide-react';
 import { useStaff } from '@/components/dashboard/staff-context';
-import { startCheckout } from '@/components/dashboard/billing-banner';
+import { startCheckout, startFreeMonth } from '@/components/dashboard/billing-banner';
 import { PricingCard } from '@/components/pricing-card';
 import { api, ApiError } from '@/lib/api';
 import { PLAN, formatEuro } from '@/config/pricing';
@@ -21,7 +21,7 @@ const LABEL: Record<string, string> = {
 const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' }) : '—');
 
 export default function BillingPage() {
-  const { pharmacy } = useStaff();
+  const { pharmacy, refresh } = useStaff();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   if (!pharmacy) return null;
@@ -47,12 +47,25 @@ export default function BillingPage() {
           <CreditCard className="h-6 w-6 text-brand" />
           <div><p className="font-semibold">Permanent subscription</p><p className="text-sm text-muted-foreground">Full access with no charge and no end date. Nothing to manage here.</p></div>
         </div>
+      ) : (s === 'trialing' && !pharmacy.has_subscription) || s === 'trial_ended' ? (
+        <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+          <div className="card">
+            <h2 className="text-lg font-semibold">{s === 'trial_ended' ? 'Your free month has ended' : `Free month — ends ${fmt(pharmacy.trial_ends_at)}`}</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {s === 'trial_ended'
+                ? <>Subscribe to keep recording. The register stays readable meanwhile, and everything already entered is kept.</>
+                : <>No card was needed to start. Subscribe now and you won&apos;t be charged until the free month ends — then it&apos;s {formatEuro(PLAN.price)}/month + VAT at the launch price. Cancel any time.</>}
+            </p>
+            <button onClick={async () => { setBusy(true); await startCheckout(); setBusy(false); }} disabled={busy} className="btn-brand mt-5 w-full">{busy && <Loader2 className="h-4 w-4 animate-spin" />} Subscribe — {formatEuro(PLAN.price)}/month</button>
+          </div>
+          <PricingCard cta={false} />
+        </div>
       ) : !s ? (
         <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
           <div className="card">
             <h2 className="text-lg font-semibold">Start your free month</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Add a card with Stripe. Nothing is charged for 30 days. After that it&apos;s {formatEuro(PLAN.price)}/month + VAT at the launch price. Cancel any time before then and you won&apos;t pay a cent.</p>
-            <button onClick={async () => { setBusy(true); await startCheckout(); setBusy(false); }} disabled={busy} className="btn-brand mt-5 w-full">{busy && <Loader2 className="h-4 w-4 animate-spin" />} Start free month</button>
+            <p className="mt-2 text-sm text-muted-foreground">No card needed for the free month. After that it&apos;s {formatEuro(PLAN.price)}/month + VAT at the launch price. Cancel any time before then and you won&apos;t pay a cent.</p>
+            <button onClick={async () => { setBusy(true); await startFreeMonth(); await refresh(); setBusy(false); }} disabled={busy} className="btn-brand mt-5 w-full">{busy && <Loader2 className="h-4 w-4 animate-spin" />} Start free month</button>
           </div>
           <PricingCard cta={false} />
         </div>

@@ -6,7 +6,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { hashKey } from '@/lib/integration-keys';
 import { liveRegisters, matchRegister } from '@/lib/match';
 import { currentBalance } from '@/lib/registers';
-import { canWrite } from '@/lib/stripe';
+import { canWrite, effectiveStatus } from '@/lib/stripe';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { registerExemption } from '@/lib/cd-catalogue';
 
@@ -81,8 +81,8 @@ export async function POST(req: Request) {
   else if (d.unit && PACK_UNIT.test(d.unit.trim())) problem = `Quantity was sent as ${d.quantity} ${d.unit}, not units. Enter the number of tablets/ml/patches`;
   else if (!match) problem = `No open register matches ${d.drug.name} ${d.drug.strength}${d.drug.form ? ` ${d.drug.form}` : ''}`;
 
-  const { data: ph } = await db.from('pharmacies').select('subscription_status').eq('id', k.pharmacy_id).single();
-  if (!problem && !canWrite(ph?.subscription_status)) problem = 'Register is read-only (no active subscription)';
+  const { data: ph } = await db.from('pharmacies').select('subscription_status, trial_ends_at, subscription_id').eq('id', k.pharmacy_id).single();
+  if (!problem && !canWrite(effectiveStatus(ph))) problem = 'Register is read-only (no active subscription)';
 
   if (!problem && k.auto_post) {
     const psi = d.pharmacist?.psi_number?.replace(/\D/g, '');

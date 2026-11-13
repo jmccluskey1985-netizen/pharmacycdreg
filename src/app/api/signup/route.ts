@@ -1,3 +1,4 @@
+import { FREE_TRIAL_DAYS } from '@/config/pricing';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createServiceClient } from '@/lib/supabase/server';
@@ -16,7 +17,7 @@ const Body = z.object({
 });
 
 // Self sign-up: creates the pharmacy + its login. The client then signs in and is
-// sent to Stripe Checkout for the free month (card required, like PharmacyConsultation.ie).
+// straight into a free month — no card needed; they subscribe from Billing before it ends.
 export async function POST(req: Request) {
   try {
     return await handle(req);
@@ -53,7 +54,9 @@ async function handle(req: Request) {
 
   const { data: ph, error: phErr } = await db
     .from('pharmacies')
-    .insert({ name: b.pharmacy_name, address: b.address, psi_premises_number: b.psi_premises_number || null, contact_name: b.contact_name, contact_phone: b.contact_phone, billing_email: b.email })
+    .insert({ name: b.pharmacy_name, address: b.address, psi_premises_number: b.psi_premises_number || null, contact_name: b.contact_name, contact_phone: b.contact_phone, billing_email: b.email,
+      // Free month starts now — no card needed. They subscribe from Billing before it runs out.
+      subscription_status: 'trialing', trial_ends_at: new Date(Date.now() + FREE_TRIAL_DAYS * 864e5).toISOString() })
     .select('id')
     .single();
   if (phErr || !ph) {
@@ -68,7 +71,7 @@ async function handle(req: Request) {
   await sendEmail({
     to: adminEmail(),
     subject: `New PharmacyCDReg sign-up: ${b.pharmacy_name}`,
-    html: `<p><b>${b.pharmacy_name}</b>, ${b.address}</p><p>${b.contact_name} · ${b.contact_phone} · ${b.email}${b.psi_premises_number ? `<br>PSI premises ${b.psi_premises_number}` : ''}</p><p>Next step for them: Stripe checkout (free month).</p>`,
+    html: `<p><b>${b.pharmacy_name}</b>, ${b.address}</p><p>${b.contact_name} · ${b.contact_phone} · ${b.email}${b.psi_premises_number ? `<br>PSI premises ${b.psi_premises_number}` : ''}</p><p>Free month started (no card). They subscribe from Billing.</p>`,
   });
 
   return NextResponse.json({ ok: true });

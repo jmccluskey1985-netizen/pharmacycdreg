@@ -28,7 +28,7 @@ export function PricingCard({ cta = true }: { cta?: boolean }) {
         ))}
       </ul>
       {cta && <Link href="/start" className="btn mt-6 w-full bg-brand text-base font-semibold text-white hover:bg-brand/90">Start your free month</Link>}
-      <p className="mt-3 text-center text-xs text-white/60">Card required · €0 today · no charge if you cancel before day 30</p>
+      <p className="mt-3 text-center text-xs text-white/60">No card needed · 30 days free · subscribe when you’re ready</p>
     </div>
   );
 }
