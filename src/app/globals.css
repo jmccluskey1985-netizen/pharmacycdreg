@@ -95,6 +95,12 @@
   box-shadow: 0 25px 50px -12px rgba(0,0,0,.35);
 }
 .book.open .book-cover { transform: rotateY(-178deg); box-shadow: 0 0 0 rgba(0,0,0,0); pointer-events: none; }
+/* Landing demos: scanner sweep and a ringing bell. */
+.scan-sweep { animation: scanSweep 1.6s ease-in-out; top: -2rem; }
+@keyframes scanSweep { from { top: -2rem; } to { top: 100%; } }
+.bell-ring { animation: bellRing 1.2s ease-in-out infinite; transform-origin: 50% 10%; }
+@keyframes bellRing { 0%,60%,100% { transform: rotate(0); } 10% { transform: rotate(16deg); } 20% { transform: rotate(-14deg); } 30% { transform: rotate(10deg); } 40% { transform: rotate(-6deg); } }
+@media (prefers-reduced-motion: reduce) { .scan-sweep, .bell-ring { animation: none; } }
 /* Landing page ticks: circle pops in, then the tick draws itself. */
 .ticks .tick-item { opacity: 0; transform: translateY(6px); }
 .ticks .tick-circle { transform: scale(.4); transform-origin: center; transform-box: fill-box; }

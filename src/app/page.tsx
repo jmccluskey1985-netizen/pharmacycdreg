@@ -9,6 +9,7 @@ import { PricingCard } from '@/components/pricing-card';
 import { LoginCard } from '@/components/login-card';
 import { DEMO } from '@/lib/demo/flag';
 import { RegisterCoverPreview } from '@/components/register-cover-preview';
+import { LandingDemos } from '@/components/landing-demos';
 import { homepageJsonLd, jsonLd } from '@/lib/structured-data';
 
 const FEATURES = [
@@ -21,7 +22,8 @@ const FEATURES = [
 ];
 
 const PREVIEWS = [
-  { src: '/previews/register-book.webp', alt: 'A register page laid out like the paper Controlled Drugs Register, with a correction struck through and footnoted', title: 'The register, page by page', text: 'Same columns as the paper register: date, name and address, authority, amount obtained or supplied, running balance, pharmacist. Corrections are struck through and footnoted, never hidden.' },
+  // (the register page itself is shown by the cover animation at the top)
+  { src: '/previews/register-book.webp', hidden: true, alt: 'A register page laid out like the paper Controlled Drugs Register, with a correction struck through and footnoted', title: 'The register, page by page', text: 'Same columns as the paper register: date, name and address, authority, amount obtained or supplied, running balance, pharmacist. Corrections are struck through and footnoted, never hidden.' },
   { src: '/previews/invoice-scan.webp', alt: 'Invoice scan result: OxyNorm 5mg capsules, 2 packs × 56 = 112, matched to the OxyNorm 5mg register', title: 'Invoices read for you', text: 'Photograph the wholesaler invoice. Controlled drug lines are picked out, packs × pack size worked out, matched to the right register, and Schedule 5 lines like Oramorph 10mg/5ml left out. You check and confirm each line.' },
 ];
 
@@ -175,11 +177,11 @@ export default function LandingPage() {
             Spend less time on <RotatingWords className="text-brand" words={['CD record-keeping', 'running balances', 'stock checks', 'finding the right page', 'inspections']} />
             <span className="block text-muted-foreground">and more time with your patients.</span>
           </FadeIn>
-          <FadeIn delay={250} as="p" className="mt-3 max-w-xl text-lg text-muted-foreground">
-            More accurate records, quicker entries and no more rooting through tattered CD books to find the right page. Every receipt, supply and destruction of Schedule 2 drugs is recorded, balanced and searchable, built around the IPU eCDR requirements for Irish community pharmacies.
-          </FadeIn>
-          <FadeIn delay={350} className="mt-6 max-w-xl">
+          <FadeIn delay={200} className="mt-5 max-w-xl">
             <RegisterCoverPreview src="/previews/register-book.webp" alt="A register page laid out like the paper Controlled Drugs Register" delay={1500} />
+          </FadeIn>
+          <FadeIn delay={300} as="p" className="mt-5 max-w-xl text-lg text-muted-foreground">
+            More accurate records, quicker entries and no more rooting through tattered CD books to find the right page. Every receipt, supply and destruction of Schedule 2 drugs is recorded, balanced and searchable, built around the IPU eCDR requirements for Irish community pharmacies.
           </FadeIn>
           <TickList className="mt-6 max-w-xl" items={['Running balances calculated for you', 'Duplicate and error checks on every entry', 'Tamper-evident audit trail', 'Read-only links for inspectors', 'Works on phone, tablet and PC', 'Your data stays in the EU']} />
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -196,21 +198,26 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Animated feature demos */}
+      <section className="border-t border-border">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+          <p className="text-sm font-semibold uppercase tracking-widest text-brand">See it in action</p>
+          <h2 className="mt-2 text-3xl font-bold tracking-tight text-brand-dark dark:text-white">The jobs that eat your time, done in seconds</h2>
+          <div className="mt-10"><LandingDemos /></div>
+        </div>
+      </section>
+
       {/* Previews */}
       <section className="border-t border-border bg-card/60">
         <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
           <p className="text-sm font-semibold uppercase tracking-widest text-brand">A look inside</p>
           <h2 className="mt-2 text-3xl font-bold tracking-tight text-brand-dark dark:text-white">Built for the dispensary counter</h2>
           <div className="mt-10 space-y-14">
-            {PREVIEWS.map((p, i) => (
+            {PREVIEWS.filter((p: any) => !p.hidden).map((p, i) => (
               <div key={p.src} className={`grid items-center gap-6 lg:gap-10 ${i % 2 ? 'lg:grid-cols-[1fr_1.6fr]' : 'lg:grid-cols-[1.6fr_1fr]'}`}>
-                {i === 0 ? (
-                  <figure><RegisterCoverPreview src={p.src} alt={p.alt} /></figure>
-                ) : (
-                  <figure className={`overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border ${i % 2 ? 'lg:order-2' : ''}`}>
-                    <img src={p.src} alt={p.alt} loading="lazy" className="w-full" />
-                  </figure>
-                )}
+                <figure className={`overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border ${i % 2 ? 'lg:order-2' : ''}`}>
+                  <img src={p.src} alt={p.alt} loading="lazy" className="w-full" />
+                </figure>
                 <div className={i % 2 ? 'lg:order-1' : ''}>
                   <h3 className="text-2xl font-bold">{p.title}</h3>
                   <p className="mt-2 text-lg text-muted-foreground">{p.text}</p>
