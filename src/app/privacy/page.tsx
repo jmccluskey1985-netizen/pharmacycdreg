@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 import { PublicPage, H2, P, UL } from '@/components/public/public-page';
+import { infoPageJsonLd, jsonLd } from '@/lib/structured-data';
 import { COMPANY, SUBPROCESSORS } from '@/config/company';
 
-export const metadata: Metadata = { title: 'Privacy notice: PharmacyCDReg.ie' };
+export const metadata: Metadata = { alternates: { canonical: '/privacy' }, title: 'Privacy notice: PharmacyCDReg.ie' };
 
 export default function PrivacyPage() {
   return (
     <PublicPage title="Privacy notice" intro={`Last updated ${COMPANY.updated}.`}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(infoPageJsonLd('/privacy', 'Privacy notice', COMPANY.updatedIso)) }} />
       <H2>Who we are</H2>
       <P>PharmacyCDReg.ie is provided by {COMPANY.legalName}, {COMPANY.address} (“we”). Contact: <a className="text-primary underline" href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a>.</P>
 

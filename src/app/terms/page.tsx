@@ -1,13 +1,15 @@
 import type { Metadata } from 'next';
 import { PublicPage, H2, P, UL } from '@/components/public/public-page';
+import { infoPageJsonLd, jsonLd } from '@/lib/structured-data';
 import { COMPANY } from '@/config/company';
 import { PLAN, formatEuro } from '@/config/pricing';
 
-export const metadata: Metadata = { title: 'Terms of service: PharmacyCDReg.ie' };
+export const metadata: Metadata = { alternates: { canonical: '/terms' }, title: 'Terms of service: PharmacyCDReg.ie' };
 
 export default function TermsPage() {
   return (
     <PublicPage title="Terms of service" intro={`Last updated ${COMPANY.updated}. These terms are between ${COMPANY.legalName} (“we”) and the pharmacy business using PharmacyCDReg.ie (“you”).`}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(infoPageJsonLd('/terms', 'Terms of service', COMPANY.updatedIso)) }} />
       <H2>1. The service</H2>
       <P>An electronic Controlled Drug Register and related records for community pharmacies in Ireland, provided online as a subscription.</P>
       <H2>2. Your responsibilities</H2>

@@ -7,9 +7,14 @@ import { ErrorListener } from '@/components/error-listener';
 export const metadata: Metadata = {
   title: 'PharmacyCDReg.ie: Electronic Controlled Drug Register',
   description: 'Electronic Controlled Drug Register for Irish community pharmacies.',
-  robots: { index: false, follow: false },
+  metadataBase: new URL('https://pharmacycdreg.ie'),
+  // Public pages are indexable; the app and private routes set noindex (and robots.txt disallows them).
+  robots: { index: true, follow: true },
+  alternates: { canonical: '/' },
+  openGraph: { type: 'website', locale: 'en_IE', siteName: 'PharmacyCDReg.ie', title: 'PharmacyCDReg.ie: your digital Controlled Drugs Register', description: 'Save time on CD record-keeping. Running balances, a tamper-evident audit trail and inspection-ready reports for Irish community pharmacies.', images: ['/previews/register-cover.webp'] },
   appleWebApp: { capable: true, title: 'CD Register', statusBarStyle: 'default' },
-  icons: { apple: '/apple-touch-icon.png' },
+  // Tab icon: the green pin with the white cross (same mark as the logo).
+  icons: { icon: [{ url: '/favicon.ico', sizes: '48x48' }, { url: '/icon.svg', type: 'image/svg+xml' }, { url: '/favicon-32.png', type: 'image/png', sizes: '32x32' }], apple: '/apple-touch-icon.png' },
 };
 
 export const viewport: Viewport = {

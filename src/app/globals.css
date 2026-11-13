@@ -95,6 +95,19 @@
   box-shadow: 0 25px 50px -12px rgba(0,0,0,.35);
 }
 .book.open .book-cover { transform: rotateY(-178deg); box-shadow: 0 0 0 rgba(0,0,0,0); pointer-events: none; }
+/* Landing page ticks: circle pops in, then the tick draws itself. */
+.ticks .tick-item { opacity: 0; transform: translateY(6px); }
+.ticks .tick-circle { transform: scale(.4); transform-origin: center; transform-box: fill-box; }
+.ticks .tick-path { stroke-dasharray: 18; stroke-dashoffset: 18; }
+.ticks.on .tick-item { animation: tickIn .45s ease-out forwards; animation-delay: var(--d); }
+.ticks.on .tick-circle { animation: tickPop .45s cubic-bezier(.3,1.6,.5,1) forwards; animation-delay: var(--d); }
+.ticks.on .tick-path { animation: tickDraw .45s ease-out forwards; animation-delay: calc(var(--d) + .25s); }
+@keyframes tickIn { to { opacity: 1; transform: none; } }
+@keyframes tickPop { to { transform: scale(1); } }
+@keyframes tickDraw { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .ticks .tick-item, .ticks .tick-circle, .ticks .tick-path { opacity: 1; transform: none; stroke-dashoffset: 0; animation: none !important; }
+}
 /* Landing page: a slower, more deliberate turn. */
 .book-slow .book-cover { transition-duration: 2.6s, 2.6s; transition-timing-function: cubic-bezier(.45,.05,.3,1); }
 .book-pages { opacity: 0; transform: scale(.985); transition: opacity .5s .55s, transform .6s .5s; }

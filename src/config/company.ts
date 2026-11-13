@@ -7,6 +7,7 @@ export const COMPANY = {
   address: process.env.NEXT_PUBLIC_COMPANY_ADDRESS || 'Ireland',
   email: process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'support@pharmacycdreg.ie',
   updated: '13 November 2026',
+  updatedIso: '2026-11-13',
 };
 
 /** Companies that process data on our behalf (GDPR Art. 28 sub-processors). */

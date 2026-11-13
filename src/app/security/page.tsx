@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 import { PublicPage, H2, P, UL } from '@/components/public/public-page';
+import { infoPageJsonLd, jsonLd } from '@/lib/structured-data';
 import { COMPANY } from '@/config/company';
 
-export const metadata: Metadata = { title: 'Security: PharmacyCDReg.ie', description: 'How PharmacyCDReg.ie protects your Controlled Drug Register and patient data.' };
+export const metadata: Metadata = { alternates: { canonical: '/security' }, title: 'Security: PharmacyCDReg.ie', description: 'How PharmacyCDReg.ie protects your Controlled Drug Register and patient data.' };
 
 export default function SecurityPage() {
   return (
     <PublicPage title="Security & data protection" intro="Your CD register is a legal record with patient data in it. This is how we look after it.">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(infoPageJsonLd('/security', 'Security & data protection', COMPANY.updatedIso)) }} />
       <H2>Your data stays in the EU</H2>
       <UL>
         <li>The database (registers, patients, notes, photos) is hosted in the EU.</li>

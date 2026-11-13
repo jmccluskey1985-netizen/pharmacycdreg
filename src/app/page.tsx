@@ -3,18 +3,19 @@
 import { PublicFooter } from '@/components/public/public-page';
 import { Suspense, useEffect, useState } from 'react';
 import { ShieldCheck, ScanLine, BookOpen, Search, Loader2, CheckCircle2, Lock, X, Plug, Clock, Target, BadgeCheck } from 'lucide-react';
-import { FadeIn, RotatingWords } from '@/components/fade-in';
+import { FadeIn, RotatingWords, TickList } from '@/components/fade-in';
 import { Logo } from '@/components/logo';
 import { PricingCard } from '@/components/pricing-card';
 import { LoginCard } from '@/components/login-card';
 import { DEMO } from '@/lib/demo/flag';
 import { RegisterCoverPreview } from '@/components/register-cover-preview';
+import { homepageJsonLd, jsonLd } from '@/lib/structured-data';
 
 const FEATURES = [
   { icon: Clock, title: 'Saves time, every day', text: 'Balances work themselves out, entries take seconds and regular repeat supplies are one click. Stock checks are quicker too.' },
   { icon: Target, title: 'More accurate records', text: 'No arithmetic slips carried down the page. Every entry is checked for duplicates and impossible balances before it’s signed.' },
   { icon: Search, title: 'Find any entry in seconds', text: 'No more rooting through tattered CD books for the right page. Search by drug, patient, prescriber, supplier or date.' },
-  { icon: ScanLine, title: 'Photograph the wholesaler invoice', text: 'Take a photo on your phone. CD lines and pack quantities are read for you to check and confirm.' },
+  { icon: ScanLine, title: 'Photograph the wholesaler invoice', text: 'Take a photo on your phone. CD lines and pack quantities are read by AI for you to check and confirm. Nothing is recorded until a pharmacist signs it.' },
   { icon: ShieldCheck, title: 'Nothing is ever overwritten', text: 'Corrections sit alongside the original with who, when and why. A tamper-evident audit trail backs every line.' },
   { icon: BadgeCheck, title: 'Inspection ready', text: 'Print or export any register, or give the inspector a read-only link. Integrity checked in one click.' },
 ];
@@ -149,6 +150,7 @@ export default function LandingPage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-secondary/60 to-background">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(homepageJsonLd()) }} />
       <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-5 sm:px-6">
         <Logo size="md" />
         {!unlocked && <AccessGate onUnlock={unlock} />}
@@ -179,6 +181,7 @@ export default function LandingPage() {
           <FadeIn delay={350} className="mt-6 max-w-xl">
             <RegisterCoverPreview src="/previews/register-book.webp" alt="A register page laid out like the paper Controlled Drugs Register" delay={1500} />
           </FadeIn>
+          <TickList className="mt-6 max-w-xl" items={['Running balances calculated for you', 'Duplicate and error checks on every entry', 'Tamper-evident audit trail', 'Read-only links for inspectors', 'Works on phone, tablet and PC', 'Your data stays in the EU']} />
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             {FEATURES.map((f, i) => (
               <FadeIn key={f.title} delay={i * 90} className="flex gap-3 rounded-xl bg-card/70 p-4 ring-1 ring-border">
