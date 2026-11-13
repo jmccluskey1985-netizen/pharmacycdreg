@@ -6,7 +6,7 @@ BIN=${PG_BIN:-$(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | sort -V | tail -1)
 DIR=$(mktemp -d /tmp/cdreg-dbtest.XXXX); chmod 777 "$DIR"
 RUNAS=""; [ "$(id -u)" = 0 ] && RUNAS="su postgres -c"
 run() { if [ -n "$RUNAS" ]; then $RUNAS "$*"; else bash -c "$*"; fi; }
-run "$BIN/initdb -D $DIR/data -A trust >/dev/null"
+run "$BIN/initdb -D $DIR/data -A trust -U postgres >/dev/null"
 run "$BIN/pg_ctl -D $DIR/data -o '-p 55433 -k $DIR' -l $DIR/log start >/dev/null"
 trap 'run "$BIN/pg_ctl -D $DIR/data stop >/dev/null" || true; rm -rf "$DIR"' EXIT
 sleep 1.5
