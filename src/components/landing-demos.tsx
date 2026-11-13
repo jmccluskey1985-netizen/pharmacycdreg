@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { BellRing, CheckCircle2, ScanLine, ShieldCheck, Camera } from 'lucide-react';
+import { BellRing, CheckCircle2, ScanLine, ShieldCheck, Camera, Loader2, ImagePlus, Sparkles } from 'lucide-react';
 
 /**
  * "See it in action": four small looping animations of what the dashboard does. Pure React + CSS,
@@ -56,6 +56,121 @@ function Card({ title, text, children, refEl }: { title: string; text: string; c
 }
 
 const fade = (on: boolean, extra = '') => `transition-all duration-500 ease-out ${on ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'} ${extra}`;
+
+
+/* 0. Prescription scanned with the app's camera, then recorded in the register */
+const HAND = { fontFamily: '"Segoe Script","Bradley Hand","Snell Roundhand","Comic Sans MS",cursive' };
+function FakeRx() {
+  return (
+    <div className="h-full w-full rounded-md bg-[#fffdf7] p-[7%] text-slate-800 shadow-inner">
+      <div className="flex items-start justify-between border-b border-slate-300 pb-1">
+        <div><p className="text-[7px] font-bold tracking-wide text-slate-600">ENNIS MEDICAL CENTRE</p><p className="text-[6px] text-slate-500">Dr A. Walsh · Reg 012345</p></div>
+        <p className="text-[6px] text-slate-500">Date: 13/11/26</p>
+      </div>
+      <p className="mt-1.5 text-[6px] text-slate-500">Patient</p>
+      <p className="text-[9px] leading-tight" style={HAND}>Mary Kelly, 14 Main St, Ennis</p>
+      <p className="mt-2 text-[10px] font-bold text-slate-500">Rx</p>
+      <p className="text-[10px] leading-tight" style={HAND}>OxyNorm 5mg capsules</p>
+      <p className="text-[9px] leading-tight" style={HAND}>one twice daily for 14 days</p>
+      <p className="mt-1 text-[9px] leading-tight" style={HAND}>Supply: twenty-eight (28)</p>
+      <svg viewBox="0 0 120 30" className="mt-2 h-5 w-20"><path d="M4 22c10-18 16 6 24-6s8 10 16 2 10-14 18-2 8 8 18-4 12 6 22 2" fill="none" stroke="#1e3a8a" strokeWidth="1.6" strokeLinecap="round" /></svg>
+    </div>
+  );
+}
+
+function RxScanDemo() {
+  const { ref, phase } = usePhases([1700, 450, 1400, 2900, 900, 3600, 900]);
+  const fields = [
+    { k: 'Patient', v: 'Mary Kelly · 14 Main St, Ennis' },
+    { k: 'Prescriber', v: 'Dr A. Walsh (Reg 012345)' },
+    { k: 'Drug', v: 'OxyNorm 5mg capsule' },
+    { k: 'Quantity', v: 'twenty-eight (28)', ok: 'words and figures agree' },
+  ];
+  const recorded = phase >= 5;
+  return (
+    <div ref={ref} className="overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border md:col-span-2">
+      <div className="grid gap-6 bg-gradient-to-b from-secondary/70 to-background p-5 md:grid-cols-[minmax(0,15rem)_1fr] md:p-8" aria-hidden="true">
+        {/* Phone */}
+        <div className="mx-auto w-[15rem] rounded-[2.2rem] bg-slate-900 p-2 shadow-xl">
+          <div className="relative h-[27rem] overflow-hidden rounded-[1.8rem] bg-black">
+            {phase <= 1 && (
+              <>
+                {/* "camera view": the prescription on the counter, settling into the frame */}
+                <div className="absolute inset-0 bg-gradient-to-br from-stone-600 to-stone-800" />
+                <div className={`absolute left-1/2 top-[46%] aspect-[1/1.35] h-[62%] transition-transform duration-[1400ms] ease-out ${phase === 0 ? '-translate-x-[46%] -translate-y-[47%] rotate-[-5deg] scale-105' : '-translate-x-1/2 -translate-y-1/2 rotate-0'}`}><FakeRx /></div>
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center pb-[8%]">
+                  <div className="relative aspect-[1/1.35] h-[66%] rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,.5)]">
+                    {['left-0 top-0 border-l-4 border-t-4 rounded-tl-2xl', 'right-0 top-0 border-r-4 border-t-4 rounded-tr-2xl', 'left-0 bottom-0 border-l-4 border-b-4 rounded-bl-2xl', 'right-0 bottom-0 border-r-4 border-b-4 rounded-br-2xl'].map((c) => <span key={c} className={`absolute h-7 w-7 border-brand ${c}`} />)}
+                    <span className="demo-sweep absolute inset-x-2 h-0.5 bg-brand/80 shadow-[0_0_12px_2px_rgba(84,189,80,.7)]" />
+                  </div>
+                </div>
+                <p className="absolute inset-x-0 top-3 mx-auto w-max rounded-full bg-black/60 px-2.5 py-1 text-[9px] font-medium text-white">Line up the prescription inside the frame</p>
+                <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/80 to-transparent px-4 pb-4 pt-8">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white"><ImagePlus className="h-4 w-4" /></span>
+                  <span className={`flex h-14 w-14 items-center justify-center rounded-full border-4 border-white bg-white/20 transition-transform duration-150 ${phase === 1 ? 'scale-90' : ''}`}><span className="h-10 w-10 rounded-full bg-white" /></span>
+                  <span className="block h-8 w-8" />
+                </div>
+                {phase === 1 && <div className="demo-flash absolute inset-0 bg-white" />}
+              </>
+            )}
+            {phase === 2 && (
+              <div className="flex h-full flex-col items-center justify-center gap-3 bg-background px-6 text-center">
+                <div className="h-28 w-20 overflow-hidden rounded-md ring-2 ring-brand/40"><div className="origin-top-left scale-[.42]" style={{ width: '238%', height: '238%' }}><FakeRx /></div></div>
+                <p className="flex items-center gap-2 text-xs font-semibold text-foreground"><Loader2 className="h-4 w-4 animate-spin text-brand" /> Reading the prescription…</p>
+              </div>
+            )}
+            {phase >= 3 && (
+              <div className="flex h-full flex-col bg-background p-3 text-[10px]">
+                <p className="flex items-center gap-1 text-xs font-bold text-foreground"><Sparkles className="h-3.5 w-3.5 text-brand" /> Check and sign</p>
+                <div className="mt-2 space-y-1.5">
+                  {fields.map((f, i) => (
+                    <div key={f.k} className={`rounded-lg bg-card px-2.5 py-1.5 shadow-sm ring-1 ring-border ${fade(phase >= 3)}`} style={{ transitionDelay: phase === 3 ? `${i * 350}ms` : '0ms' }}>
+                      <p className="text-[8px] uppercase tracking-wide text-muted-foreground">{f.k}</p>
+                      <p className="font-semibold text-foreground">{f.v}</p>
+                      {f.ok && <p className="flex items-center gap-1 text-[8px] font-semibold text-brand"><CheckCircle2 className="h-2.5 w-2.5" /> {f.ok}</p>}
+                    </div>
+                  ))}
+                  <div className={`flex items-center justify-between rounded-lg bg-brand/10 px-2.5 py-1.5 ${fade(phase >= 3)}`} style={{ transitionDelay: phase === 3 ? '1400ms' : '0ms' }}>
+                    <span className="font-semibold text-brand-dark">OxyNorm 5mg register</span><span className="rounded-full bg-brand/20 px-1.5 text-[8px] font-bold text-brand-dark">YOUR REGISTER</span>
+                  </div>
+                </div>
+                <div className="mt-auto">
+                  {phase < 5 ? (
+                    <span className={`flex h-9 items-center justify-center rounded-lg bg-brand-dark text-xs font-semibold text-white transition-transform duration-150 ${phase === 4 ? 'scale-95 ring-4 ring-brand/30' : ''}`}>Sign &amp; record</span>
+                  ) : (
+                    <span className="flex h-9 items-center justify-center gap-1.5 rounded-lg bg-brand/15 text-xs font-semibold text-brand-dark"><CheckCircle2 className="h-4 w-4 text-brand" /> Recorded on line 9</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Register */}
+        <div className="flex min-w-0 flex-col md:pt-10">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">OxyNorm 5mg capsule · register</p>
+          <div className="mt-2 overflow-x-auto rounded-lg bg-white text-[11px] text-slate-800 shadow ring-1 ring-slate-200">
+            <div className="grid min-w-[26rem] grid-cols-[3.2rem_1fr_7rem_2.6rem_3.4rem] bg-slate-100 px-3 py-2 text-[9px] font-bold uppercase tracking-wide text-slate-500"><span>Date</span><span>Supplied to</span><span>Authority</span><span className="text-right">Out</span><span className="text-right">Balance</span></div>
+            {[{ d: '07/11/26', n: 'Patrick Hayes', a: 'Rx: Dr A. Walsh', q: 14, b: 112 }, { d: '11/11/26', n: 'Seán O’Brien', a: 'Rx: Dr L. Nolan', q: 14, b: 98 }].map((r) => (
+              <div key={r.n} className="grid min-w-[26rem] grid-cols-[3.2rem_1fr_7rem_2.6rem_3.4rem] border-t border-slate-100 px-3 py-2"><span>{r.d}</span><span>{r.n}</span><span className="truncate text-slate-500">{r.a}</span><span className="text-right font-semibold">{r.q}</span><span className="text-right font-bold">{r.b}</span></div>
+            ))}
+            <div className={`grid min-w-[26rem] grid-cols-[3.2rem_1fr_7rem_2.6rem_3.4rem] border-t border-slate-100 px-3 py-2 transition-all duration-700 ease-out ${recorded ? 'max-h-16 translate-x-0 bg-brand/10 opacity-100' : 'max-h-0 -translate-x-6 py-0 opacity-0'}`}>
+              <span>13/11/26</span>
+              <span>Mary Kelly <span className="ml-1 rounded-full bg-brand/20 px-1.5 text-[8px] font-bold text-brand-dark">scanned</span><span className="block text-[9px] text-slate-500">14 Main St, Ennis</span></span>
+              <span className="truncate text-slate-500">Rx: Dr A. Walsh</span>
+              <span className="text-right font-semibold">28</span>
+              <span className="text-right font-bold text-brand-dark"><Counter value={recorded ? 70 : 98} /></span>
+            </div>
+            <div className="min-w-[26rem] border-t border-dashed border-slate-200 px-3 py-2 text-[10px] text-slate-400">+ Add the next entry here</div>
+          </div>
+          <p className={`mt-3 flex items-center gap-2 text-sm font-semibold text-brand-dark ${fade(recorded)}`}><CheckCircle2 className="h-4 w-4 text-brand" /> Signed by Aoife Byrne (PSI 12345) · balance 70 capsules</p>
+          <h3 className="mt-6 text-2xl font-bold">Scan a prescription, sign, done</h3>
+          <p className="mt-1 max-w-lg text-muted-foreground">Photograph the prescription with the app. The patient, prescriber, drug and quantity are read for you to check, and one tap writes the line into the right register with the balance worked out.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* 1. Running balance */
 function BalanceDemo() {
@@ -171,6 +286,7 @@ function IntegrityDemo() {
 export function LandingDemos() {
   return (
     <div className="grid gap-6 md:grid-cols-2">
+      <RxScanDemo />
       <BalanceDemo />
       <ScanDemo />
       <ReminderDemo />
