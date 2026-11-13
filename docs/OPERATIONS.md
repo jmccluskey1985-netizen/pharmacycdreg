@@ -22,6 +22,7 @@
 | `CRON_SECRET` | for billing | Protects `/api/cron/trial-reminders` (`vercel.json`, daily 09:17 UTC) |
 | `EMAIL_FROM`, `EMAIL_FROM_NAME`, `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | for email | Waitlist and trial-reminder email (`src/lib/email.ts`) |
 | `ADMIN_NOTIFY_EMAIL` | optional | Who receives waitlist notifications |
+| `NEXT_PUBLIC_COMPANY_NAME`, `NEXT_PUBLIC_COMPANY_ADDRESS`, `NEXT_PUBLIC_CONTACT_EMAIL` | before launch | Shown on /privacy, /terms and /security (public, not secrets) |
 | `NEXT_PUBLIC_DEMO_MODE` | never in production | `1` builds the click-through demo (in-browser fake data) |
 
 ## 2. Database migrations (Supabase → SQL editor)
@@ -41,6 +42,7 @@ Run them in order. Each one is safe to re-run (`if not exists`).
 | 0009_reader_settings | `site_secrets` (encrypted site-wide reader key) |
 | 0010_product_brand | `cd_products.brand` (one register per brand) |
 | 0011_quarantine_destruction_book | `quarantine_items`, `destruction_book` |
+| 0013_integrity_inspector_2fa | SHA-256 hash chain on `cd_entries` and `audit_log` (backfills existing rows), `verify_register_chain()` / `verify_audit_chain()`, `inspector_links`, `pharmacies.require_2fa` |
 | 0012_reminders_notes_feedback_adjustments | `dispense_reminders`, `notes` + `note_attachments` (private storage bucket `cd-notes`), `feedback` + `feedback_votes`, entry types `adjustment_in` / `adjustment_out` and the updated `cd_ledger` view |
 
 Pages whose table isn't there yet say "Needs a one-off database update: run migration 00xx" rather than failing.
@@ -89,3 +91,19 @@ Subscribing during the trial keeps the remaining free days (Checkout `trial_end`
   NEXT_PUBLIC_DEMO_MODE=1 npx next build && npx next start -p 3200
   ```
   The demo PINs are listed on the PIN screen.
+
+## 6. Hardening checklist (one-off, in dashboards)
+
+- **Vercel:**
+  - Region is pinned to Dublin by `vercel.json` (`"regions": ["dub1"]`).
+  - Turn on **Web Analytics**. It's cookie-free, and the `<Analytics />` component is already in place.
+- **Uptime:** point a monitor (e.g. UptimeRobot or Better Stack, free tier) at `https://pharmacycdreg.ie/api/health`. It returns 200 when the app and the database answer.
+- **Errors:** browser errors are logged as `[client-error]` lines. Find them in Vercel → Logs, and add a log alert or drain if you want email.
+- **Supabase:**
+  - **Authentication → Providers → Email:** turn on *Leaked password protection* and set the minimum password length to 10.
+  - **Authentication → Rate limits:** keep the defaults or lower them.
+  - **Database → Backups:** confirm daily backups. Add Point-in-Time Recovery when you have paying customers.
+  - Run the restore test in `docs/BACKUP_AND_RESTORE.md` and keep the record.
+- **GitHub:** `.github/workflows/ci.yml` runs on every push to `main`: type check, lint, unit and rule tests, a demo build, and the click-through test (`tests/e2e/demo.mjs`).
+- **Security headers:** set for every route in `next.config.js`: HSTS, CSP, frame-ancestors none, nosniff, referrer policy, permissions policy and COOP. API responses are `private, no-store`.
+- **Cron jobs:** `vercel.json` runs `trial-reminders` (09:17 UTC) and `daily-digest` (06:43 UTC). `daily-digest` sends due-reminder counts each morning and the weekly integrity fingerprints on Mondays. Both need `CRON_SECRET`.

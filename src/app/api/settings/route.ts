@@ -6,6 +6,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { getSettings } from '@/lib/settings';
 import { can } from '@/lib/roles';
 import { balancesFor } from '@/lib/registers';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +32,7 @@ const Patch = z.object({
   lock_minutes: z.coerce.number().int().min(2).max(120).optional(),
   locum_default_days: z.coerce.number().int().min(1).max(365).optional(),
   stock_check_frequency: z.enum(['off', 'weekly', 'fortnightly', 'monthly']).optional(),
+  require_2fa: z.boolean().optional(),
   low_stock: z.array(z.object({ register_id: z.string().uuid(), level: z.coerce.number().min(0).nullable() })).max(500).optional(),
 });
 
@@ -40,11 +42,16 @@ export async function PATCH(req: Request) {
     const parsed = Patch.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) return NextResponse.json({ error: 'Check the settings', issues: parsed.error.flatten() }, { status: 400 });
     const { low_stock, ...fields } = parsed.data;
+    // Requiring two-step sign-in only makes sense once this login has an authenticator set up.
+    if (fields.require_2fa) {
+      const { data: f } = await createServerSupabaseClient().auth.mfa.listFactors();
+      if (!f?.totp?.some((x) => x.status === 'verified')) return NextResponse.json({ error: 'Turn on two-step sign-in (add a phone) first, then require it.' }, { status: 400 });
+    }
     const db = createServiceClient();
     if (Object.keys(fields).length) {
       const { error } = await db.from('pharmacies').update(fields).eq('id', account.pharmacyId);
       if (error) {
-        if (/column/i.test(error.message)) return NextResponse.json({ error: 'Settings need a one-off database update first (run migration 0007 in Supabase).' }, { status: 409 });
+        if (/column/i.test(error.message)) return NextResponse.json({ error: `Settings need a one-off database update first (run migration ${'require_2fa' in fields ? '0013' : '0007'} in Supabase).` }, { status: 409 });
         throw error;
       }
     }

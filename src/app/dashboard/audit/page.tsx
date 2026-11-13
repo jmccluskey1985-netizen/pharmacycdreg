@@ -1,4 +1,6 @@
 'use client';
+import { IntegrityCheck } from '@/components/dashboard/integrity-check';
+import { InspectorLinks } from '@/components/dashboard/inspector-links';
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
@@ -35,6 +37,10 @@ export default function AuditPage() {
     <div>
       <h1 className="mb-1 text-2xl font-bold">Audit trail</h1>
       <p className="mb-4 text-sm text-muted-foreground">This log cannot be edited or deleted.</p>
+      <div className="mb-4 grid gap-4 lg:grid-cols-2">
+        <IntegrityCheck />
+        <InspectorLinks />
+      </div>
       <div className="card divide-y divide-border p-0">
         {events.map((e) => (
           <details key={e.id} className="group px-4 py-3">

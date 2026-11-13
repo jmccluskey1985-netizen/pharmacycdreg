@@ -9,7 +9,7 @@ import { can } from '@/lib/roles';
 import { TwoStepSettings } from '@/components/dashboard/two-step';
 import { ReaderSettings } from '@/components/dashboard/reader-settings';
 
-interface Settings { name: string; address: string; psi_premises_number: string | null; invoice_names: string | null; lock_minutes: number; locum_default_days: number; stock_check_frequency: string; halo_enabled: boolean; migrated: boolean }
+interface Settings { name: string; address: string; psi_premises_number: string | null; invoice_names: string | null; lock_minutes: number; locum_default_days: number; stock_check_frequency: string; halo_enabled: boolean; require_2fa?: boolean; migrated: boolean }
 interface Reg { id: string; label: string; unit: string; balance: number; low_stock_level: number | null }
 
 function Section({ icon: Icon, title, text, children }: { icon: any; title: string; text?: string; children: React.ReactNode }) {
@@ -134,7 +134,11 @@ function Security({ s, onSaved }: { s: Settings; onSaved: (s: Settings) => void 
         </div>
         <SaveBar busy={busy} saved={saved} error={error} />
       </form>
-      <div className="border-t border-border pt-4"><TwoStepSettings /></div>
+      <div className="border-t border-border pt-4"><TwoStepSettings locked={!!s.require_2fa} /></div>
+      <label className="flex items-start gap-3 rounded-lg border border-border p-3 text-sm">
+        <input type="checkbox" className="mt-0.5 h-5 w-5 accent-[#54BD50]" checked={!!s.require_2fa} disabled={busy} onChange={(e) => save({ require_2fa: e.target.checked })} />
+        <span><b>Require two-step sign-in</b> for this pharmacy’s login. While on, the last authenticator can’t be removed, and you’ll be warned on every page if it ever goes missing. Recommended.</span>
+      </label>
     </Section>
   );
 }
@@ -184,7 +188,12 @@ function Data({ regs, reload }: { regs: Reg[]; reload: () => void }) {
   const empty = regs.filter((r) => r.balance === 0);
   return (
     <Section icon={Database} title="Data" text="Your registers are never deleted. Keep a recent copy for business continuity.">
-      <a href="/api/export" className="btn-secondary w-fit"><Download className="h-4 w-4" /> Export every register (CSV)</a>
+      <div className="flex flex-wrap gap-2">
+        <a href="/api/export" className="btn-secondary w-fit"><Download className="h-4 w-4" /> Export every register (CSV)</a>
+        <a href="/api/backup" className="btn-secondary w-fit" title="Everything: registers, entries, destructions, patients, notes, audit trail"><Download className="h-4 w-4" /> Full backup (JSON)</a>
+        <Link href="/dashboard/fallback-sheet" className="btn-secondary w-fit">Paper fallback sheet</Link>
+      </div>
+      <p className="text-xs text-muted-foreground">Keep a monthly full backup somewhere safe outside the pharmacy system (e.g. an encrypted USB key in the safe). It contains patient details — store it securely.</p>
       <div>
         <p className="label">Close a register</p>
         <p className="mb-2 text-xs text-muted-foreground">For a product you no longer stock. Only registers at a nil balance can be closed.</p>

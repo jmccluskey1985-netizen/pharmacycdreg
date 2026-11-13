@@ -13,7 +13,7 @@ interface Factor { id: string; friendly_name?: string; status: string; created_a
  * the password AND a 6-digit code; the server refuses the dashboard and API until the
  * code step is done. Add a second phone as a backup in case one is lost.
  */
-export function TwoStepSettings() {
+export function TwoStepSettings({ locked = false }: { locked?: boolean }) {
   const [factors, setFactors] = useState<Factor[] | null>(null);
   const [enrolling, setEnrolling] = useState<{ id: string; qr: string; secret: string } | null>(null);
   const [name, setName] = useState('');
@@ -82,7 +82,7 @@ export function TwoStepSettings() {
           {factors.map((f) => (
             <li key={f.id} className="flex items-center justify-between gap-3 px-3 py-2">
               <span className="flex items-center gap-2"><Smartphone className="h-4 w-4 text-muted-foreground" /> {f.friendly_name || 'Authenticator'} <span className="text-xs text-muted-foreground">added {new Date(f.created_at).toLocaleDateString('en-IE')}</span></span>
-              <button onClick={() => remove(f)} disabled={busy} className="btn-ghost text-sm text-destructive"><Trash2 className="h-4 w-4" /> Remove</button>
+              <button onClick={() => remove(f)} disabled={busy || (locked && factors.length <= 1)} title={locked && factors.length <= 1 ? 'Two-step sign-in is required — add another phone first, or turn off “Require two-step sign-in”' : undefined} className="btn-ghost text-sm text-destructive disabled:opacity-40"><Trash2 className="h-4 w-4" /> Remove</button>
             </li>
           ))}
         </ul>

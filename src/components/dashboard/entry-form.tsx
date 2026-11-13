@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { isLate } from '@/lib/late-entry';
 import { Loader2, PackagePlus, PackageMinus, Flame, Undo2, PencilLine } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 import { QuickFillInput, type Suggestion } from './quickfill-input';
@@ -74,6 +75,9 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
     ...initial,
   });
   const [reason, setReason] = useState('');
+  const [lateReason, setLateReason] = useState('');
+  const [requisition, setRequisition] = useState(false);
+  const late = !correcting && isLate(d.transaction_date);
   const [newPatient, setNewPatient] = useState<string | null>(null);
   const fromRecord = (p: PatientRecord) => pickPatient({ name: `${p.first_name} ${p.surname}`.trim(), address: p.address, source: 'patient', patient_id: p.id, dob: p.date_of_birth, usual_prescriber: p.gp_name ? { name: p.gp_name, address: p.gp_address } : null });
   const [busy, setBusy] = useState(false);
@@ -120,7 +124,7 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
     setError(null);
     if (!override) { setDup(null); setOverriding(false); }
     try {
-      const body: Record<string, unknown> = { ...d, register_id: registerId, quantity: Number(d.quantity), ...(override ? { allow_duplicate: true, duplicate_reason: dupReason } : {}) };
+      const body: Record<string, unknown> = { ...d, register_id: registerId, quantity: Number(d.quantity), ...(override ? { allow_duplicate: true, duplicate_reason: dupReason } : {}), ...(late ? { late_reason: lateReason } : {}), ...(type === 'supply' && requisition ? { requisition: true, patient_id: null } : {}) };
       if (correcting) {
         body.entry_type = 'correction';
         body.corrects_entry_id = correcting.id;
@@ -172,6 +176,14 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
         </Field>
       </div>
 
+      {late && (
+        <div className="space-y-1 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
+          <p className="font-semibold">Late entry — this transaction is more than a day old</p>
+          <input className="input" required minLength={5} value={lateReason} onChange={(e) => setLateReason(e.target.value)} placeholder="Why it’s being entered now, e.g. system down — entered from the paper fallback sheet" />
+          <p className="text-xs opacity-80">The reason is printed on the register line.</p>
+        </div>
+      )}
+
       {type === 'receipt' && (
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Obtained from (name)"><QuickFillInput kind="supplier" required value={d.supplier_name ?? ''} onChange={setVal('supplier_name')} onPick={pickSupplier} placeholder="Start typing, e.g. United" /></Field>
@@ -180,7 +192,22 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
         </div>
       )}
 
-      {type === 'supply' && (
+      {type === 'supply' && !correcting && (
+        <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1 text-sm">
+          <button type="button" onClick={() => { setRequisition(false); }} className={`rounded-lg px-2 py-1.5 font-semibold ${!requisition ? 'bg-card shadow-sm' : 'text-muted-foreground'}`}>To a patient (prescription)</button>
+          <button type="button" onClick={() => { setRequisition(true); setD((x) => ({ ...x, patient_id: null, authority_to_possess: x.authority_to_possess?.startsWith('Requisition') ? x.authority_to_possess : 'Requisition — signed by ' })); }} className={`rounded-lg px-2 py-1.5 font-semibold ${requisition ? 'bg-card shadow-sm' : 'text-muted-foreground'}`}>On a requisition</button>
+        </div>
+      )}
+      {type === 'supply' && requisition && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Supplied to (practitioner / business)"><input className="input" required minLength={2} value={d.recipient_name ?? ''} onChange={set('recipient_name')} placeholder="e.g. Dr J. Walsh, Shannon Medical Centre" /></Field>
+          <Field label="Address"><input className="input" required value={d.recipient_address ?? ''} onChange={set('recipient_address')} /></Field>
+          <Field label="Authority to be in possession" hint="Who signed the requisition and in what capacity"><input className="input" required value={d.authority_to_possess ?? ''} onChange={set('authority_to_possess')} /></Field>
+          <Field label="Requisition no. / date"><input className="input" value={d.prescription_ref ?? ''} onChange={set('prescription_ref')} /></Field>
+          <p className="text-xs text-muted-foreground sm:col-span-2">Keep the signed requisition on file. Requisitions for Schedule 2 drugs must be signed by the recipient and state their name, address, profession, purpose and total quantity.</p>
+        </div>
+      )}
+      {type === 'supply' && !requisition && (
         <>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Supplied to (name)"><QuickFillInput kind="patient" required value={d.recipient_name ?? ''} onChange={(v) => setD((x) => ({ ...x, recipient_name: v, patient_id: null }))} onPick={pickPatient} onCreate={setNewPatient} createLabel="New patient" placeholder="Name, DOB (dd/mm/yyyy) or GMS no." /></Field>

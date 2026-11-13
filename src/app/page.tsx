@@ -1,5 +1,6 @@
 'use client';
 
+import { PublicFooter } from '@/components/public/public-page';
 import { Suspense, useEffect, useState } from 'react';
 import { ShieldCheck, ScanLine, BookOpen, Search, Loader2, CheckCircle2, Lock, X, Plug } from 'lucide-react';
 import { Logo } from '@/components/logo';
@@ -232,9 +233,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="border-t border-border py-6 text-center text-xs text-muted-foreground">
-        PharmacyCDReg.ie is an independent service. It is not affiliated with the PSI, the HSE or the IPU.
-      </footer>
+      <PublicFooter />
     </main>
   );
 }

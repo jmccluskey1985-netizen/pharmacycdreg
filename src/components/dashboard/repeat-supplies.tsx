@@ -43,7 +43,7 @@ export function RepeatSupplies({ registerId, unit, balance, balances, lines, onD
   const multi = Object.keys(afterBy).length > 1 || !!balances;
   const after = multi ? Math.min(0, ...Object.values(afterBy).map((a) => a.after)) : balance - total;
 
-  async function saveRow(i: number, override = false) {
+  async function saveRow(i: number, override = false, lateReason?: string) {
     const r = rows[i];
     upd(i, { status: { state: 'saving' } });
     try {
@@ -54,10 +54,15 @@ export function RepeatSupplies({ registerId, unit, balance, balances, lines, onD
         authority_to_possess: cleanAuthority(r.src.authority_to_possess), prescription_ref: r.ref.trim() || null,
         patient_id: r.src.patient_id ?? null,
         ...(override ? { allow_duplicate: true, duplicate_reason: r.reason } : {}),
+        ...(lateReason ? { late_reason: lateReason } : {}),
       } });
       upd(i, { status: { state: 'saved' } });
       return true;
     } catch (e) {
+      if (e instanceof ApiError && e.code === 'LATE_ENTRY' && !lateReason) {
+        const why = window.prompt(e.message);
+        if (why && why.trim().length >= 5) return saveRow(i, override, why.trim());
+      }
       if (e instanceof ApiError && (e.code === 'DUPLICATE' || e.code === 'POSSIBLE_DUPLICATE')) {
         upd(i, { status: { state: 'dup', message: e.message, level: e.code === 'DUPLICATE' ? 'block' : 'warn' } });
       } else {

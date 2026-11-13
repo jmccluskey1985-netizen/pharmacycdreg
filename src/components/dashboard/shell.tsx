@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser, Settings, UserRound, ListOrdered, Menu, BellRing, StickyNote, MessageSquarePlus, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser, Settings, UserRound, ListOrdered, Menu, BellRing, StickyNote, MessageSquarePlus, LifeBuoy, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { NewEntryButton } from './new-entry';
 import { Modal } from '@/components/modal';
 import { TrainingBar, TrainingButton, useTraining } from './training';
@@ -29,6 +29,7 @@ const NAV = [
   { href: '/dashboard/integrations', label: 'Halo connection', icon: Plug, show: can.manageStaff, halo: true },
   { href: '/dashboard/billing', label: 'Billing', icon: CreditCard, show: can.manageStaff },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings, show: can.manageStaff },
+  { href: '/dashboard/help', label: 'Help', icon: LifeBuoy, show: () => true },
   { href: '/dashboard/feedback', label: 'Feedback & ideas', icon: MessageSquarePlus, show: () => true, badge: 'feedback' },
   { href: '/dashboard/waitlist', label: 'Waitlist', icon: ListOrdered, show: () => true, admin: true },
 ];
@@ -107,6 +108,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
           {can.record(staff.role) && <NewEntryButton />}
         </div>}
         <BillingBanner />
+        {(pharmacy as any)?.twofa_missing && can.manageStaff(staff.role) && (
+          <Link href="/dashboard/settings" className="no-print mb-4 flex items-center gap-3 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <span className="flex-1"><b>Two-step sign-in is required but not set up.</b> Add an authenticator app in Settings → Security.</span><span className="font-semibold underline">Fix</span>
+          </Link>
+        )}
         {remindersDue > 0 && can.record(staff.role) && !path.startsWith('/dashboard/reminders') && (
           <Link href="/dashboard/reminders" className="no-print mb-4 flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
             <BellRing className="h-5 w-5 flex-shrink-0" /> <span className="flex-1"><b>{remindersDue} dispensing reminder{remindersDue === 1 ? '' : 's'} due</b> — record {remindersDue === 1 ? 'it' : 'them'} in the registers in one click</span><span className="font-semibold underline">Open</span>

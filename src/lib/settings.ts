@@ -10,6 +10,7 @@ export interface PharmacySettings {
   locum_default_days: number;
   stock_check_frequency: StockCheckFrequency;
   halo_enabled: boolean;
+  require_2fa: boolean;
   migrated: boolean; // false until migration 0007 has been run
 }
 
@@ -28,6 +29,7 @@ export async function getSettings(db: SupabaseClient, pharmacyId: string): Promi
     locum_default_days: typeof p.locum_default_days === 'number' ? p.locum_default_days : 14,
     stock_check_frequency: p.stock_check_frequency ?? 'monthly',
     halo_enabled: p.halo_enabled === true,
+    require_2fa: p.require_2fa === true,
     migrated: 'lock_minutes' in p,
   };
 }

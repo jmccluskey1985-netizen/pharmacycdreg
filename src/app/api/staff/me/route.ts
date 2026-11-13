@@ -20,7 +20,14 @@ export async function GET() {
     if (pharmacy) { const p = pharmacy as any; Object.assign(p, { subscription_status: effectiveStatus(p), has_subscription: !!p.subscription_id }); delete p.subscription_id; }
     // The site owner's pharmacy is a permanent subscription: no trial, no billing prompts.
     if (pharmacy && owner) Object.assign(pharmacy, { subscription_status: 'complimentary', trial_ends_at: null, cancel_at_period_end: false });
-    if (pharmacy) Object.assign(pharmacy, { is_site_admin: owner, halo_enabled: halo, lock_minutes: st.lock_minutes, locum_default_days: st.locum_default_days });
+    // "Require two-step sign-in" is on but this login has no authenticator any more → nag until fixed.
+    let twofaMissing = false;
+    if (st.require_2fa) {
+      const { createServerSupabaseClient } = await import('@/lib/supabase/server');
+      const { data: aal } = await createServerSupabaseClient().auth.mfa.getAuthenticatorAssuranceLevel();
+      twofaMissing = aal?.nextLevel !== 'aal2';
+    }
+    if (pharmacy) Object.assign(pharmacy, { require_2fa: st.require_2fa, twofa_missing: twofaMissing, is_site_admin: owner, halo_enabled: halo, lock_minutes: st.lock_minutes, locum_default_days: st.locum_default_days });
     const { count } = await db.from('staff').select('id', { count: 'exact', head: true }).eq('pharmacy_id', account.pharmacyId).eq('is_active', true).not('pin_hash', 'is', null);
     try {
       const { staff } = await requireStaff();

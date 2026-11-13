@@ -10,6 +10,7 @@ import { decideQuantity } from '@/lib/quantity';
 import { productTitle } from '@/lib/product-name';
 import { STOCK_EFFECT } from '@/lib/entry-schema';
 import { advance } from '@/lib/reminders';
+import { isLate } from '@/lib/late-entry';
 import { genericKey, sameStrength, registerExemption } from '@/lib/cd-catalogue';
 
 type Json = Record<string, any>;
@@ -264,6 +265,11 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     if (needStaff()) return needStaff()!;
     if (!can.record(st!.role)) return fail(403, 'Your role does not allow this action');
     const e = body;
+    if (e.entry_type !== 'correction' && isLate(e.transaction_date)) {
+      if (!e.late_reason || String(e.late_reason).trim().length < 5) return fail(400, 'This transaction is more than a day old — say why it’s being entered late (e.g. system down, entered from the paper fallback sheet).', 'LATE_ENTRY');
+      e.notes = `Late entry — ${String(e.late_reason).trim()}${e.notes ? ` · ${e.notes}` : ''}`;
+    }
+    delete e.late_reason; delete e.requisition;
     const bal = balance(e.register_id);
     let next = bal;
     if (e.entry_type === 'correction') {
@@ -308,6 +314,35 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     if (method === 'PUT') { if (body.api_key) { R.has_key = true; R.hint = `…${String(body.api_key).slice(-4)}`; } R.models = body.models; }
     if (method === 'DELETE') { R.has_key = false; R.hint = null; }
     return res(R);
+  }
+  if (path === '/api/integrity') {
+    if (needStaff()) return needStaff()!;
+    const only = url.searchParams.get('register_id');
+    const regs = regList().filter((r) => !only || r.id === only);
+    const fake = (n: number, salt: string) => Array.from(salt + n).reduce((h, c) => ((h * 31 + c.charCodeAt(0)) >>> 0), 7).toString(16).padStart(8, '0').repeat(8);
+    return res({ ok: true, registers: regs.map((r) => ({ id: r.id, label: productTitle(r.product), ok: true, checked: r.entry_count, broken_seq: null, reason: null, head: fake(r.entry_count, r.id) })), audit: only ? null : { ok: true, checked: S.audit.length, broken_seq: null, reason: null, head: fake(S.audit.length, 'audit') }, checked_at: new Date().toISOString() });
+  }
+  if (path === '/api/inspector-links') {
+    if (needStaff()) return needStaff()!;
+    const L: Json[] = ((S as any).inspectorLinks ||= []);
+    if (method === 'GET') return res({ links: L });
+    const l = { id: uid(), label: body.label, expires_at: new Date(Date.now() + body.hours * 3600_000).toISOString(), revoked_at: null, created_by_name: st!.full_name, created_at: new Date().toISOString(), last_used_at: null, use_count: 0 };
+    L.unshift(l); return res({ id: l.id, url: `${window.location.origin}/inspect/demo-link-not-available-in-the-demo`, expires_at: l.expires_at });
+  }
+  if ((m = path.match(/^\/api\/inspector-links\/([^/]+)$/)) && method === 'DELETE') {
+    const l = ((S as any).inspectorLinks || []).find((x: Json) => x.id === m![1]); if (l) l.revoked_at = new Date().toISOString();
+    return res({ ok: true });
+  }
+  if (path === '/api/onboarding') {
+    return res({ steps: [
+      { key: 'team', label: 'Add your team, each with their own PIN', done: true, href: '/dashboard/team' },
+      { key: 'registers', label: 'Open a CD book for each product you stock', done: true, href: '/dashboard?new=register' },
+      { key: 'twofa', label: 'Turn on two-step sign-in', done: false, href: '/dashboard/settings' },
+      { key: 'scan', label: 'Try scanning a prescription', done: false, href: '/dashboard/scan?type=prescription' },
+      { key: 'check', label: 'Do your first stock check', done: !!((S as any).checks || []).length, href: '/dashboard' },
+      { key: 'reminder', label: 'Set up a reminder for a regular weekly supply', done: REM().length > 1, href: '/dashboard/reminders' },
+      { key: 'backup', label: 'Download a full backup and keep it safe', done: false, href: '/dashboard/settings' },
+    ] });
   }
   if (path === '/api/reminders') {
     if (needStaff()) return needStaff()!;
@@ -593,6 +628,10 @@ function installInterceptor(passthrough: (path: string) => boolean = () => false
     const m = a.getAttribute('href')!.match(/^\/api\/registers\/([^/]+)\/export/);
     if (m) exportRegisters([m[1]], `cd-register-${m[1]}.csv`);
     else if (a.getAttribute('href') === '/api/export') exportRegisters(S.registers.map((r) => r.id), `cd-register-all-${today()}.csv`);
+    else if (a.getAttribute('href') === '/api/backup') {
+      const blob = new Blob([JSON.stringify({ format: 'pharmacycdreg-backup', version: 1, demo: true, exported_at: new Date().toISOString(), ...S }, null, 1)], { type: 'application/json' });
+      const d = document.createElement('a'); d.href = URL.createObjectURL(blob); d.download = `pharmacycdreg-backup-${today()}.json`; d.click();
+    }
   }, true);
 }
 

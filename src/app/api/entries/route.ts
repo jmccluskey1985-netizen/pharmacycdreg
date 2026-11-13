@@ -7,6 +7,7 @@ import { can } from '@/lib/roles';
 import { findOrCreatePatient } from '@/lib/patients';
 import { findDuplicate } from '@/lib/duplicates';
 import { audit } from '@/lib/access';
+import { isLate, LATE_PREFIX } from '@/lib/late-entry';
 
 // Make a register entry. Append-only: corrections are new rows (FR10/FR11). The audit
 // row is written by a database trigger, so it can't be skipped from here.
@@ -41,7 +42,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const { inbox_id, allow_duplicate, duplicate_reason, ...fields } = e as typeof e & { inbox_id?: string | null };
+    const { inbox_id, allow_duplicate, duplicate_reason, late_reason, ...fields } = e as typeof e & { inbox_id?: string | null };
+    // Late entry (older than yesterday): needs a reason, which is written into the line itself.
+    if (e.entry_type !== 'correction' && isLate(e.transaction_date)) {
+      if (!late_reason || late_reason.trim().length < 5) {
+        return NextResponse.json({ error: 'This transaction is more than a day old — say why it’s being entered late (e.g. system down, entered from the paper fallback sheet).', code: 'LATE_ENTRY' }, { status: 400 });
+      }
+      (fields as any).notes = `${LATE_PREFIX}${late_reason.trim()}${fields.notes ? ` · ${fields.notes}` : ''}`;
+    }
+    const requisition = !!(fields as any).requisition;
+    delete (fields as any).requisition;
     // Same invoice / same prescription twice? Checked here so scanned, typed and Halo entries all pass through it.
     const dup = e.entry_type === 'correction' ? null : await findDuplicate(db, reg.id, fields as any);
     if (dup && !allow_duplicate) {
@@ -58,7 +68,7 @@ export async function POST(req: Request) {
     // name + address so every supplied patient builds up a record. Skipped before migration 0008.
     const dob = (fields as any).patient_dob ?? null;
     delete (fields as any).patient_dob; // not a register column
-    if (fields.entry_type === 'supply' || fields.entry_type === 'patient_return') {
+    if ((fields.entry_type === 'supply' && !requisition) || fields.entry_type === 'patient_return') {
       const f = fields as any;
       if (f.patient_id) {
         const { data: pt } = await db.from('patients').select('id').eq('id', f.patient_id).eq('pharmacy_id', account.pharmacyId).maybeSingle();

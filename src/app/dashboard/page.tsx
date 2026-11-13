@@ -1,4 +1,5 @@
 'use client';
+import { GettingStarted } from '@/components/dashboard/getting-started';
 
 import { productTitle, genericLine, brandOf } from '@/lib/product-name';
 import { useCallback, useEffect, useState } from 'react';
@@ -75,6 +76,7 @@ export default function RegistersPage() {
 
   return (
     <div>
+      <GettingStarted />
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm text-muted-foreground">{pharmacy?.name}</p>

@@ -52,7 +52,7 @@ function partyCell(r: Raw) {
 
 function authorityCell(r: Raw) {
   if (r.entry_type === 'receipt' || r.entry_type.startsWith('adjustment')) return r.notes ?? '';
-  return [r.authority_to_possess || (r.prescriber_name ? `Rx — ${r.prescriber_name}` : ''), r.prescription_ref].filter(Boolean).join(' · ');
+  return [r.authority_to_possess || (r.prescriber_name ? `Rx — ${r.prescriber_name}` : ''), r.prescription_ref, r.notes?.startsWith('Late entry') ? r.notes : null].filter(Boolean).join(' · ');
 }
 
 export default function RegisterBook({ params }: { params: { id: string } }) {
@@ -234,6 +234,7 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
                                 {party.address && <span className="block text-xs opacity-75">{party.address}</span>}
                                 {l.footnote && <sup className="ml-1 font-bold text-red-600">{l.footnote}</sup>}
                                 {r.source === 'scan' && !l.struck && <span className="badge ml-1 bg-brand/15 text-[10px] text-primary no-print">scanned</span>}
+                                {r.notes?.startsWith('Late entry') && <span className="badge ml-1 bg-amber-100 text-[10px] text-amber-900" title={r.notes}>late entry</span>}
                               </td>
                               <td className={`${cls} text-xs`}>{authorityCell(r)}</td>
                               <td className={`${cls} text-right font-semibold tabular-nums`}>{inQty}</td>

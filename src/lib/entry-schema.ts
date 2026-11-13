@@ -14,6 +14,8 @@ const base = {
   // Pharmacist confirms a flagged possible duplicate is a genuine separate entry.
   allow_duplicate: z.boolean().optional(),
   duplicate_reason: z.string().trim().max(300).optional().nullable(),
+  // Entry made more than a day after the transaction: why (kept in the line's notes).
+  late_reason: z.string().trim().max(300).optional().nullable(),
 };
 
 // Mandatory statutory fields per entry type (FR5, FR19). The database enforces the
@@ -33,6 +35,7 @@ export const EntrySchema = z.discriminatedUnion('entry_type', [
     collected_by: opt,
     collector_id_checked: z.boolean().optional().nullable(),
     patient_id: z.string().uuid().optional().nullable(),
+    requisition: z.boolean().optional(), // supplied to a practitioner / business on a signed requisition
     patient_dob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable().catch(null), // for a new patient record only
   }),
   z.object({ ...base, entry_type: z.literal('destruction'), quantity: qty, witness_name: s(2), witness_role: s(2), destruction_method: opt }),
