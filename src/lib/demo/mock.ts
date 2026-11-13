@@ -11,6 +11,7 @@ import { productTitle } from '@/lib/product-name';
 import { STOCK_EFFECT } from '@/lib/entry-schema';
 import { advance } from '@/lib/reminders';
 import { isLate } from '@/lib/late-entry';
+import { findDuplicate } from '@/lib/duplicates';
 import { genericKey, sameStrength, registerExemption } from '@/lib/cd-catalogue';
 
 type Json = Record<string, any>;
@@ -280,6 +281,18 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
       for (const k of Object.keys(raw)) if (e[k] == null || e[k] === '') e[k] = (raw as any)[k];
     } else next = bal + (STOCK_EFFECT[e.entry_type] ?? 0) * Number(e.quantity);
     if (next < 0) return fail(409, `This would take the balance below zero (current ${bal}). Check the quantity or record the missing receipt first.`);
+    // Same duplicate guard as the real server, run against the in-browser ledger.
+    if (e.entry_type !== 'correction') {
+      const rows = ledger(e.register_id);
+      const fakeDb: any = { from: () => { let r: Json[] = rows.slice(); const q: any = {
+        select: () => q, eq: (k: string, v: any) => ((r = r.filter((x) => x[k] === v)), q),
+        gte: (k: string, v: any) => ((r = r.filter((x) => x[k] >= v)), q), lte: (k: string, v: any) => ((r = r.filter((x) => x[k] <= v)), q),
+        limit: () => q, then: (res: any) => res({ data: r }) }; return q; } };
+      const dup = await findDuplicate(fakeDb, e.register_id, e);
+      if (dup && !e.allow_duplicate) return res({ error: dup.message, code: dup.level === 'block' ? 'DUPLICATE' : 'POSSIBLE_DUPLICATE', duplicate_of_seq: dup.seq }, 409);
+      if (dup && e.allow_duplicate && (!e.duplicate_reason || String(e.duplicate_reason).length < 5)) return fail(400, 'Say why this isn’t a duplicate', dup.level === 'block' ? 'DUPLICATE' : 'POSSIBLE_DUPLICATE');
+    }
+    delete e.allow_duplicate; delete e.duplicate_reason;
     const seq = S.entries.filter((x) => x.register_id === e.register_id).length + 1;
     const row = { ...e, id: uid(), seq, quantity: String(e.quantity), recorded_at: new Date().toISOString(), recorded_by_staff_id: st!.id, source: e.inbox_id ? 'pmr' : e.scan_id ? 'scan' : 'manual' };
     if (e.entry_type !== 'correction') { delete row.corrects_entry_id; delete row.correction_reason; }

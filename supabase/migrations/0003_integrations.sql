@@ -2,7 +2,7 @@
 -- Incoming dispensings land in an inbox ("To confirm") unless the key is set to
 -- auto-post AND the dispensing pharmacist is matched to a staff member by PSI number.
 
-create table integration_keys (
+create table if not exists integration_keys (
   id uuid primary key default gen_random_uuid(),
   pharmacy_id uuid not null references pharmacies(id) on delete cascade,
   name text not null,                         -- e.g. "Halo – dispensary PC"
@@ -16,7 +16,7 @@ create table integration_keys (
   revoked_at timestamptz
 );
 
-create table pmr_inbox (
+create table if not exists pmr_inbox (
   id uuid primary key default gen_random_uuid(),
   pharmacy_id uuid not null references pharmacies(id) on delete cascade,
   integration_key_id uuid references integration_keys(id),
@@ -33,7 +33,7 @@ create table pmr_inbox (
   received_at timestamptz not null default now(),
   unique (pharmacy_id, source, external_id, action)
 );
-create index pmr_inbox_pending on pmr_inbox (pharmacy_id, received_at desc) where status = 'pending';
+create index if not exists pmr_inbox_pending on pmr_inbox (pharmacy_id, received_at desc) where status = 'pending';
 
 alter table integration_keys enable row level security;
 alter table pmr_inbox enable row level security;

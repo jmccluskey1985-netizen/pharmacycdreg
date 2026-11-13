@@ -168,6 +168,9 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
           <p>Correcting line {correcting.seq}. The original stays in the register, struck through, with a footnote showing who corrected it, when and why.</p>
         </div>
       )}
+      {correcting && (
+        <Field label="Reason for correction"><textarea className="input min-h-[72px]" required minLength={5} autoFocus value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Quantity entered as 100 ml; 50 ml was dispensed" /></Field>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Date of transaction"><input type="date" className="input" required value={d.transaction_date} max={today()} onChange={set('transaction_date')} /></Field>
@@ -249,9 +252,6 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
         </div>
       )}
 
-      {correcting && (
-        <Field label="Reason for correction"><textarea className="input min-h-[80px]" required minLength={5} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Quantity entered as 100 ml; 50 ml was dispensed" /></Field>
-      )}
 
       {preview !== null && (
         <div className={`flex items-center justify-between rounded-lg px-4 py-3 text-sm ${preview < 0 ? 'bg-destructive/10 text-destructive' : 'bg-secondary'}`}>

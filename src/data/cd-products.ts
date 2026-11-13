@@ -91,6 +91,11 @@ export function normBrand(b: string | null | undefined): string | null {
   const k = b.trim().toLowerCase().replace(/\s+/g, ' ');
   if (BRAND_ALIASES[k]) return BRAND_ALIASES[k];
   for (const p of CD_PRODUCTS) for (const x of p.brands) if (x.toLowerCase() === k) return x;
+  // Spacing / punctuation slips on invoices ("Oxy Norm", "Oxy-Contin", "MST-Continus").
+  const squash = (v: string) => v.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const sk = squash(k);
+  for (const [alias, brand] of Object.entries(BRAND_ALIASES)) if (squash(alias) === sk) return brand;
+  for (const p of CD_PRODUCTS) for (const x of p.brands) if (squash(x) === sk) return x;
   return b.trim();
 }
 

@@ -24,6 +24,8 @@ jobs:
         run: npm run lint
       - name: Rule tests
         run: npm run test:unit && npm run test:rules
+      - name: Database tests (all migrations + integrity rules on Postgres)
+        run: npm run test:db
       - name: Build the demo
         run: npm run build
         env:
@@ -35,5 +37,6 @@ jobs:
           npx next start -p 3200 &
           for i in $(seq 1 60); do curl -sf http://localhost:3200 >/dev/null && break; sleep 1; done
           npm run test:e2e
+          npm run test:sweep
         env:
           NEXT_PUBLIC_DEMO_MODE: '1'

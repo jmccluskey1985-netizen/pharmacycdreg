@@ -8,9 +8,11 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test:unit": "tsx tests/unit/rules.test.ts && tsx tests/unit/vertex.test.mts",
+    "test:unit": "tsx tests/unit/rules.test.ts && tsx tests/unit/vertex.test.mts && tsx tests/unit/logic.test.mts",
     "test:rules": "tsx scripts/test-invoice-rules.ts",
-    "test:e2e": "node tests/e2e/demo.mjs"
+    "test:e2e": "node tests/e2e/demo.mjs",
+    "test:db": "bash tests/db/run.sh",
+    "test:sweep": "node tests/e2e/sweep.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",

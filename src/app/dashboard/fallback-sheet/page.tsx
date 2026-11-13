@@ -27,7 +27,7 @@ export default function FallbackSheet() {
           </div>
           <p className="text-sm">Sheet no. ______ &nbsp; System down from ____/____ ____:____ to ____/____ ____:____</p>
         </div>
-        <table className="w-full border-collapse text-[11px]">
+        <div className="overflow-x-auto print:overflow-visible"><table className="w-full min-w-[760px] border-collapse text-[11px] print:min-w-0">
           <thead>
             <tr className="[&>th]:border [&>th]:border-black [&>th]:p-1 [&>th]:text-left">
               <th className="w-[62px]">Date</th><th className="w-[150px]">Drug, strength, form (brand)</th><th className="w-[58px]">In / Out</th><th>Name &amp; address (supplier or patient)</th><th className="w-[150px]">Prescriber / Rx or invoice no.</th><th className="w-[56px]">Amount</th><th className="w-[70px]">Pharmacist (PSI no.)</th><th className="w-[74px]">Entered in eCDR (date, initials)</th>
@@ -38,7 +38,7 @@ export default function FallbackSheet() {
               <tr key={i} className="h-9 [&>td]:border [&>td]:border-black"><td /><td /><td /><td /><td /><td /><td /><td /></tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
         <p className="mt-2 text-[10px]">Running balances are recalculated when the lines are entered. Destructions of Schedule 2 stock still need an authorised witness. Record the witness’s name and capacity in the name column.</p>
       </div>
     </div>

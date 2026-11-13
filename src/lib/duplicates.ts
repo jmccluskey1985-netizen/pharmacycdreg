@@ -27,6 +27,17 @@ export function refTokens(s: string | null | undefined): string[] {
   return s.toUpperCase().split(/[^A-Z0-9]+/).filter((t) => t.length >= 5 && /\d/.test(t) && !/^\d{1,2}$/.test(t));
 }
 
+/**
+ * Tokens from the "authority to possess" text that identify THIS prescription. The prescriber's
+ * registration / IMC / GMS numbers and the patient's medical-card number repeat on every
+ * prescription, so they must never count as "the same prescription".
+ */
+export function authorityTokens(s: string | null | undefined): string[] {
+  if (!s) return [];
+  const cleaned = s.replace(/\b(reg(istration)?|imc|mcrn|gms|medical\s*card|psi|prescriber)\s*(no\.?|number)?\s*[:#]?\s*[A-Z0-9-]+/gi, ' ');
+  return refTokens(cleaned);
+}
+
 const sameName = (a?: string | null, b?: string | null) => !!a && !!b && a.trim().toLowerCase().replace(/\s+/g, ' ') === b.trim().toLowerCase().replace(/\s+/g, ' ');
 
 export async function findDuplicate(db: SupabaseClient, registerId: string, e: Record<string, any>): Promise<Duplicate | null> {
@@ -57,9 +68,9 @@ export async function findDuplicate(db: SupabaseClient, registerId: string, e: R
   if (!name) return null;
   const { data } = await db.from('cd_ledger').select('id, seq, quantity, recipient_name, prescriber_name, prescription_ref, authority_to_possess, transaction_date').eq('register_id', registerId).eq('entry_type', 'supply').gte('transaction_date', addDays(date, -60)).lte('transaction_date', addDays(date, 60)).limit(1000);
   const mine = (data ?? []).filter((r) => sameName(r.recipient_name, name));
-  const tokens = [...refTokens(e.prescription_ref), ...refTokens(e.authority_to_possess)];
+  const tokens = [...refTokens(e.prescription_ref), ...authorityTokens(e.authority_to_possess)];
   for (const r of mine) {
-    const theirs = [...refTokens(r.prescription_ref), ...refTokens(r.authority_to_possess)];
+    const theirs = [...refTokens(r.prescription_ref), ...authorityTokens(r.authority_to_possess)];
     const hit = tokens.find((t) => theirs.includes(t));
     if (hit) return { level: 'block', seq: r.seq, message: `This prescription (${hit}) was already supplied to ${name}: line ${r.seq}, ${Number(r.quantity)} on ${r.transaction_date}.` };
   }

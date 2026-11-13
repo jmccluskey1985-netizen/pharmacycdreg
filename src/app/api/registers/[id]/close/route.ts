@@ -14,7 +14,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     if (!reg) return NextResponse.json({ error: 'Register not found' }, { status: 404 });
     if (reg.closed_at) return NextResponse.json({ error: 'Already closed' }, { status: 409 });
     const balance = (await balancesFor([params.id]))[params.id] ?? 0;
-    if (balance !== 0) return NextResponse.json({ error: `Balance is ${balance}. Record the destruction or return of the remaining stock first, a register can only be closed at nil.` }, { status: 409 });
+    if (balance !== 0) return NextResponse.json({ error: `Balance is ${balance}. Record the destruction or return of the remaining stock first. A register can only be closed at nil.` }, { status: 409 });
     await db.from('cd_registers').update({ closed_at: new Date().toISOString(), closed_by_staff_id: staff.id }).eq('id', params.id);
     await audit(account.pharmacyId, 'register.closed', staff, account.authUserId, {}, { table: 'cd_registers', id: params.id });
     return NextResponse.json({ ok: true });

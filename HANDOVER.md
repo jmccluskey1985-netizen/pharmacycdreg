@@ -50,7 +50,7 @@ src/lib/
   demo/                     demo mode + training mode (in-browser mock of the API)
 src/data/cd-products.ts     CD catalogue: one product per brand, strengths, schedule paragraph
 src/components/dashboard/   shell (sidebar / icon rail), entry form, new-entry chooser, shelf, …
-supabase/migrations/        0001–0014 (see docs/OPERATIONS.md)
+supabase/migrations/        0001–0015 (see docs/OPERATIONS.md)
 scripts/                    create-pharmacy.mjs, rule tests, GMS list parser
 ```
 
@@ -115,16 +115,20 @@ npx tsx scripts/test-invoice-rules.ts  # invoice quantity / reference rules
 npx tsx scripts/test-register-page.ts  # paper-page opening-balance rules
 npm run test:unit                      # reminders, late entries, stock effects
 npm run test:e2e                       # click-through of the demo build (needs it running on :3200)
+npm run test:sweep                     # every page (desktop + phone) and every main workflow, demo build on :3200
+npm run test:db                        # all migrations on a throwaway Postgres + register integrity rules
 NEXT_PUBLIC_DEMO_MODE=1 npx next build && npx next start -p 3200   # click-through demo
 ```
 
-GitHub Actions (`.github/workflows/ci.yml`) runs all of the above on every push. Migrations were tested on a local Postgres 16, including the hash-chain backfill and a tamper test (a direct edit is detected at the exact line).
+GitHub Actions (`.github/workflows/ci.yml`) runs all of the above on every push.
+
+Not covered automatically: the real server API routes talking to a real Supabase project (sign-in, storage, Stripe, Vertex AI, email). The demo build exercises the same screens against an in-browser copy of the API. Check these on a Supabase **staging** project before major releases. Migrations were tested on a local Postgres 16, including the hash-chain backfill and a tamper test (a direct edit is detected at the exact line).
 
 ## 7. Outstanding / to do
 
 - [ ] **Stripe:** create the product and price, webhook and portal (README → Stripe setup); set `STRIPE_*` and `CRON_SECRET`.
 - [ ] **Google sign-in:** finish the Google Cloud client and Supabase provider set-up (docs/OPERATIONS.md §3).
-- [ ] **Migrations:** confirm 0009–0014 have been run in production.
+- [ ] **Migrations:** confirm 0009–0015 have been run in production.
 - [ ] **Document reader:** set up Google Vertex AI (Settings → Document reading) and accept the Google Cloud DPA. File the sub-processor DPAs (`docs/compliance/SUBPROCESSOR_DPAS.md`).
 - [ ] **Company details:** set `NEXT_PUBLIC_COMPANY_NAME`, `NEXT_PUBLIC_COMPANY_ADDRESS` and `NEXT_PUBLIC_CONTACT_EMAIL`. Have a solicitor review /privacy, /terms and `docs/compliance/DPA_TEMPLATE.md`.
 - [ ] **Hardening checklist:** `docs/OPERATIONS.md` §6 (uptime monitor, leaked-password protection, backups and restore test).
