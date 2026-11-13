@@ -87,3 +87,25 @@ export function typeLabel(drugName: string, form: string): string {
   const p = productFor(drugName, form);
   return p ? `${p.brands[0]} · ${p.form}` : form;
 }
+
+const SOLID = /tablet|capsule|caps?\b|tab\b/i;
+const MODIFIED = /prolonged|modified|sustained|extended|controlled|\bsr\b|\bxl\b|\bla\b|\bpr\b|retard/i;
+
+/**
+ * The form a brand actually comes in. A prescription that says "OxyNorm … tablet" means
+ * OxyNorm capsules (OxyNorm has no tablet). Only changes a solid oral form, and only when
+ * the brand has exactly one plain (or exactly one modified-release) solid form.
+ */
+export function canonicalForm(brand: string | null | undefined, form: string): { form: string; unit: CdProduct['unit'] } | null {
+  if (!brand || !form) return null;
+  const b = brand.trim().toLowerCase();
+  let matches = CD_PRODUCTS.filter((p) => p.brands.some((x) => x.toLowerCase() === b));
+  if (!matches.length) matches = CD_PRODUCTS.filter((p) => p.brands.some((x) => x.toLowerCase().startsWith(b) || b.startsWith(x.toLowerCase())));
+  if (!matches.length || !SOLID.test(form)) return null;
+  if (matches.some((p) => formKey(p.form) === formKey(form))) return null; // already a real form of this brand
+  const wantModified = MODIFIED.test(form);
+  const solidAll = matches.filter((p) => SOLID.test(p.form));
+  const solid = solidAll.filter((p) => MODIFIED.test(p.form) === wantModified);
+  const pick = solid.length === 1 ? solid[0] : solidAll.length === 1 ? solidAll[0] : null; // e.g. MST only comes prolonged-release
+  return pick ? { form: pick.form, unit: pick.unit } : null;
+}

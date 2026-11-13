@@ -3,7 +3,7 @@
 import { productTitle, genericLine, brandOf } from '@/lib/product-name';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ChevronLeft, ChevronRight, Download, Plus, Printer, PencilLine } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Download, Plus, Printer, PencilLine, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { can } from '@/lib/roles';
 import { canWrite } from '@/lib/stripe';
@@ -138,6 +138,13 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
         <div className="flex flex-wrap gap-2">
           <a href={`/api/registers/${params.id}/export`} className="btn-secondary"><Download className="h-4 w-4" /> <span className="hidden sm:inline">Export</span> CSV</a>
           <button onClick={() => window.print()} className="btn-secondary"><Printer className="h-4 w-4" /> Print</button>
+          {data.entries.length === 0 && staff && can.openRegister(staff.role) && (
+            <button onClick={async () => {
+              if (!confirm('Remove this unused CD book? It has no entries.')) return;
+              try { await api(`/api/registers/${params.id}`, { method: 'DELETE' }); window.location.href = '/dashboard'; }
+              catch (e: any) { alert(e?.message ?? 'Could not remove it'); }
+            }} className="btn-ghost text-destructive"><Trash2 className="h-4 w-4" /> Remove book</button>
+          )}
           <StockCheckButton registerId={params.id} unit={p.unit} balance={Number(balance)} canRecord={!!mayRecord} />
           {mayRecord && <button onClick={() => setAdding(true)} className="btn-primary"><Plus className="h-4 w-4" /> New entry</button>}
         </div>
@@ -221,8 +228,13 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
                         })}
                         {/* Ruled empty lines so the page looks like the book */}
                         {Array.from({ length: Math.max(0, LINES_PER_PAGE - pageLines.length) }).map((_, i) => (
-                          <tr key={`empty-${i}`} aria-hidden>
-                            <td /><td /><td /><td /><td /><td /><td />{mayRecord && <td className="no-print" />}
+                          <tr key={`empty-${i}`} aria-hidden={!mayRecord}
+                            onClick={mayRecord ? () => { setAddType(undefined); setAdding(true); } : undefined}
+                            className={mayRecord ? 'group cursor-pointer hover:bg-brand/5' : undefined}
+                            title={mayRecord ? 'Add the next entry' : undefined}>
+                            <td />
+                            <td>{mayRecord && <span className={`no-print text-sm font-semibold text-primary ${i === 0 ? 'opacity-70' : 'opacity-0'} group-hover:opacity-100`}>+ {i === 0 ? 'Add the next entry here' : 'Add entry'}</span>}</td>
+                            <td /><td /><td /><td /><td />{mayRecord && <td className="no-print" />}
                           </tr>
                         ))}
                       </tbody>

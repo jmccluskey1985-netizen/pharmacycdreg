@@ -8,6 +8,7 @@ import { api, ApiError } from '@/lib/api';
 import { can } from '@/lib/roles';
 import { useStaff } from '@/components/dashboard/staff-context';
 import { EntryForm } from '@/components/dashboard/entry-form';
+import { productFor } from '@/data/cd-products';
 
 type Page = { file: File; url: string };
 type Stage = 'capture' | 'reading' | 'review';
@@ -193,7 +194,7 @@ export default function ScanPage() {
 
         <div className="space-y-4">
           {result.proposals.map((p: any, i: number) => (
-            <ProposalCard key={i} p={p} autoOpen={result.proposals.length === 1 && !!p.register_id} done={!!result.done[i]} onDone={() => setResult({ ...result, done: { ...result.done, [i]: true } })} canRecord={!!staff && can.record(staff.role)} />
+            <ProposalCard key={i} p={p} canOpenBook={!!staff && can.openRegister(staff.role)} autoOpen={result.proposals.length === 1 && !!p.register_id} done={!!result.done[i]} onDone={() => setResult({ ...result, done: { ...result.done, [i]: true } })} canRecord={!!staff && can.record(staff.role)} />
           ))}
         </div>
 
@@ -331,11 +332,14 @@ export default function ScanPage() {
   );
 }
 
-function ProposalCard({ p, done, onDone, canRecord, autoOpen }: { p: any; done: boolean; onDone: () => void; canRecord: boolean; autoOpen?: boolean }) {
+function ProposalCard({ p, done, onDone, canRecord, autoOpen, canOpenBook }: { p: any; done: boolean; onDone: () => void; canRecord: boolean; autoOpen?: boolean; canOpenBook?: boolean }) {
   const [registerId, setRegisterId] = useState<string | null>(p.register_id);
+  const [candidates, setCandidates] = useState<any[]>(p.candidates);
+  const [started, setStarted] = useState<{ id: string; balance: number } | null>(null);
+  const [startOpen, setStartOpen] = useState(!p.candidates.length);
   // One drug matched to your register (the usual prescription): go straight to the filled-in entry.
   const [open, setOpen] = useState(!!autoOpen && canRecord);
-  const chosen = p.candidates.find((c: any) => c.id === registerId);
+  const chosen = candidates.find((c: any) => c.id === registerId);
   const conf = p.item.confidence as 'high' | 'medium' | 'low';
   const confCls = conf === 'high' ? 'bg-brand/15 text-primary' : conf === 'medium' ? 'bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100' : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200';
 
@@ -365,14 +369,17 @@ function ProposalCard({ p, done, onDone, canRecord, autoOpen }: { p: any; done: 
         <>
           <div className="mt-3">
             <label className="label">Register</label>
-            {p.candidates.length ? (
+            {candidates.length > 0 && (
               <select className="input" value={registerId ?? ''} onChange={(e) => setRegisterId(e.target.value || null)}>
                 <option value="">Choose register…</option>
-                {p.candidates.map((c: any) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                {candidates.map((c: any) => <option key={c.id} value={c.id}>{c.label}</option>)}
               </select>
-            ) : (
-              <p className="rounded-lg bg-muted p-3 text-sm">No CD book for this product yet. <Link href="/dashboard?new=register" className="text-primary underline">Open a new CD book</Link>, then scan again.</p>
             )}
+            {!started && p.match_state !== 'your_register' && (canOpenBook ? (
+              startOpen
+                ? <StartBook item={p.item} receipt={p.draft?.entry_type === 'receipt'} onStarted={(id, label, balance) => { setCandidates((c) => [...c, { id, label }]); setRegisterId(id); setStarted({ id, balance }); setStartOpen(false); if (canRecord) setOpen(true); }} onCancel={candidates.length ? () => setStartOpen(false) : undefined} />
+                : <button type="button" onClick={() => setStartOpen(true)} className="mt-2 text-sm font-semibold text-primary underline">Not listed? Start a new CD book for it</button>
+            ) : !candidates.length && <p className="rounded-lg bg-muted p-3 text-sm">No CD book for this product yet — ask the supervising pharmacist to start one.</p>)}
           </div>
           {registerId && !open && canRecord && <button onClick={() => setOpen(true)} className="btn-primary mt-3 w-full">Check details &amp; record</button>}
           {registerId && !canRecord && <p className="mt-3 text-sm text-muted-foreground">A pharmacist needs to confirm this entry.</p>}
@@ -381,7 +388,7 @@ function ProposalCard({ p, done, onDone, canRecord, autoOpen }: { p: any; done: 
               <EntryForm
                 registerId={registerId}
                 unit={chosen?.label ? p.item.quantity_unit : 'units'}
-                balance={registerId === p.register_id ? Number(p.current_balance ?? 0) : NaN}
+                balance={started && registerId === started.id ? started.balance : registerId === p.register_id ? Number(p.current_balance ?? 0) : NaN}
                 initial={p.draft}
                 lockType
                 submitLabel="Confirm & record"
@@ -392,6 +399,50 @@ function ProposalCard({ p, done, onDone, canRecord, autoOpen }: { p: any; done: 
           )}
         </>
       )}
+    </div>
+  );
+}
+
+/** Start a CD book straight from a scanned line: brand, drug, strength and form come from the scan. */
+function StartBook({ item, receipt, onStarted, onCancel }: { item: any; receipt: boolean; onStarted: (id: string, label: string, balance: number) => void; onCancel?: () => void }) {
+  const cat = productFor(item.drug_name, item.form);
+  const [f, setF] = useState({ brand: item.brand ?? cat?.brands[0] ?? '', drug_name: item.drug_name, strength: item.strength, form: cat?.form ?? item.form, unit: cat?.unit ?? (item.quantity_unit || 'tablets'), balance: '' });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
+  async function start() {
+    setBusy(true); setError(null);
+    try {
+      const bal = f.balance === '' ? 0 : Number(f.balance);
+      const d = await api('/api/registers', { method: 'POST', json: {
+        drug_name: f.drug_name, brand: f.brand || null, class_name: cat?.class ?? f.drug_name.split(' ')[0], schedule: item.likely_schedule ?? 2, schedule_paragraph: cat?.para ?? null,
+        form: f.form, strength: f.strength, unit: f.unit, opening_balance: bal || undefined, opening_date: new Date().toISOString().slice(0, 10),
+        opening_balance_note: 'Stock counted when the CD book was started',
+      } });
+      onStarted(d.id, `${f.brand || f.drug_name} ${f.strength} ${f.form}`, bal);
+    } catch (e) { setError(e instanceof ApiError ? e.message : 'Could not start the CD book'); }
+    finally { setBusy(false); }
+  }
+  return (
+    <div className="space-y-3 rounded-xl border border-brand/40 bg-brand/5 p-3 text-sm">
+      <p className="font-semibold">Start a CD book for <span className="text-base">{f.brand || f.drug_name} {f.strength} {f.form}</span></p>
+      <div className="grid gap-2 sm:grid-cols-4">
+        <input className="input py-1.5" value={f.brand} onChange={set('brand')} placeholder="Brand" aria-label="Brand" />
+        <input className="input py-1.5 sm:col-span-2" value={f.drug_name} onChange={set('drug_name')} placeholder="Generic name" aria-label="Generic name" />
+        <input className="input py-1.5" value={f.strength} onChange={set('strength')} placeholder="Strength" aria-label="Strength" />
+        <input className="input py-1.5 sm:col-span-2" value={f.form} onChange={set('form')} placeholder="Form" aria-label="Form" />
+        <select className="input py-1.5" value={f.unit} onChange={set('unit')} aria-label="Counted in">{['tablets', 'capsules', 'ml', 'patches', 'ampoules', 'vials', 'units'].map((u) => <option key={u}>{u}</option>)}</select>
+      </div>
+      <div>
+        <label className="label">{receipt ? 'Stock on hand before this delivery' : 'Stock on hand now, before this supply'} ({f.unit})</label>
+        <input className="input max-w-[10rem] font-semibold" type="number" min="0" step="any" inputMode="decimal" value={f.balance} onChange={set('balance')} placeholder="0" />
+        <p className="mt-1 text-xs text-muted-foreground">Count the shelf, or use the last balance in your paper book. It becomes the book’s opening line.</p>
+      </div>
+      {error && <p className="text-destructive">{error}</p>}
+      <div className="flex gap-2">
+        <button type="button" onClick={start} disabled={busy || !f.drug_name || !f.strength || !f.form} className="btn-primary py-1.5">{busy && <Loader2 className="h-4 w-4 animate-spin" />} Start book &amp; continue</button>
+        {onCancel && <button type="button" onClick={onCancel} className="btn-ghost py-1.5">Cancel</button>}
+      </div>
     </div>
   );
 }

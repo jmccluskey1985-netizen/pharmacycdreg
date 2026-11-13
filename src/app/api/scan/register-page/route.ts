@@ -6,6 +6,7 @@ import { RegisterPageSchema, REGISTER_PAGE_JSON_SCHEMA, REGISTER_PAGE_SYSTEM, re
 import { balancesFor } from '@/lib/registers';
 import { liveRegisters, matchRegister } from '@/lib/match';
 import { registerExemption } from '@/lib/cd-catalogue';
+import { canonicalForm } from '@/data/cd-products';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getReaderConfig } from '@/lib/reader-config';
 import { can } from '@/lib/roles';
@@ -39,6 +40,8 @@ export async function POST(req: Request) {
       prompt: registerPagePrompt(docs.length),
       parse: parseJsonWith(RegisterPageSchema),
     });
+    const fix = canonicalForm(page.brand, page.form ?? '');
+    if (fix) { page.form = fix.form; page.unit = fix.unit; }
     const opening = decideOpening(page);
 
     // Only dates and amounts are kept (no names were read).

@@ -6,7 +6,9 @@ import Link from 'next/link';
 import { Plus, ScanLine, Users, Download, Camera, Loader2, AlertTriangle, CheckCircle2, GalleryHorizontal, Table2, ListChecks, ChevronRight, Search, X } from 'lucide-react';
 import { SetupFromList } from '@/components/dashboard/setup-from-list';
 import { SnapPaperRegisters } from '@/components/dashboard/snap-paper-registers';
-import { Shelf } from '@/components/dashboard/shelf';
+import { Shelf, type Ghost } from '@/components/dashboard/shelf';
+import { CD_PRODUCTS } from '@/data/cd-products';
+import { isOpen } from '@/components/dashboard/setup-from-list';
 import { filterRegisters } from '@/lib/register-filter';
 import { api, ApiError } from '@/lib/api';
 import { can } from '@/lib/roles';
@@ -17,6 +19,8 @@ import { canWrite } from '@/lib/stripe';
 interface Reg {
   id: string;
   balance: number;
+  entry_count?: number;
+  ghost?: Ghost;
   low_stock?: boolean;
   check_due?: boolean;
   last_checked_at?: string | null;
@@ -45,7 +49,22 @@ export default function RegistersPage() {
   const load = useCallback(() => api('/api/registers').then((d) => setRegs(d.registers)), []);
   useEffect(() => { load(); }, [load]);
 
+  // "All CD types": every common CD shows on the shelf; ones not started yet are faint "Start book" cards.
+  const [showAll, setShowAll] = useState(true);
+  useEffect(() => { try { if (localStorage.getItem('cdreg-all-cds') === 'off') setShowAll(false); } catch {} }, []);
+  const toggleAll = () => setShowAll((v) => { try { localStorage.setItem('cdreg-all-cds', v ? 'off' : 'on'); } catch {} return !v; });
+  const [starting, setStarting] = useState<Ghost | null>(null);
+  const canOpen = writable && !!staff && can.openRegister(staff.role);
+  const ghosts: Reg[] = !showAll || !regs || !canOpen ? [] : CD_PRODUCTS.flatMap((p) => p.strengths.filter((st) => !isOpen(regs, p, st)).map((st) => ({
+    id: `ghost:${p.key}:${st}`, balance: 0, ghost: { product: p, strength: st },
+    product: { drug_name: p.generic, brand: p.brands[0], class_name: p.class, strength: st, form: p.form, unit: p.unit, schedule: 2, schedule_paragraph: p.para, is_stereoisomer_of: null, parent: null },
+  }) as unknown as Reg));
+  const removeUnused = async (r: Reg) => {
+    if (!confirm(`Remove the unused CD book for ${(r.product as any).brand ?? r.product.drug_name} ${r.product.strength}? It has no entries.`)) return;
+    try { await api(`/api/registers/${r.id}`, { method: 'DELETE' }); load(); } catch (e) { alert(e instanceof ApiError ? e.message : 'Could not remove it'); }
+  };
   const shown = filterRegisters(regs ?? [], q);
+  const shelfItems = filterRegisters([...(regs ?? []), ...ghosts], q);
   const groups = shown.reduce<Record<string, Reg[]>>((acc, r) => {
     const k = `Schedule ${r.product.schedule}${r.product.schedule_paragraph ? ` (${r.product.schedule_paragraph})` : ''} · ${r.product.class_name}`;
     (acc[k] ||= []).push(r);
@@ -62,6 +81,7 @@ export default function RegistersPage() {
         <div className="flex min-w-0 flex-wrap gap-2">
           <a href="/api/export" className="btn-secondary" title="Download every register as one file — keep a recent copy for business continuity"><Download className="h-4 w-4" /> <span className="hidden sm:inline">Export all</span></a>
           {writable && staff && can.scan(staff.role) && <Link href="/dashboard/scan?type=invoice" className="btn-secondary"><ScanLine className="h-4 w-4" /> Invoice</Link>}
+          {canOpen && view === 'shelf' && <button onClick={toggleAll} className={`btn-secondary ${showAll ? 'ring-2 ring-brand/40' : ''}`} aria-pressed={showAll} title="Show every common CD, including ones you haven't started">{showAll ? 'All CD types' : 'My books only'}</button>}
           <div className="flex rounded-lg border border-border bg-card p-0.5" role="group" aria-label="View">
             <button onClick={() => pickView('shelf')} className={`rounded-md px-2.5 py-1.5 ${view === 'shelf' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`} title="Shelf view" aria-pressed={view === 'shelf'}><GalleryHorizontal className="h-4 w-4" /></button>
             <button onClick={() => pickView('table')} className={`rounded-md px-2.5 py-1.5 ${view === 'table' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`} title="Table view" aria-pressed={view === 'table'}><Table2 className="h-4 w-4" /></button>
@@ -81,14 +101,14 @@ export default function RegistersPage() {
       )}
       {regs && regs.length > 0 && shown.length === 0 && <p className="text-muted-foreground">No register matches “{q}”.</p>}
       {regs === null && <p className="text-muted-foreground">Loading…</p>}
-      {regs?.length === 0 && (
+      {regs?.length === 0 && !ghosts.length && (
         <div className="card text-center">
           <p className="font-semibold">No registers yet</p>
           <p className="mt-1 text-sm text-muted-foreground">Open a register for each controlled drug product you stock. Bring forward the balance from your paper book.</p>
         </div>
       )}
 
-      {view === 'shelf' ? <Shelf regs={shown} /> : (
+      {view === 'shelf' ? <Shelf regs={shelfItems as any} onStart={setStarting} onRemove={canOpen ? (r) => removeUnused(r as any) : undefined} /> : (
         <div className="space-y-8">
           {Object.entries(groups).map(([group, items]) => (
             <section key={group}>
@@ -99,6 +119,9 @@ export default function RegistersPage() {
         </div>
       )}
 
+      <Modal open={!!starting} onClose={() => setStarting(null)} title="Start a CD book">
+        {starting && <StartFromList g={starting} onDone={() => { setStarting(null); load(); }} />}
+      </Modal>
       <Modal open={snap} onClose={() => setSnap(false)} title="Snap your paper register" wide>
         <SnapPaperRegisters onChanged={load} />
       </Modal>
@@ -272,5 +295,43 @@ function TypeTable({ items }: { items: Reg[] }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+/** Start one CD book from the shelf: brand, balance brought forward and its date. */
+function StartFromList({ g, onDone }: { g: Ghost; onDone: () => void }) {
+  const [brand, setBrand] = useState(g.product.brands[0]);
+  const [balance, setBalance] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function start(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true); setError(null);
+    try {
+      await api('/api/registers', { method: 'POST', json: {
+        drug_name: g.product.generic, brand, class_name: g.product.class, schedule: 2, schedule_paragraph: g.product.para,
+        form: g.product.form, strength: g.strength, unit: g.product.unit,
+        opening_balance: balance ? Number(balance) : undefined, opening_date: date, opening_balance_note: 'Brought forward from paper CD register',
+      } });
+      onDone();
+    } catch (err) { setError(err instanceof ApiError ? err.message : 'Could not start the book'); }
+    finally { setBusy(false); }
+  }
+  return (
+    <form onSubmit={start} className="space-y-4">
+      <p className="text-lg font-bold">{brand} {g.strength} <span className="font-normal text-muted-foreground">{g.product.form}</span></p>
+      <p className="-mt-3 text-sm text-muted-foreground">{g.product.generic}</p>
+      {g.product.brands.length > 1 && (
+        <div><label className="label">Brand you stock</label>
+          <select className="input" value={brand} onChange={(e) => setBrand(e.target.value)}>{g.product.brands.map((b) => <option key={b}>{b}</option>)}</select></div>
+      )}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div><label className="label">Balance brought forward ({g.product.unit})</label><input className="input font-semibold" type="number" min="0" step="any" inputMode="decimal" value={balance} onChange={(e) => setBalance(e.target.value)} placeholder="0" autoFocus /></div>
+        <div><label className="label">As at</label><input className="input" type="date" max={new Date().toISOString().slice(0, 10)} value={date} onChange={(e) => setDate(e.target.value)} /></div>
+      </div>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      <button className="btn-primary w-full" disabled={busy}>{busy && <Loader2 className="h-4 w-4 animate-spin" />} Start CD book</button>
+    </form>
   );
 }

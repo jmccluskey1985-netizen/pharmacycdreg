@@ -6,6 +6,7 @@ import { balancesFor } from '@/lib/registers';
 import { liveRegisters, matchRegister } from '@/lib/match';
 import { decideQuantity } from '@/lib/quantity';
 import { getSettings } from '@/lib/settings';
+import { canonicalForm } from '@/data/cd-products';
 import { getReaderConfig } from '@/lib/reader-config';
 import { identifySupplier, looksLikeOwnPharmacy, checkReference } from '@/lib/invoice-rules';
 import { registerExemption } from '@/lib/cd-catalogue';
@@ -39,6 +40,15 @@ export async function POST(req: Request) {
     const db = createServiceClient();
     const { extraction, model } = await extractFromDocument(docs, hint, await getReaderConfig(db));
     if (extraction.document_type === 'other') extraction.document_type = hint; // the pharmacist said what it is
+    // The form the brand really comes in (a script saying "OxyNorm tablet" means OxyNorm capsules).
+    for (const item of extraction.items) {
+      const fix = canonicalForm(item.brand, item.form);
+      if (fix && fix.form !== item.form) {
+        item.notes = `${item.notes ? `${item.notes} ` : ''}Written as “${item.form}”; ${item.brand} comes as ${fix.form}s.`.trim();
+        item.form = fix.form;
+        if (/tablet|capsule/i.test(item.quantity_unit)) item.quantity_unit = fix.unit;
+      }
+    }
 
     const { data: scan, error } = await db
       .from('scans')
@@ -105,7 +115,8 @@ export async function POST(req: Request) {
         candidates: candidates.map((r) => ({ id: r.id, label: r.label })),
         draft: {
           entry_type: isInvoice ? 'receipt' : 'supply',
-          transaction_date: extraction.document_date ?? new Date().toISOString().slice(0, 10),
+          // A supply is dated the day it's supplied (today), not the prescription date; a delivery by the invoice date.
+          transaction_date: isInvoice ? extraction.document_date ?? new Date().toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
           quantity: qty.quantity ?? '',
           supplier_name: extraction.supplier_name,
           supplier_address: extraction.supplier_address,
@@ -114,7 +125,7 @@ export async function POST(req: Request) {
           patient_dob: extraction.patient_dob ?? null,
           prescriber_name: extraction.prescriber_name,
           prescriber_address: extraction.prescriber_address,
-          authority_to_possess: !isInvoice && extraction.prescriber_name ? `Prescription — ${extraction.prescriber_name}${extraction.prescriber_registration ? ` (Reg ${extraction.prescriber_registration})` : ''}` : null,
+          authority_to_possess: !isInvoice && extraction.prescriber_name ? `Prescription — ${extraction.prescriber_name}${extraction.prescriber_registration ? ` (Reg ${extraction.prescriber_registration})` : ''}${extraction.document_date ? `, dated ${extraction.document_date.split('-').reverse().join('/')}` : ''}` : null,
           prescription_ref: isInvoice ? null : extraction.reference,
           notes: isInvoice && extraction.reference ? `Invoice ${extraction.reference}` : null,
           scan_id: scan.id,

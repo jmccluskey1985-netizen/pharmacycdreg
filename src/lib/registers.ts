@@ -35,3 +35,17 @@ export async function balancesFor(registerIds: string[]): Promise<Record<string,
   for (const r of data ?? []) out[r.register_id] = Number(r.running_balance);
   return out;
 }
+
+/** Balance and number of lines per register (one read of the ledger). */
+export async function ledgerSummary(registerIds: string[]): Promise<Record<string, { balance: number; entries: number }>> {
+  if (!registerIds.length) return {};
+  const db = createServiceClient();
+  const { data } = await db.from('cd_ledger').select('register_id, seq, running_balance').in('register_id', registerIds).order('seq', { ascending: true });
+  const out: Record<string, { balance: number; entries: number }> = {};
+  for (const r of data ?? []) {
+    const o = (out[r.register_id] ||= { balance: 0, entries: 0 });
+    o.balance = Number(r.running_balance);
+    o.entries++;
+  }
+  return out;
+}

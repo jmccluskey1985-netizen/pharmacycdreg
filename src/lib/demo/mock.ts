@@ -161,7 +161,7 @@ const patientMatch = (p: Json, q: string) => {
   if (/^\d{4,}/.test(t)) return (p.gms_number || '').startsWith(t);
   return t.split(/\s+/).every((w) => `${p.first_name} ${p.surname}`.toLowerCase().includes(w));
 };
-const regList = () => S.registers.filter((r) => !r.closed_at).map((r) => ({ id: r.id, opened_at: r.opened_at, closed_at: null, product: productOf(r.id), balance: balance(r.id) }));
+const regList = () => S.registers.filter((r) => !r.closed_at).map((r) => ({ id: r.id, opened_at: r.opened_at, closed_at: null, product: productOf(r.id), balance: balance(r.id), entry_count: S.entries.filter((e) => e.register_id === r.id).length }));
 const norm = (s: string) => s.toLowerCase().replace(/hydrochloride|sulfate|sulphate|[^a-z0-9]/g, '');
 
 function csvFile(name: string, rows: (string | number | null)[][]) {
@@ -229,6 +229,11 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     if (needStaff()) return needStaff()!;
     const r = S.registers.find((x) => x.id === m![1]);
     if (!r) return fail(404, 'Register not found');
+    if (method === 'DELETE') {
+      if (S.entries.some((e) => e.register_id === r.id)) return fail(409, 'This CD book has entries, so it can’t be removed.');
+      S.registers = S.registers.filter((x) => x.id !== r.id);
+      return res({ ok: true });
+    }
     audit('register.viewed');
     return res({ register: { id: r.id, product: productOf(r.id) }, ledger: ledger(r.id), entries: S.entries.filter((e) => e.register_id === r.id).sort((a, b) => a.seq - b.seq), staff: S.staff });
   }
