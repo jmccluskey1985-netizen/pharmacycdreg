@@ -3,7 +3,7 @@
 import { productTitle, genericLine, brandOf } from '@/lib/product-name';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ChevronLeft, ChevronRight, Download, Plus, Printer, PencilLine, Trash2 } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Download, Plus, Printer, PencilLine, Trash2, Repeat, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import { can } from '@/lib/roles';
 import { canWrite } from '@/lib/stripe';
@@ -12,6 +12,7 @@ import { Modal } from '@/components/modal';
 import { useStaff } from '@/components/dashboard/staff-context';
 import { EntryForm, type EntryType } from '@/components/dashboard/entry-form';
 import { StockCheckButton } from '@/components/dashboard/stock-check';
+import { RepeatSupplies, type SupplyLine } from '@/components/dashboard/repeat-supplies';
 
 const LINES_PER_PAGE = 16;
 
@@ -67,6 +68,10 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
     }
   }, []);
   const [correcting, setCorrecting] = useState<Raw | null>(null);
+  // Excel-style selection of supply lines → "Repeat for today" (typical repeat prescriptions).
+  const [selected, setSelected] = useState<string[]>([]);
+  const [anchor, setAnchor] = useState<string | null>(null);
+  const [repeating, setRepeating] = useState(false);
 
   const load = useCallback(async () => {
     const d = await api(`/api/registers/${params.id}`);
@@ -130,6 +135,19 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
   if (!data) return <p className="text-muted-foreground">Opening register…</p>;
   const p = data.register.product;
   const mayRecord = staff && can.record(staff.role) && canWrite(pharmacy?.subscription_status);
+  const selectable = (l: Line) => !!mayRecord && !l.struck && l.raw.entry_type === 'supply';
+  const pickable = lines.filter(selectable);
+  const choose = (l: Line, e: React.MouseEvent) => {
+    if (!selectable(l) || (e.target as HTMLElement).closest('button,a,input')) return;
+    if (e.shiftKey && anchor) {
+      const keys = pickable.map((x) => x.key);
+      const [a, b] = [keys.indexOf(anchor), keys.indexOf(l.key)].sort((x, y) => x - y);
+      if (a >= 0 && b >= 0) { setSelected((cur) => [...new Set([...cur, ...keys.slice(a, b + 1)])]); return; }
+    }
+    setSelected((cur) => (cur.includes(l.key) ? cur.filter((k) => k !== l.key) : [...cur, l.key]));
+    setAnchor(l.key);
+  };
+  const chosenLines: SupplyLine[] = lines.filter((l) => selected.includes(l.key)).map((l) => ({ ...(l.raw as any), id: l.raw.corrects_entry_id ?? l.raw.id }));
 
   return (
     <div>
@@ -201,7 +219,9 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
                           const outQty = ['supply', 'destruction', 'patient_return_destruction'].includes(r.entry_type) ? fmtQty(r.quantity) : '';
                           const cls = l.struck ? 'struck' : '';
                           return (
-                            <tr key={l.key} className={r.entry_type.includes('patient_return') ? 'bg-sky-50/60 dark:bg-sky-950/30' : r.entry_type === 'destruction' ? 'bg-amber-50/60 dark:bg-amber-950/20' : ''}>
+                            <tr key={l.key} onClick={(e) => choose(l, e)} aria-selected={selected.includes(l.key) || undefined}
+                              title={selectable(l) ? 'Click to select · Shift-click for a range · then “Repeat for today”' : undefined}
+                              className={`${selectable(l) ? 'cursor-pointer select-none' : ''} ${selected.includes(l.key) ? 'bg-brand/15 outline outline-2 -outline-offset-2 outline-brand' : r.entry_type.includes('patient_return') ? 'bg-sky-50/60 dark:bg-sky-950/30' : r.entry_type === 'destruction' ? 'bg-amber-50/60 dark:bg-amber-950/20' : selectable(l) ? 'hover:bg-brand/5' : ''}`}>
                               <td className={`${cls} tabular-nums`}>{fmtDate(r.transaction_date)}</td>
                               <td className={cls}>
                                 <span className="font-medium">{party.name}</span>
@@ -275,6 +295,19 @@ export default function RegisterBook({ params }: { params: { id: string } }) {
         </button>
       )}
 
+      {selected.length > 0 && !repeating && (
+        <div className="no-print fixed inset-x-0 bottom-24 z-30 flex justify-center px-4 lg:bottom-6">
+          <div className="flex items-center gap-2 rounded-full bg-foreground px-3 py-2 text-sm text-background shadow-2xl">
+            <span className="px-2 font-semibold">{selected.length} selected</span>
+            <button onClick={() => setRepeating(true)} className="flex items-center gap-1.5 rounded-full bg-brand px-3 py-1.5 font-semibold text-white"><Repeat className="h-4 w-4" /> Repeat for today</button>
+            <button onClick={() => setSelected([])} className="rounded-full p-1.5 hover:bg-background/20" aria-label="Clear selection"><X className="h-4 w-4" /></button>
+          </div>
+        </div>
+      )}
+      <Modal open={repeating} onClose={() => setRepeating(false)} title={`Repeat ${selected.length > 1 ? `${selected.length} supplies` : 'supply'} — ${brandOf(p) ?? p.drug_name} ${p.strength}`} wide>
+        {repeating && <RepeatSupplies registerId={params.id} unit={p.unit} balance={Number(balance)} lines={chosenLines}
+          onCancel={() => setRepeating(false)} onDone={async () => { setRepeating(false); setSelected([]); await load(); }} />}
+      </Modal>
       <Modal open={adding} onClose={() => setAdding(false)} title={`New entry — ${brandOf(p) ?? p.drug_name} ${p.strength}`}>
         <EntryForm registerId={params.id} unit={p.unit} balance={balance} initial={addType ? { entry_type: addType } : undefined} onCancel={() => setAdding(false)} onSaved={async () => { setAdding(false); await load(); }} />
       </Modal>
