@@ -20,7 +20,7 @@ export async function GET(req: Request) {
   const code = url.searchParams.get('code');
   if (!code) return back(origin, 'Google sign-in didn’t finish. Please try again.');
 
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
   if (error || !data.user) return back(origin, 'Google sign-in didn’t finish. Please try again.');
 

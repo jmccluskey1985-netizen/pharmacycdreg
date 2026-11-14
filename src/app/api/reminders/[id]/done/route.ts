@@ -13,7 +13,8 @@ const Body = z.object({ action: z.enum(['recorded', 'skipped']), recorded: z.num
  * The supplies themselves are recorded line by line through /api/entries (signed, checked for
  * balance and duplicates). This only moves the reminder on to its next date.
  */
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { account, staff } = await requireStaff(can.record, { write: true });
     const parsed = Body.safeParse(await req.json().catch(() => ({})));

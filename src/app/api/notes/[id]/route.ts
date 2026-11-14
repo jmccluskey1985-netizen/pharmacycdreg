@@ -15,7 +15,8 @@ const Patch = z.object({
 });
 
 // Edit a note. The previous text is kept in the audit trail, so nothing is silently lost.
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { account, staff } = await requireStaff((r) => r !== 'read_only', { write: true });
     const parsed = Patch.safeParse(await req.json().catch(() => ({})));

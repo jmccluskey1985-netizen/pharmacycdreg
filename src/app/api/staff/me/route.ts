@@ -23,7 +23,7 @@ export async function GET() {
     // "Require two-step sign-in" is on but this login has no authenticator any more → nag until fixed.
     // Two-step sign-in: is an authenticator set up on this login? (Suggested when not; required only if the setting is on.)
     const { createServerSupabaseClient } = await import('@/lib/supabase/server');
-    const sb = createServerSupabaseClient();
+    const sb = await createServerSupabaseClient();
     const { data: aal } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
     const has2fa = aal?.nextLevel === 'aal2';
     const twofaMissing = !!st.require_2fa && !has2fa;

@@ -51,7 +51,7 @@ export async function POST(req: Request) {
 
     const { lock_minutes } = await getSettings(createServiceClient(), account.pharmacyId);
     const idle = lock_minutes * 60;
-    cookies().set(
+    (await cookies()).set(
       STAFF_COOKIE,
       encodeStaffSession({ staffId: match.id, pharmacyId: account.pharmacyId, authUserId: account.authUserId, idle }),
       cookieOptionsFor(idle),

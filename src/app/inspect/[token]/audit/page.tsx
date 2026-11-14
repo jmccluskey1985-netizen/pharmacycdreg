@@ -4,7 +4,8 @@ import { openLink, Frame } from '../shared';
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Audit trail: inspection view', robots: { index: false, follow: false } };
 
-export default async function InspectAudit({ params }: { params: { token: string } }) {
+export default async function InspectAudit(props: { params: Promise<{ token: string }> }) {
+  const params = await props.params;
   const { link, pharmacy, db } = await openLink(params.token, 'audit');
   const [{ data: events }, chain] = await Promise.all([
     db.from('audit_log').select('id, occurred_at, action, staff_name, target_table').eq('pharmacy_id', pharmacy.id).order('occurred_at', { ascending: false }).limit(1000),

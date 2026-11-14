@@ -5,8 +5,8 @@ import { cookies } from 'next/headers';
 type CookieToSet = { name: string; value: string; options?: CookieOptions };
 
 /** Session-aware client (reads the signed-in pharmacy account from cookies). */
-export function createServerSupabaseClient() {
-  const cookieStore = cookies();
+export async function createServerSupabaseClient() {
+  const cookieStore = await cookies();
   return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
     cookies: {
       getAll() {

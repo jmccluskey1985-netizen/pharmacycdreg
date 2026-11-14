@@ -13,7 +13,8 @@ const party = (r: any) =>
   : r.entry_type === 'patient_return' ? [`Patient return: ${r.recipient_name}`, 'Not pharmacy stock']
   : [r.recipient_name, r.recipient_address];
 
-export default async function InspectRegister({ params }: { params: { token: string; id: string } }) {
+export default async function InspectRegister(props: { params: Promise<{ token: string; id: string }> }) {
+  const params = await props.params;
   const { link, pharmacy, db } = await openLink(params.token, `register:${params.id}`);
   const { data: reg } = await db.from('cd_registers').select('id, opened_at, closed_at, product:cd_products(*)').eq('id', params.id).eq('pharmacy_id', pharmacy.id).maybeSingle();
   if (!reg) notFound();

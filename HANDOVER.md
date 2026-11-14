@@ -18,7 +18,7 @@ Read this first, then:
 
 | Layer | Choice |
 |---|---|
-| App | Next.js 14 App Router, TypeScript, Tailwind, lucide icons, zod |
+| App | Next.js 16 App Router (React 19), TypeScript, Tailwind, lucide icons, zod 4 |
 | Data / auth | Supabase: Postgres (EU), Auth (password, Google OAuth, TOTP MFA). RLS on with **no client policies**; every read and write goes through server routes using the service key after `requireAccount` / `requireStaff`. |
 | Hosting | Vercel (`main` auto-deploys). Domain `pharmacycdreg.ie`. Daily cron for trial reminders. |
 | Billing | Stripe Checkout, Customer Portal and webhook (€19/month launch price, free month without a card) |
@@ -112,7 +112,7 @@ Other pharmacies never see API keys or model choices.
 
 ```bash
 npx tsc --noEmit                       # types
-npx next lint --dir src                # lint
+npm run lint                           # lint (ESLint 9)
 npx tsx scripts/test-invoice-rules.ts  # invoice quantity / reference rules
 npx tsx scripts/test-register-page.ts  # paper-page opening-balance rules
 npm run test:unit                      # reminders, late entries, stock effects, patient matching
@@ -133,6 +133,11 @@ Not covered automatically: the real server API routes talking to a real Supabase
 - [ ] **Migrations:** confirm 0009–0018 have been run in production.
 - [ ] **Document reader:** set up Google Vertex AI (Settings → Document reading) and accept the Google Cloud DPA. File the sub-processor DPAs (`docs/compliance/SUBPROCESSOR_DPAS.md`).
 - [ ] **Company details:** set `NEXT_PUBLIC_COMPANY_NAME`, `NEXT_PUBLIC_COMPANY_ADDRESS` and `NEXT_PUBLIC_CONTACT_EMAIL`. Have a solicitor review /privacy, /terms and `docs/compliance/DPA_TEMPLATE.md`.
+- [ ] **Supabase plan:** Pro (daily backups, 7 days) and ideally Point-in-Time Recovery. Turn on leaked-password protection (Authentication → Policies). Run migration 0018.
+- [ ] **Vercel env:** set `SECRETS_KEY` (32+ random characters, different from `STAFF_SESSION_SECRET`) so stored API keys and staff sessions use separate keys. Then re-save the reader key in Settings so it's encrypted with the new key.
+- [ ] **Uptime monitor** on `https://pharmacycdreg.ie/api/health` (e.g. UptimeRobot, free).
+- [ ] **Restore drill:** once a year, restore a Full backup into a throwaway Supabase project with `scripts/restore-backup.mjs` and record the result (docs/BACKUP_AND_RESTORE.md).
+- [ ] **Code (later):** tighten the browser security policy to nonce-based scripts (drop `'unsafe-inline'`); refactor the 26 effects flagged by `react-hooks/set-state-in-effect` (warnings for now).
 - [ ] **Hardening checklist:** `docs/OPERATIONS.md` §6 (uptime monitor, leaked-password protection, backups and restore test).
 - [ ] **Multi-premises groups:** one login across several pharmacies, with a switcher and group pricing. Not built yet; the data model is one pharmacy per login.
 - [ ] **Reminders:** consider an email or push notification for due reminders (they're in-app only for now).

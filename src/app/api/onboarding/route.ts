@@ -22,7 +22,7 @@ export async function GET() {
       count('dispense_reminders', (q) => q.eq('pharmacy_id', ph)),
       count('audit_log', (q) => q.eq('pharmacy_id', ph).in('action', ['data.backup_downloaded', 'register.exported_all'])),
     ]);
-    const { data: f } = await createServerSupabaseClient().auth.mfa.listFactors();
+    const { data: f } = await (await createServerSupabaseClient()).auth.mfa.listFactors();
     const steps = [
       { key: 'team', label: 'Add your team, each with their own PIN', done: staff > 1, href: '/dashboard/team' },
       { key: 'registers', label: 'Open a CD book for each product you stock', done: registers > 0, href: '/dashboard?new=register' },

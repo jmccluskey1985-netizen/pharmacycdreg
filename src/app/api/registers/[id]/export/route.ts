@@ -10,7 +10,8 @@ const csv = (v: unknown) => {
 };
 
 // FR16 / NFR11 / NFR13: reproduce the register for an authorised officer.
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { account, staff } = await requireStaff();
     const reg = await getRegisterForPharmacy(params.id, account.pharmacyId);

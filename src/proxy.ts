@@ -8,7 +8,7 @@ function withHeaders(response: NextResponse) {
 
 const CANONICAL_HOST = process.env.CANONICAL_HOST || 'pharmacycdreg.ie';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   // One address, one login: www and the vercel.app address keep separate cookies, so
   // send everyone to the main domain (production only; previews keep their own URL).

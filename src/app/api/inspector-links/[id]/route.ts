@@ -6,7 +6,8 @@ import { can } from '@/lib/roles';
 export const dynamic = 'force-dynamic';
 
 // Revoke a link straight away.
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { account, staff } = await requireStaff(can.manageStaff);
     const db = createServiceClient();

@@ -28,7 +28,7 @@ export interface Staff {
 
 /** Step 1: the pharmacy login (email + password via Supabase). */
 export async function requireAccount(): Promise<Account> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new HttpError(401, 'Not signed in', 'NO_ACCOUNT');
   const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
@@ -47,7 +47,7 @@ export async function requireAccount(): Promise<Account> {
  */
 export async function requireStaff(allowed?: (r: StaffRole) => boolean, opts: { write?: boolean } = {}): Promise<{ account: Account; staff: Staff }> {
   const account = await requireAccount();
-  const session = decodeStaffSession(cookies().get(STAFF_COOKIE)?.value);
+  const session = decodeStaffSession((await cookies()).get(STAFF_COOKIE)?.value);
   if (!session || session.pharmacyId !== account.pharmacyId || session.authUserId !== account.authUserId) {
     throw new HttpError(423, 'Enter your PIN to continue', 'LOCKED');
   }
@@ -76,7 +76,7 @@ export async function requireStaff(allowed?: (r: StaffRole) => boolean, opts: { 
   // Sliding idle timeout: any authenticated activity extends the lock timer.
   try {
     const { exp: _exp, ...keep } = session;
-    cookies().set(STAFF_COOKIE, encodeStaffSession(keep), cookieOptionsFor(session.idle));
+    (await cookies()).set(STAFF_COOKIE, encodeStaffSession(keep), cookieOptionsFor(session.idle));
   } catch {
     /* read-only context */
   }

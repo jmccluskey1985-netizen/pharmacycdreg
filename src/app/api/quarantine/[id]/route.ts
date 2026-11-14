@@ -4,7 +4,8 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { can } from '@/lib/roles';
 
 // Release: put stock set aside by mistake back into usable stock (with a reason). Recorded, never deleted.
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { account, staff } = await requireStaff(can.record, { write: true });
     const { reason } = await req.json().catch(() => ({}));

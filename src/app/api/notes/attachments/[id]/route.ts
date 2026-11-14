@@ -12,7 +12,8 @@ async function find(id: string, pharmacyId: string) {
 }
 
 // Stream the file to a signed-in staff member of the same pharmacy (never a public URL).
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { account } = await requireStaff();
     const { db, att } = await find(params.id, account.pharmacyId);
@@ -26,7 +27,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 }
 
 // Remove an attachment added by mistake (e.g. the wrong photo). Audited.
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { account, staff } = await requireStaff((r) => r !== 'read_only', { write: true });
     const { db, att } = await find(params.id, account.pharmacyId);

@@ -5,7 +5,8 @@ import { createServiceClient } from '@/lib/supabase/server';
 export const dynamic = 'force-dynamic';
 
 // One vote per pharmacy per shared idea; POST again to take it back.
-export async function POST(_req: Request, { params }: { params: { id: string } }) {
+export async function POST(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { account } = await requireStaff();
     const db = createServiceClient();

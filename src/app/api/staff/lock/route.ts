@@ -4,6 +4,6 @@ import { STAFF_COOKIE } from '@/lib/staff-session';
 
 // "Lock" / switch user: clears the active staff member; the pharmacy login stays.
 export async function POST() {
-  cookies().delete(STAFF_COOKIE);
+  (await cookies()).delete(STAFF_COOKIE);
   return NextResponse.json({ ok: true });
 }

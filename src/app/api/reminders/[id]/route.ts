@@ -6,7 +6,8 @@ import { can } from '@/lib/roles';
 
 export const dynamic = 'force-dynamic';
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { account, staff } = await requireStaff(can.record, { write: true });
     const parsed = ReminderBody.partial().safeParse(await req.json().catch(() => ({})));
@@ -28,7 +29,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   }
 }
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { account, staff } = await requireStaff(can.record, { write: true });
     const db = createServiceClient();

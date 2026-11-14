@@ -6,7 +6,8 @@ import { can } from '@/lib/roles';
 
 // Close a register (product no longer stocked). It stays readable, searchable and
 // exportable for inspection; it just can't take new entries. Balance must be nil.
-export async function POST(_req: Request, { params }: { params: { id: string } }) {
+export async function POST(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { account, staff } = await requireStaff(can.manageStaff);
     const db = createServiceClient();

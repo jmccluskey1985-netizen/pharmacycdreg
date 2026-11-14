@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic';
 
 // One register "book": the effective ledger + every raw row (originals and corrections)
 // so the page can show struck-through originals with footnotes (FR11, NFR5).
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { account, staff } = await requireStaff();
     const reg = await getRegisterForPharmacy(params.id, account.pharmacyId);
@@ -28,7 +29,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 
 // Remove a CD book that was never used (opened by mistake, or a "start" you don't stock).
 // Only when it has NO entries at all, a register with any line, even corrected, is kept forever.
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { account, staff } = await requireStaff(can.openRegister);
     const db = createServiceClient();

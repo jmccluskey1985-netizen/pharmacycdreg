@@ -14,7 +14,8 @@ const Patch = z.object({
 });
 
 // Site owner only: set status, reply, and share an idea (with a tidied title) for everyone to vote on.
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { account } = await requireStaff();
     if (!isSiteAdmin(account.email)) return NextResponse.json({ error: 'Not allowed' }, { status: 403 });

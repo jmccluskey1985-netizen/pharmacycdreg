@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Search } from 'lucide-react';
 
-const GUIDES: { title: string; tags: string; steps: (string | JSX.Element)[]; link?: { href: string; label: string } }[] = [
+const GUIDES: { title: string; tags: string; steps: (string | React.JSX.Element)[]; link?: { href: string; label: string } }[] = [
   { title: 'Record a supply from a prescription', tags: 'scan rx dispense supply', steps: ['Tap Scan Rx (top of every page).', 'Photograph the prescription: it reads the patient, prescriber, drug and quantity.', 'Check every field against the prescription, then Sign & record. Nothing is recorded until you sign.'], link: { href: '/dashboard/scan?type=prescription', label: 'Scan Rx' } },
   { title: 'Book in a delivery (invoice / CD docket)', tags: 'invoice receipt wholesaler uniphar united drug pco', steps: ['New entry → From an invoice → Photograph the invoice.', 'It works out packs × pack size and picks up the invoice number (not your account number).', 'Check each line and sign. The same invoice can’t be booked in twice.'] },
   { title: 'Type an entry by hand', tags: 'manual entry type', steps: ['Open the drug’s register and click the next empty row (or New entry).', 'Start typing a patient, doctor or supplier, known ones fill in automatically.', 'Check the balance preview, then Sign & record.'] },

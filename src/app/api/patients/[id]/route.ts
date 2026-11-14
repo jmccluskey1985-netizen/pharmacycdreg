@@ -6,7 +6,8 @@ import { PatientBody, writePatient } from '@/lib/patients';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { account } = await requireStaff(can.record);
     const db = createServiceClient();
@@ -19,7 +20,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 }
 
 // Edit details, or archive (is_active=false). Never touches past register entries.
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { account, staff } = await requireStaff(can.record);
     const body = await req.json().catch(() => ({}));

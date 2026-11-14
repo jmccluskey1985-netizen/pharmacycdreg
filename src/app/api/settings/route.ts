@@ -44,7 +44,7 @@ export async function PATCH(req: Request) {
     const { low_stock, ...fields } = parsed.data;
     // Requiring two-step sign-in only makes sense once this login has an authenticator set up.
     if (fields.require_2fa) {
-      const { data: f } = await createServerSupabaseClient().auth.mfa.listFactors();
+      const { data: f } = await (await createServerSupabaseClient()).auth.mfa.listFactors();
       if (!f?.totp?.some((x) => x.status === 'verified')) return NextResponse.json({ error: 'Turn on two-step sign-in (add a phone) first, then require it.' }, { status: 400 });
     }
     const db = createServiceClient();

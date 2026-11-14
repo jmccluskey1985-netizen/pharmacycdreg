@@ -14,7 +14,8 @@ const FIELDS = ['date_of_birth', 'address', 'phone', 'gms_number', 'dps_number',
  * Merge a duplicate patient (:id) into the record to keep (into). Register lines keep their own
  * name and address text; only the link to the patient record moves. Pharmacists only; audited.
  */
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { account, staff } = await requireStaff(can.record, { write: true });
     const parsed = Body.safeParse(await req.json().catch(() => ({})));

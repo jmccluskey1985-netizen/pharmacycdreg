@@ -6,7 +6,8 @@ import { ATTACHMENT_TYPES, MAX_ATTACHMENT, NOTES_BUCKET, missing0012, NEEDS_0012
 export const dynamic = 'force-dynamic';
 
 // Attach a photo / scan / PDF to a note. Stored in a private bucket; only served through the app.
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { account, staff } = await requireStaff((r) => r !== 'read_only', { write: true });
     const db = createServiceClient();

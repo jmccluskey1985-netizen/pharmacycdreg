@@ -6,7 +6,8 @@ import { openLink, Frame, fmtQty } from './shared';
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Inspection view: PharmacyCDReg.ie', robots: { index: false, follow: false } };
 
-export default async function InspectHome({ params }: { params: { token: string } }) {
+export default async function InspectHome(props: { params: Promise<{ token: string }> }) {
+  const params = await props.params;
   const { link, pharmacy, db } = await openLink(params.token, 'registers');
   const { data: regs } = await db.from('cd_registers').select('id, opened_at, closed_at, product:cd_products(*)').eq('pharmacy_id', pharmacy.id).order('opened_at');
   const ids = (regs ?? []).map((r) => r.id);

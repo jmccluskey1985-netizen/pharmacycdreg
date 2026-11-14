@@ -1,7 +1,7 @@
 'use client';
 
 import { productTitle, genericLine, brandOf } from '@/lib/product-name';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, use } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Plus, Printer, PencilLine, Trash2, Repeat, X, BellRing, StickyNote } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -55,7 +55,8 @@ function authorityCell(r: Raw) {
   return [r.authority_to_possess || (r.prescriber_name ? `Rx: ${r.prescriber_name}` : ''), r.prescription_ref, r.notes?.startsWith('Late entry') ? r.notes : null].filter(Boolean).join(' · ');
 }
 
-export default function RegisterBook({ params }: { params: { id: string } }) {
+export default function RegisterBook(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const { staff, pharmacy, refresh } = useStaff();
   const [data, setData] = useState<{ register: any; ledger: Ledger[]; entries: Raw[]; staff: Person[] } | null>(null);
   const [opened, setOpened] = useState(false);

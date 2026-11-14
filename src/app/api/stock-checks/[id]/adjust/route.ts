@@ -21,7 +21,8 @@ const fmt = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
  * register has moved on since the count (count again first). Optionally saves the
  * investigation as a note linked to the register and the stock check (photos can be added).
  */
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { account, staff } = await requireStaff(can.record, { write: true });
     const parsed = Body.safeParse(await req.json().catch(() => ({})));

@@ -43,7 +43,7 @@ function Counter({ value, className = '' }: { value: number; className?: string 
   return <span className={`tabular-nums ${className}`}>{shown}</span>;
 }
 
-function Card({ title, text, children, refEl }: { title: string; text: string; children: React.ReactNode; refEl: React.RefObject<HTMLDivElement> }) {
+function Card({ title, text, children, refEl }: { title: string; text: string; children: React.ReactNode; refEl: React.RefObject<HTMLDivElement | null> }) {
   return (
     <div ref={refEl} className="flex flex-col overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border">
       <div className="relative h-56 overflow-hidden bg-gradient-to-b from-secondary/70 to-background p-4" aria-hidden="true">{children}</div>
