@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser, Settings, UserRound, ListOrdered, Menu, BellRing, StickyNote, MessageSquarePlus, LifeBuoy, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser, Settings, UserRound, ListOrdered, Menu, BellRing, StickyNote, MessageSquarePlus, LifeBuoy, PanelLeftClose, PanelLeftOpen, ShieldCheck, X } from 'lucide-react';
 import { NewEntryButton } from './new-entry';
 import { Modal } from '@/components/modal';
 import { TrainingBar, TrainingButton, useTraining } from './training';
@@ -113,6 +113,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <span className="flex-1"><b>Two-step sign-in is required but not set up.</b> Add an authenticator app in Settings → Security.</span><span className="font-semibold underline">Fix</span>
           </Link>
         )}
+        {!(pharmacy as any)?.twofa_missing && (pharmacy as any)?.has_2fa === false && can.manageStaff(staff.role) && <TwoStepSuggestion session={(pharmacy as any)?.login_session ?? null} />}
         {remindersDue > 0 && can.record(staff.role) && !path.startsWith('/dashboard/reminders') && (
           <Link href="/dashboard/reminders" className="no-print mb-4 flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
             <BellRing className="h-5 w-5 flex-shrink-0" /> <span className="flex-1"><b>{remindersDue} dispensing reminder{remindersDue === 1 ? '' : 's'} due</b>. Record {remindersDue === 1 ? 'it' : 'them'} in the registers in one click</span><span className="font-semibold underline">Open</span>
@@ -164,6 +165,25 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </>
         );
       })()}
+    </div>
+  );
+}
+
+/**
+ * Two-step sign-in is optional, but suggested: this bar shows until an authenticator is added.
+ * Closing it hides it until the next sign-in (keyed to the login session).
+ */
+function TwoStepSuggestion({ session }: { session: string | null }) {
+  const key = `cdreg-2fa-dismissed`;
+  const [hidden, setHidden] = useState(true);
+  useEffect(() => { let v: string | null = null; try { v = localStorage.getItem(key); } catch {} setHidden(!!session && v === session); }, [session]);
+  if (hidden) return null;
+  return (
+    <div className="no-print mb-4 flex items-center gap-3 rounded-xl border border-primary/30 bg-secondary px-4 py-3 text-sm">
+      <ShieldCheck className="h-5 w-5 flex-shrink-0 text-primary" />
+      <span className="flex-1"><b>Protect your register with two-step sign-in.</b> Add a code from an authenticator app on your phone when signing in, so a stolen password isn&apos;t enough.</span>
+      <Link href="/dashboard/settings#two-step" className="font-semibold text-primary underline">Set up</Link>
+      <button type="button" aria-label="Hide until next sign-in" title="Hide until next sign-in" onClick={() => { try { if (session) localStorage.setItem(key, session); } catch {} setHidden(true); }} className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"><X className="h-4 w-4" /></button>
     </div>
   );
 }

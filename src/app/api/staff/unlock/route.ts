@@ -11,9 +11,15 @@ import { STAFF_COOKIE, encodeStaffSession, cookieOptionsFor } from '@/lib/staff-
 export async function POST(req: Request) {
   try {
     const account = await requireAccount(); // PIN only works inside a signed-in pharmacy session
-    const limit = checkRateLimit(`pin:${account.pharmacyId}:${clientKey(req)}`, 5, 60_000);
+    const limit = await checkRateLimit(`pin:${account.pharmacyId}:${clientKey(req)}`, 5, 60_000);
     if (!limit.ok) {
       return NextResponse.json({ error: `Too many attempts. Try again in ${limit.retryAfter}s.` }, { status: 429 });
+    }
+    // Across every device: after 30 wrong PINs in an hour, PIN sign-in pauses for this pharmacy.
+    const PIN_FAILS = 30, HOUR = 60 * 60_000;
+    const fails = await checkRateLimit(`pinfail:${account.pharmacyId}`, PIN_FAILS, HOUR, 0);
+    if (!fails.ok) {
+      return NextResponse.json({ error: `Too many wrong PINs on this pharmacy's login. PIN sign-in is paused for ${Math.ceil(fails.retryAfter / 60)} min. If this wasn't your team, change the pharmacy password.` }, { status: 429 });
     }
 
     const { pin } = await req.json().catch(() => ({}));
@@ -36,6 +42,7 @@ export async function POST(req: Request) {
 
     if (!match) {
       await audit(account.pharmacyId, 'staff.pin_failed', null, account.authUserId);
+      await checkRateLimit(`pinfail:${account.pharmacyId}`, PIN_FAILS, HOUR);
       return NextResponse.json({ error: 'PIN not recognised: try again', code: 'BAD_PIN' }, { status: 400 }); // not 401: a wrong PIN must not sign the pharmacy out
     }
     if (match.access_expires_at && new Date(match.access_expires_at) < new Date()) {

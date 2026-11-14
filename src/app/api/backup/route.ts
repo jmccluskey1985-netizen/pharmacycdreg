@@ -11,7 +11,7 @@ export const maxDuration = 60;
  * (business continuity) and for data portability. Supervising pharmacist only; audited.
  * Secrets (PIN hashes, Stripe ids, API keys) are left out. Photos on notes are listed, not embedded.
  */
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const { account, staff } = await requireStaff(can.manageStaff);
     const db = createServiceClient();
@@ -55,7 +55,7 @@ export async function GET() {
       // restore reproduces the same fingerprints (scripts/restore-backup.mjs).
       audit_log: await all('audit_log', (q) => q.eq('pharmacy_id', ph), 'chain_seq', '*, details_raw:details::text'),
     };
-    await audit(ph, 'data.backup_downloaded', staff, account.authUserId, { entries: Array.isArray(backup.entries) ? backup.entries.length : 0 });
+    await audit(ph, 'data.backup_downloaded', staff, account.authUserId, { password_protected: new URL(req.url).searchParams.get('encrypted') === '1', entries: Array.isArray(backup.entries) ? backup.entries.length : 0 });
     const name = `pharmacycdreg-backup-${new Date().toISOString().slice(0, 10)}.json`;
     return new NextResponse(JSON.stringify(backup, null, 1), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Content-Disposition': `attachment; filename="${name}"`, 'Cache-Control': 'private, no-store' } });
   } catch (err) {

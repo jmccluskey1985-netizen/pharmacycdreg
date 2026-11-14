@@ -1,0 +1,14 @@
+# Weekly update requests for packages with fixes. Security fixes open on their own as soon as
+# they're published. Every update request runs the full test suite (ci.yml) before it can be merged.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: monthly }

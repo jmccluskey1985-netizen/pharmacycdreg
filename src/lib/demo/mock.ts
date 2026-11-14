@@ -222,7 +222,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
   const needStaff = () => (st ? null : fail(423, 'Enter your PIN to continue', 'LOCKED'));
 
   if (path === '/api/staff/me') {
-    return res({ pharmacy: S.pharmacy, staff: st && { id: st.id, full_name: st.full_name, role: st.role, psi_number: st.psi_number }, locked: !st, hasPins: true, inboxCount: S.inbox.filter((i) => i.status === 'pending').length, remindersDue: st ? REM().filter((r) => r.active && r.next_due <= today()).length : 0, feedbackNew: 0 });
+    return res({ pharmacy: { ...S.pharmacy, has_2fa: false, login_session: ((S as any).loginSession ||= uid()) }, staff: st && { id: st.id, full_name: st.full_name, role: st.role, psi_number: st.psi_number }, locked: !st, hasPins: true, inboxCount: S.inbox.filter((i) => i.status === 'pending').length, remindersDue: st ? REM().filter((r) => r.active && r.next_due <= today()).length : 0, feedbackNew: 0 });
   }
   if (path === '/api/staff/unlock' && method === 'POST') {
     const s = S.staff.find((x) => x.is_active && x.pin === String(body.pin));
@@ -516,6 +516,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     return res({ check: c, balance: bal, diff });
   }
   if (path === '/api/audit/event') return res({ ok: true });
+  if (path === '/api/backup') return res({ format: 'pharmacycdreg-backup', version: 1, demo: true, exported_at: new Date().toISOString(), ...S });
   if (path === '/api/preferences') return res(method === 'GET' ? { theme: null } : { ok: true, saved_to_account: false });
   if (path === '/api/patients/import') return res({ added: 0 });
   if (path === '/api/patients') {

@@ -44,7 +44,11 @@ if $P -f "$DIR/tampered.sql" >/dev/null 2>"$DIR/terr"; then no 'a tampered backu
   grep -q 'failed its integrity check' "$DIR/terr" && [ "$($P -At -c "select count(*) from pharmacies where id='$X'")" = 0 ] && ok 'a tampered backup is refused and nothing is left behind' || { no 'tampered backup: wrong failure'; head -3 "$DIR/terr"; }
 fi
 
-node scripts/restore-backup.mjs "$DIR/backup.json" --out "$DIR/restore.sql" --login "$U" > "$DIR/rout"
+# Password-protected backup (encrypted with the browser code): wrong password refused, right one restores
+npx tsx tests/db/encrypt-backup.mts "$DIR/backup.json" "$DIR/protected.json" 'correct horse battery'
+! grep -q 'Mary' "$DIR/protected.json" && ok 'protected backup: no patient details readable in the file' || no 'protected backup readable'
+CDREG_BACKUP_PASSWORD='wrong password!' node scripts/restore-backup.mjs "$DIR/protected.json" --out "$DIR/x.sql" >/dev/null 2>"$DIR/perr" && no 'wrong password accepted' || { grep -q 'Wrong password' "$DIR/perr" && ok 'protected backup: wrong password refused' || no 'wrong password: wrong message'; }
+CDREG_BACKUP_PASSWORD='correct horse battery' node scripts/restore-backup.mjs "$DIR/protected.json" --out "$DIR/restore.sql" --login "$U" > "$DIR/rout"
 if $P -f "$DIR/restore.sql" >/dev/null 2>"$DIR/rerr"; then ok 'backup restores in one transaction'; else no 'restore failed'; grep -m3 ERROR "$DIR/rerr"; fi
 after=$($P -At -c "select (select string_agg(row_hash, ',' order by register_id, seq) from cd_entries where register_id in (select id from cd_registers where pharmacy_id='$X')) || '|' || (select string_agg(row_hash, ',' order by chain_seq) from audit_log where pharmacy_id='$X' and action <> 'data.restored')")
 [ -n "$before" ] && [ "$before" = "$after" ] && ok "all $lines register lines and the audit trail have identical fingerprints" || no 'fingerprints differ after restore'

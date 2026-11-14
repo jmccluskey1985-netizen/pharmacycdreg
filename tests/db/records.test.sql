@@ -67,3 +67,19 @@ select pg_temp.ok(true, 'reminder frequency and feedback kind/status are validat
 select pg_temp.ok((select coalesce(string_agg(tablename, ', '), '') = '' from pg_tables where schemaname = 'public' and not rowsecurity),
   'row level security is on for every table: ' || coalesce((select string_agg(tablename, ', ') from pg_tables where schemaname = 'public' and not rowsecurity), 'none missing'));
 select pg_temp.ok((select count(*) = 0 from pg_policies where schemaname = 'public'), 'no browser access policies exist (server-only access)');
+
+-- 0018: shared attempt limits (statements run in order; side effects matter)
+do $$ declare a boolean; b boolean; c boolean; d boolean; r integer; begin
+  select ok into a from rate_limit_hit('pin:test', 3, 60);
+  select ok into a from rate_limit_hit('pin:test', 3, 60);
+  select ok into b from rate_limit_hit('pin:test', 3, 60);
+  select ok, retry_after into c, r from rate_limit_hit('pin:test', 3, 60);
+  if not (a and b and not c and r between 1 and 60) then raise exception 'FAIL attempt limit'; end if;
+  if exists (select 1 from rate_limits where key_hash like '%pin%') then raise exception 'FAIL key stored in clear'; end if;
+  select ok into a from rate_limit_hit('fail:test', 2, 60, 0);
+  select ok into b from rate_limit_hit('fail:test', 2, 60);
+  select ok into b from rate_limit_hit('fail:test', 2, 60);
+  select ok into d from rate_limit_hit('fail:test', 2, 60, 0);
+  if not (a and b and not d) then raise exception 'FAIL peek'; end if;
+end $$;
+select pg_temp.ok(true, 'attempt limits: refused after the limit, keys stored hashed, failures can be checked without adding');

@@ -22,6 +22,35 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { randomInt, randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
+import { pbkdf2Sync, createDecipheriv } from 'node:crypto';
+import { gunzipSync } from 'node:zlib';
+
+/** Password-protected backups (src/lib/backup-crypto.ts): PBKDF2-SHA256 → AES-256-GCM over gzip. */
+function decryptBackup(env, password) {
+  if (env.cipher !== 'AES-256-GCM' || env.kdf?.name !== 'PBKDF2' || env.kdf?.hash !== 'SHA-256') throw new Error('Unknown backup encryption');
+  const key = pbkdf2Sync(password, Buffer.from(env.kdf.salt, 'base64'), env.kdf.iterations, 32, 'sha256');
+  const blob = Buffer.from(env.data, 'base64');
+  const d = createDecipheriv('aes-256-gcm', key, Buffer.from(env.iv, 'base64'));
+  d.setAuthTag(blob.subarray(blob.length - 16));
+  try { return gunzipSync(Buffer.concat([d.update(blob.subarray(0, blob.length - 16)), d.final()])).toString('utf8'); }
+  catch { throw new Error('Wrong password, or the file has been changed.'); }
+}
+
+async function askPassword() {
+  if (process.env.CDREG_BACKUP_PASSWORD) return process.env.CDREG_BACKUP_PASSWORD;
+  if (!process.stdin.isTTY) throw new Error('This backup is password protected: set CDREG_BACKUP_PASSWORD or run in a terminal.');
+  process.stdout.write('Backup password: ');
+  process.stdin.setRawMode(true); process.stdin.resume(); process.stdin.setEncoding('utf8');
+  return new Promise((resolve) => {
+    let pw = '';
+    process.stdin.on('data', (ch) => {
+      if (ch === '\r' || ch === '\n' || ch === '\u0004') { process.stdin.setRawMode(false); process.stdin.pause(); process.stdout.write('\n'); resolve(pw); }
+      else if (ch === '\u0003') process.exit(130);
+      else if (ch === '\u007f') pw = pw.slice(0, -1);
+      else pw += ch;
+    });
+  });
+}
 
 const args = process.argv.slice(2);
 const opt = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
@@ -33,7 +62,12 @@ const login = opt('--login');
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 if (login && !UUID.test(login)) { console.error('--login must be the user id (uuid) from Supabase → Authentication → Users'); process.exit(2); }
 
-const b = JSON.parse(readFileSync(file, 'utf8'));
+let raw = readFileSync(file, 'utf8');
+let b = JSON.parse(raw);
+if (b.format === 'pharmacycdreg-backup-encrypted') {
+  try { raw = decryptBackup(b, await askPassword()); } catch (e) { console.error(e.message); process.exit(2); }
+  b = JSON.parse(raw);
+}
 if (b.format !== 'pharmacycdreg-backup') { console.error('This is not a PharmacyCDReg full backup file.'); process.exit(2); }
 if (b.version !== 1) { console.error(`Backup format version ${b.version} is not supported by this loader.`); process.exit(2); }
 const ph = b.pharmacy?.id;
@@ -48,7 +82,6 @@ const rows = (key) => {
 };
 
 // Dollar-quote tag that cannot appear in the data
-const raw = readFileSync(file, 'utf8');
 let tag = 'cdreg';
 while (raw.includes(`$${tag}$`)) tag = 'cdreg' + randomBytes(4).toString('hex');
 const lit = (v) => `$${tag}$${JSON.stringify(v)}$${tag}$`;

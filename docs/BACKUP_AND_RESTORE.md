@@ -6,7 +6,7 @@
 | Append-only design | Register lines and the audit trail can't be updated or deleted (DB triggers), so an app bug can't destroy history | Built in |
 | Integrity chain | SHA-256 fingerprint per line (migration 0013); `verify_register_chain` / `verify_audit_chain` and the **Verify integrity** button | Built in |
 | Provider backups | Supabase daily backups (Pro plan: 7 days; add **Point-in-Time Recovery** for restore to any second) | Operator: enable in Supabase → Database → Backups |
-| Customer copies | Settings → Data → **Full backup (JSON)** and **Export every register (CSV)** | Each pharmacy, monthly recommended |
+| Customer copies | Settings → Data → **Full backup** (password protected: encrypted in the browser with AES-256-GCM, key from the password via PBKDF2-SHA256, 600,000 rounds; the password never leaves the pharmacy) and **Export every register (CSV)** | Each pharmacy, monthly recommended |
 | Off-system fingerprint | Monday email with every register's latest fingerprint | Built in (cron `daily-digest`) |
 
 ## Restore test (do it once, then yearly, and record the result)
@@ -39,6 +39,7 @@ Use this when the database is lost and there's no Supabase backup to go back to,
    npm ci
    node scripts/restore-backup.mjs pharmacycdreg-backup-YYYY-MM-DD.json --login <user id> --out restore.sql
    ```
+   For a password-protected backup (the default since November 2026) it asks for the backup password; it never appears on screen. To script it, set `CDREG_BACKUP_PASSWORD` instead.
    It prints what it will load, any notes, and a **one-off PIN** for each supervising pharmacist. The PIN is shown once and is not written into the SQL file.
 4. Run it against the new project (Supabase → **Connect** → session pooler connection string; keep the password out of shell history):
    ```bash

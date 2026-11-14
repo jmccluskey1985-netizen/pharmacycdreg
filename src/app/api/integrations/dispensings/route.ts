@@ -47,7 +47,7 @@ export async function POST(req: Request) {
   const { data: k } = await db.from('integration_keys').select('*').eq('key_hash', hashKey(key)).is('revoked_at', null).maybeSingle();
   if (!k) return NextResponse.json({ error: 'Missing or invalid API key' }, { status: 401 });
 
-  const limit = checkRateLimit(`pmr:${k.id}`, 120, 60_000);
+  const limit = await checkRateLimit(`pmr:${k.id}`, 120, 60_000);
   if (!limit.ok) return NextResponse.json({ error: 'Rate limited' }, { status: 429, headers: { 'Retry-After': String(limit.retryAfter) } });
 
   const parsed = Body.safeParse(await req.json().catch(() => ({})));

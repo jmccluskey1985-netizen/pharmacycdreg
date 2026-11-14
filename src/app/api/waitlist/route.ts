@@ -17,7 +17,7 @@ const Body = z.object({
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
 export async function POST(req: Request) {
-  const limit = checkRateLimit(`waitlist:${clientKey(req)}`, 5, 15 * 60_000);
+  const limit = await checkRateLimit(`waitlist:${clientKey(req)}`, 5, 15 * 60_000);
   if (!limit.ok) return NextResponse.json({ error: 'Too many attempts: try again later.' }, { status: 429 });
 
   const parsed = Body.safeParse(await req.json().catch(() => ({})));

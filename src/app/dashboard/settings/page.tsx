@@ -9,6 +9,7 @@ import { can } from '@/lib/roles';
 import { TwoStepSettings } from '@/components/dashboard/two-step';
 import { ReaderSettings } from '@/components/dashboard/reader-settings';
 import { useTheme } from '@/components/dashboard/theme';
+import { BackupButton } from '@/components/dashboard/backup-button';
 import { THEMES } from '@/lib/theme';
 import { Palette } from 'lucide-react';
 
@@ -56,8 +57,11 @@ export default function SettingsPage() {
   const [regs, setRegs] = useState<Reg[]>([]);
   const load = useCallback(() => api('/api/settings').then((d) => { setS(d.settings); setRegs(d.registers); }), []);
   useEffect(() => { load(); }, [load]);
+  // Arriving from the two-step suggestion bar: scroll to it once the page has loaded
+  useEffect(() => { if (s && window.location.hash === '#two-step') document.getElementById('two-step')?.scrollIntoView({ behavior: 'smooth' }); }, [s]);
 
-  if (!staff || !can.manageStaff(staff.role)) return <p className="text-muted-foreground">Only the supervising pharmacist can change settings.</p>;
+  // Everyone can pick their colour mode; the rest of Settings is the supervising pharmacist's.
+  if (!staff || !can.manageStaff(staff.role)) return <div className="mx-auto max-w-3xl space-y-5"><h1 className="text-2xl font-bold">Settings</h1><Display /><p className="text-muted-foreground">Only the supervising pharmacist can change the other settings.</p></div>;
   if (!s) return <p className="text-muted-foreground">Loading…</p>;
   const onSaved = (x: Settings) => { setS(x); refresh(); };
 
@@ -158,7 +162,7 @@ function Security({ s, onSaved }: { s: Settings; onSaved: (s: Settings) => void 
         </div>
         <SaveBar busy={busy} saved={saved} error={error} />
       </form>
-      <div className="border-t border-border pt-4"><TwoStepSettings locked={!!s.require_2fa} /></div>
+      <div id="two-step" className="scroll-mt-24 border-t border-border pt-4"><TwoStepSettings locked={!!s.require_2fa} /></div>
       <label className="flex items-start gap-3 rounded-lg border border-border p-3 text-sm">
         <input type="checkbox" className="mt-0.5 h-5 w-5 accent-[#54BD50]" checked={!!s.require_2fa} disabled={busy} onChange={(e) => save({ require_2fa: e.target.checked })} />
         <span><b>Require two-step sign-in</b> for this pharmacy’s login. While on, the last authenticator can’t be removed, and you’ll be warned on every page if it ever goes missing. Recommended.</span>
@@ -214,10 +218,10 @@ function Data({ regs, reload }: { regs: Reg[]; reload: () => void }) {
     <Section icon={Database} title="Data" text="Your registers are never deleted. Keep a recent copy for business continuity.">
       <div className="flex flex-wrap gap-2">
         <a href="/api/export" className="btn-secondary w-fit"><Download className="h-4 w-4" /> Export every register (CSV)</a>
-        <a href="/api/backup" className="btn-secondary w-fit" title="Everything: registers, entries, destructions, patients, notes, audit trail"><Download className="h-4 w-4" /> Full backup (JSON)</a>
+        <BackupButton />
         <Link href="/dashboard/fallback-sheet" className="btn-secondary w-fit">Paper fallback sheet</Link>
       </div>
-      <p className="text-xs text-muted-foreground">Keep a monthly full backup somewhere safe outside the pharmacy system (e.g. an encrypted USB key in the safe). It contains patient details: store it securely.</p>
+      <p className="text-xs text-muted-foreground">Keep a monthly full backup somewhere safe outside the pharmacy system (e.g. an encrypted USB key in the safe). It contains patient details, so it&apos;s password protected.</p>
       <div>
         <p className="label">Close a register</p>
         <p className="mb-2 text-xs text-muted-foreground">For a product you no longer stock. Only registers at a nil balance can be closed.</p>

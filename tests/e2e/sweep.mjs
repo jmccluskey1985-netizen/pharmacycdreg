@@ -2,6 +2,7 @@
 //   NEXT_PUBLIC_DEMO_MODE=1 npm run build && npx next start -p 3200 &
 //   npm run test:sweep
 import { chromium } from 'playwright';
+import { readFileSync } from 'node:fs';
 
 const B = process.env.BASE_URL || 'http://localhost:3200';
 const browser = await chromium.launch(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {});
@@ -261,9 +262,21 @@ await step('colour mode: choose True Black, kept after reload, then back to Defa
   await page.getByRole('radio', { name: /^Default/ }).click(); await page.waitForTimeout(300);
 });
 
-await step('full backup downloads', async () => {
+await step('two-step suggestion bar: shown, hidden with X until next sign-in', async () => {
+  await page.goto(B + '/dashboard'); await page.waitForTimeout(1000);
+  await see('text=Protect your register with two-step sign-in');
+  await click('button[aria-label="Hide until next sign-in"]'); await page.waitForTimeout(300);
+  await page.reload(); await page.waitForTimeout(1200);
+  if (await page.isVisible('text=Protect your register with two-step sign-in')) throw new Error('came back in the same sign-in');
+});
+
+await step('full backup downloads, password protected', async () => {
   await page.goto(B + '/dashboard/settings'); await page.waitForTimeout(800);
-  const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 8000 }), page.click('a:has-text("Full backup")')]);
+  await click('button:has-text("Full backup")');
+  await page.fill('#bk-pw', 'sweep-test-password'); await page.fill('#bk-pw2', 'sweep-test-password');
+  const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 15000 }), page.click('button:has-text("Download protected backup")')]);
+  const body = JSON.parse(readFileSync(await dl.path(), 'utf8'));
+  if (body.format !== 'pharmacycdreg-backup-encrypted' || JSON.stringify(body).includes('Mary Kelly')) throw new Error('backup not encrypted');
   if (!/backup.*\.json$/.test(dl.suggestedFilename())) throw new Error(dl.suggestedFilename());
 });
 

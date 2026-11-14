@@ -37,7 +37,7 @@ async function handle(req: Request) {
   if (process.env.SIGNUPS_OPEN !== '1') {
     return NextResponse.json({ error: 'Sign-ups open soon: please join the waitlist on the home page.' }, { status: 403 });
   }
-  const limit = checkRateLimit(`signup:${clientKey(req)}`, 3, 15 * 60_000);
+  const limit = await checkRateLimit(`signup:${clientKey(req)}`, 3, 15 * 60_000);
   if (!limit.ok) return NextResponse.json({ error: 'Too many sign-up attempts. Try again later.' }, { status: 429 });
 
   const parsed = Body.safeParse(await req.json().catch(() => ({})));

@@ -21,13 +21,20 @@ export async function GET() {
     // The site owner's pharmacy is a permanent subscription: no trial, no billing prompts.
     if (pharmacy && owner) Object.assign(pharmacy, { subscription_status: 'complimentary', trial_ends_at: null, cancel_at_period_end: false });
     // "Require two-step sign-in" is on but this login has no authenticator any more → nag until fixed.
-    let twofaMissing = false;
-    if (st.require_2fa) {
-      const { createServerSupabaseClient } = await import('@/lib/supabase/server');
-      const { data: aal } = await createServerSupabaseClient().auth.mfa.getAuthenticatorAssuranceLevel();
-      twofaMissing = aal?.nextLevel !== 'aal2';
-    }
-    if (pharmacy) Object.assign(pharmacy, { require_2fa: st.require_2fa, twofa_missing: twofaMissing, is_site_admin: owner, halo_enabled: halo, lock_minutes: st.lock_minutes, locum_default_days: st.locum_default_days });
+    // Two-step sign-in: is an authenticator set up on this login? (Suggested when not; required only if the setting is on.)
+    const { createServerSupabaseClient } = await import('@/lib/supabase/server');
+    const sb = createServerSupabaseClient();
+    const { data: aal } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+    const has2fa = aal?.nextLevel === 'aal2';
+    const twofaMissing = !!st.require_2fa && !has2fa;
+    // Changes every time someone signs in, so a dismissed suggestion comes back at the next sign-in.
+    let loginSession: string | null = null;
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      const payload = session?.access_token?.split('.')[1];
+      if (payload) loginSession = String(JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')).session_id ?? '') || null;
+    } catch { /* no session id: the bar just shows */ }
+    if (pharmacy) Object.assign(pharmacy, { require_2fa: st.require_2fa, twofa_missing: twofaMissing, has_2fa: has2fa, login_session: loginSession, is_site_admin: owner, halo_enabled: halo, lock_minutes: st.lock_minutes, locum_default_days: st.locum_default_days });
     const { count } = await db.from('staff').select('id', { count: 'exact', head: true }).eq('pharmacy_id', account.pharmacyId).eq('is_active', true).not('pin_hash', 'is', null);
     try {
       const { staff } = await requireStaff();
