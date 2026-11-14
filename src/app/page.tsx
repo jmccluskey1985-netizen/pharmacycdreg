@@ -260,12 +260,28 @@ export default function LandingPage() {
 
       {/* Sister service */}
       <section className="border-t border-border">
-        <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 px-4 py-12 text-center sm:px-6">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brand">Also for your pharmacy</p>
-          <a href="https://www.pharmacyconsultation.ie" target="_blank" rel="noopener" aria-label="PharmacyConsultation.ie (opens in a new tab)" className="rounded-xl bg-white px-5 py-3 shadow-soft ring-1 ring-border transition hover:shadow-md">
-            <img src="/brand/pharmacyconsultation.webp" alt="PharmacyConsultation.ie: Book Your Pharmacy Appointment" width={345} height={74} loading="lazy" className="h-auto w-64 sm:w-80" />
-          </a>
-          <p className="max-w-2xl text-muted-foreground">Online booking and consultation records for the <b className="text-foreground">Common Conditions Service</b>, vaccinations and your other pharmacy consultations. From the same team as PharmacyCDReg.ie.</p>
+        <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
+          <div className="flex flex-col items-center gap-4 text-center">
+            <p className="text-sm font-semibold uppercase tracking-widest text-brand">Also for your pharmacy</p>
+            <a href="https://www.pharmacyconsultation.ie/pharmacy" target="_blank" rel="noopener" aria-label="PharmacyConsultation.ie for pharmacies (opens in a new tab)" className="rounded-xl bg-white px-5 py-3 shadow-soft ring-1 ring-border transition hover:shadow-md">
+              <img src="/brand/pharmacyconsultation.webp" alt="PharmacyConsultation.ie: Book Your Pharmacy Appointment" width={345} height={74} loading="lazy" className="h-auto w-64 sm:w-80" />
+            </a>
+            <h2 className="text-2xl font-bold tracking-tight text-brand-dark">Run the Common Conditions Service with less paperwork</h2>
+            <p className="max-w-2xl text-muted-foreground">From the same team as PharmacyCDReg.ie. Patients book consultations online, and the pharmacist is guided through each one step by step.</p>
+          </div>
+          <ul className="mx-auto mt-6 grid max-w-4xl gap-3 text-sm sm:grid-cols-2">
+            {[
+              ['Online bookings', 'Patients find your pharmacy and book a consultation online.'],
+              ['Guided consultations', 'HSE protocol prompts for each condition, with red flags highlighted for you to act on.'],
+              ['Prescriptions and referrals', 'Prescription PDFs and GP referral letters filled in from the consultation.'],
+              ['Audit-ready records', 'Every consultation recorded and easy to find again.'],
+            ].map(([t, d]) => (
+              <li key={t} className="flex gap-3 rounded-xl bg-card p-4 ring-1 ring-border"><CheckCircle2 className="h-5 w-5 flex-shrink-0 text-brand" /><span><b className="block text-foreground">{t}</b><span className="text-muted-foreground">{d}</span></span></li>
+            ))}
+          </ul>
+          <div className="mt-6 text-center">
+            <a href="https://www.pharmacyconsultation.ie/pharmacy" target="_blank" rel="noopener" className="btn-secondary px-6">See PharmacyConsultation.ie for pharmacies</a>
+          </div>
         </div>
       </section>
 
