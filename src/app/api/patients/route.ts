@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireStaff, errorResponse, audit } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase/server';
-import { searchPatients, PatientBody } from '@/lib/patients';
+import { searchPatients, PatientBody, writePatient } from '@/lib/patients';
 import { can } from '@/lib/roles';
 
 export const dynamic = 'force-dynamic';
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     const parsed = PatientBody.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) return NextResponse.json({ error: 'First name is required; check the date of birth' }, { status: 400 });
     const db = createServiceClient();
-    const { data, error } = await db.from('patients').insert({ ...parsed.data, pharmacy_id: account.pharmacyId }).select('*').single();
+    const { data, error } = await writePatient(db, { ...parsed.data, pharmacy_id: account.pharmacyId });
     if (error) return NextResponse.json({ error: /relation|does not exist/i.test(error.message) ? NEEDS_MIGRATION : 'Could not save the patient' }, { status: 409 });
     await audit(account.pharmacyId, 'patient.created', staff, account.authUserId, {}, { table: 'patients', id: data.id });
     return NextResponse.json({ patient: data });

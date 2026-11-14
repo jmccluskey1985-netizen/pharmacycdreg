@@ -4,7 +4,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { getRegisterForPharmacy, currentBalance } from '@/lib/registers';
 import { EntrySchema, STOCK_EFFECT } from '@/lib/entry-schema';
 import { can } from '@/lib/roles';
-import { findOrCreatePatient } from '@/lib/patients';
+import { resolvePatientForEntry } from '@/lib/patients';
 import { findDuplicate } from '@/lib/duplicates';
 import { audit } from '@/lib/access';
 import { isLate, LATE_PREFIX } from '@/lib/late-entry';
@@ -64,20 +64,26 @@ export async function POST(req: Request) {
       const { data: ib } = await db.from('pmr_inbox').select('status').eq('id', inbox_id).eq('pharmacy_id', account.pharmacyId).maybeSingle();
       if (!ib || ib.status !== 'pending') return NextResponse.json({ error: 'This Halo item was already dealt with' }, { status: 409 });
     }
-    // Patient record: use the one picked (must be this pharmacy's), else find/create one by
-    // name + address so every supplied patient builds up a record. Skipped before migration 0008.
-    const dob = (fields as any).patient_dob ?? null;
-    delete (fields as any).patient_dob; // not a register column
+    // Patient record (docs/PATIENT_MATCHING.md): the one picked, a new one, or matched from the
+    // script's details. With a person at the screen, a near-match is sent back to choose from.
+    const f = fields as any;
+    const dob = f.patient_dob ?? null;
+    const choice = { newPatient: !!f.new_patient, interactive: !!f.interactive, update: f.update_patient as string[] | undefined, details: f.patient_details ?? {} };
+    for (const k of ['patient_dob', 'new_patient', 'interactive', 'update_patient', 'patient_details']) delete f[k]; // not register columns
+    let patientEvents: { action: string; details: Record<string, unknown> }[] = [];
+    let patientDiffers: unknown[] = [];
     if ((fields.entry_type === 'supply' && !requisition) || fields.entry_type === 'patient_return') {
-      const f = fields as any;
-      if (f.patient_id) {
-        const { data: pt } = await db.from('patients').select('id').eq('id', f.patient_id).eq('pharmacy_id', account.pharmacyId).maybeSingle();
-        if (!pt) delete f.patient_id;
-      } else {
-        const id = await findOrCreatePatient(db, account.pharmacyId, f.recipient_name, f.recipient_address ?? null, f.entry_type === 'supply' ? { name: f.prescriber_name ?? null, address: f.prescriber_address ?? null } : undefined, dob).catch(() => null);
-        if (id) f.patient_id = id; else delete f.patient_id;
+      const d = choice.details;
+      const r = await resolvePatientForEntry(db, account.pharmacyId, {
+        patientId: f.patient_id ?? null, newPatient: choice.newPatient, interactive: choice.interactive, update: choice.update,
+        probe: { full_name: f.recipient_name, first_name: d.first_name, surname: d.surname, address: f.recipient_address ?? null, dob, eircode: d.eircode, gms: d.gms, dps: d.dps, lti: d.lti, mrn: d.mrn },
+        gp: f.entry_type === 'supply' ? { name: f.prescriber_name ?? null, address: f.prescriber_address ?? null } : undefined,
+      }).catch(() => ({ kind: 'none' as const }));
+      if (r.kind === 'choose') {
+        return NextResponse.json({ error: 'This looks like a patient you already have. Choose the patient, or New patient.', code: 'PATIENT_CHOICE', candidates: r.candidates, pick_id: r.pick_id }, { status: 409 });
       }
-    }
+      if (r.kind === 'linked') { f.patient_id = r.id; patientEvents = r.events; patientDiffers = r.differs; } else delete f.patient_id;
+    } else delete f.patient_id;
     const row: Record<string, unknown> = { ...fields, recorded_by_staff_id: staff.id, recorded_by_auth_user: account.authUserId, source: inbox_id ? 'pmr' : e.scan_id ? 'scan' : 'manual' };
     if (e.entry_type === 'correction') {
       // Carry forward the original's fields the correction didn't change, so the effective row is complete.
@@ -107,7 +113,8 @@ export async function POST(req: Request) {
     if (inbox_id) {
       await db.from('pmr_inbox').update({ status: 'posted', entry_id: data.id, register_id: reg.id, resolved_by_staff_id: staff.id, resolved_at: new Date().toISOString() }).eq('id', inbox_id);
     }
-    return NextResponse.json({ id: data.id, seq: data.seq, balance: resulting });
+    for (const ev of patientEvents) await audit(account.pharmacyId, ev.action, staff, account.authUserId, { ...ev.details, entry_id: data.id }, { table: 'patients', id: String(ev.details.patient_id) }).catch(() => {});
+    return NextResponse.json({ id: data.id, seq: data.seq, balance: resulting, patient_id: (row as any).patient_id ?? null, patient_differs: patientDiffers });
   } catch (err) {
     return errorResponse(err);
   }

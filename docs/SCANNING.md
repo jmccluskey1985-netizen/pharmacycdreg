@@ -37,7 +37,7 @@ Scanning only **reads**. A pharmacist checks and signs every entry before it rea
 ## 2. Prescriptions (`/dashboard/scan`, "Scan Rx")
 
 - **Flow:** **Scan Rx** at the top of every page → snap → it reads automatically.
-- **What is read:** patient (name, address, DOB), prescriber, the CD item(s), the quantity in words and figures, dose and units per dose.
+- **What is read:** patient (name, split into first name and surname, address, eircode, DOB, GMS/DPS/LTI number, hospital MRN), prescriber, the CD item(s), the quantity in words and figures, dose and units per dose.
 - **Quantity rules** (`src/lib/quantity.ts`):
   - Schedule 2/3 prescriptions need the total in **words and figures**. A quantity written in words only is accepted.
   - A quantity given only as doses is calculated, and flagged.
@@ -46,7 +46,14 @@ Scanning only **reads**. A pharmacist checks and signs every entry before it rea
 - **Matching** (`src/lib/match.ts`) is **brand-aware**:
   - OxyNorm, Shortec, and different fentanyl patch brands each have their own register. One brand is never posted into another brand's book.
   - If only another brand's book exists, the card says so and offers **Start book**, pre-filled from the scan.
-- **Patients:** each read is linked to a patient record (`patients`, migration 0008), which is created if the patient is new. How existing patients should be matched and offered for picking, so duplicates aren't created, is in [PATIENT_MATCHING.md](PATIENT_MATCHING.md).
+- **Patients** (`src/lib/patient-match.ts`, migration 0016; spec in [PATIENT_MATCHING.md](PATIENT_MATCHING.md)):
+  - Names are normalised (accents, apostrophes, `O Brien`/`O'Brien`, `Mc Guinness`/`McGuinness`, surname-first hospital stickers) and compared allowing one misread letter and short forms (Kate/Katherine).
+  - The scan card shows **Is this one of your patients?** with each near-match and why it matched (DOB, GMS, eircode, address) or differs. A single certain match is pre-selected. **New patient** is always offered; choosing it despite a very likely match needs a second tap and is audited (`patient.created_despite_match`).
+  - Typed supplies get the same question when the name looks like an existing patient (`409 PATIENT_CHOICE` from `/api/entries`).
+  - Blank fields on the chosen record are filled from the script. A different address is only overwritten if the pharmacist ticks it. The register line always keeps the script's own text.
+  - Halo, repeats and reminders link a single certain match; otherwise they make a new record and note the near-match (`patient.possible_duplicate`).
+  - **Patients → Possible duplicates** lists records that look like the same person; a pharmacist can merge them (`POST /api/patients/[id]/merge`, audited `patient.merged`).
+  - PPS numbers are not read or stored.
 
 ## 3. Invoices / CD dockets (Uniphar, United Drug, PCO, IMED, Pluripharm)
 

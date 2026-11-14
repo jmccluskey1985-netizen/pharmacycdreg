@@ -12,6 +12,8 @@ import { STOCK_EFFECT } from '@/lib/entry-schema';
 import { advance } from '@/lib/reminders';
 import { isLate } from '@/lib/late-entry';
 import { findDuplicate } from '@/lib/duplicates';
+import { matchPatients as matchP, preselect, patientKeys, type MatchPatient } from '@/lib/patient-match';
+const matchPatients = (probe: Parameters<typeof matchP>[0], pool: Json[], limit?: number) => matchP(probe, pool as unknown as (MatchPatient & Json)[], limit);
 import { genericKey, sameStrength, registerExemption } from '@/lib/cd-catalogue';
 
 type Json = Record<string, any>;
@@ -157,6 +159,12 @@ const demoPatients = (): Json[] => {
       const t = e.recipient_name.trim(); const i = t.lastIndexOf(' ');
       X.patients.push({ id: uid(), first_name: i < 0 ? t : t.slice(0, i), surname: i < 0 ? '' : t.slice(i + 1), date_of_birth: null, address: e.recipient_address ?? null, phone: null, gms_number: null, ihi_number: null, gp_name: e.prescriber_name ?? null, gp_address: e.prescriber_address ?? null, notes: null, is_active: true });
     }
+    // Made-up identifiers so patient matching has something to show
+    const mk = X.patients.find((p: Json) => p.first_name === 'Mary' && p.surname === 'Kelly');
+    if (mk) Object.assign(mk, { date_of_birth: '1948-07-01', gms_number: '1234567B' });
+    // A duplicate made by a different spelling of the address, for Possible duplicates
+    X.patients.push({ id: uid(), first_name: 'Patrick', surname: 'Hayes', date_of_birth: null, address: '22 Abbey Street, Ennis', phone: null, gms_number: null, ihi_number: null, gp_name: null, gp_address: null, notes: null, is_active: true });
+    for (const p of X.patients) Object.assign(p, patientKeys(p));
   }
   return X.patients.filter((p: Json) => p.is_active !== false);
 };
@@ -270,6 +278,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
       if (!e.late_reason || String(e.late_reason).trim().length < 5) return fail(400, 'This transaction is more than a day old, say why it’s being entered late (e.g. system down, entered from the paper fallback sheet).', 'LATE_ENTRY');
       e.notes = `Late entry: ${String(e.late_reason).trim()}${e.notes ? ` · ${e.notes}` : ''}`;
     }
+    const requisitionLine = !!e.requisition; const scriptDob = e.patient_dob ?? null;
     delete e.late_reason; delete e.requisition;
     const bal = balance(e.register_id);
     let next = bal;
@@ -293,6 +302,25 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
       if (dup && e.allow_duplicate && (!e.duplicate_reason || String(e.duplicate_reason).length < 5)) return fail(400, 'Say why this isn’t a duplicate', dup.level === 'block' ? 'DUPLICATE' : 'POSSIBLE_DUPLICATE');
     }
     delete e.allow_duplicate; delete e.duplicate_reason;
+    // Patient record, as on the server (docs/PATIENT_MATCHING.md §7)
+    const isPatientLine = (e.entry_type === 'supply' && !requisitionLine) || e.entry_type === 'patient_return';
+    const wantNew = !!e.new_patient, interactive = !!e.interactive, details = e.patient_details ?? {};
+    for (const k of ['new_patient', 'interactive', 'update_patient', 'patient_details', 'patient_dob']) delete e[k];
+    if (isPatientLine && !e.patient_id) {
+      const probe = { full_name: e.recipient_name, first_name: details.first_name, surname: details.surname, address: e.recipient_address, dob: scriptDob, gms: details.gms, eircode: details.eircode };
+      const cands = matchPatients(probe, demoPatients());
+      const certain = cands.filter((c) => c.level === 'certain');
+      if (!wantNew && certain.length === 1 && cands.filter((c) => c.level !== 'possible').length === 1) e.patient_id = certain[0].patient.id;
+      else if (!wantNew && interactive && cands.length) {
+        return res({ error: 'This looks like a patient you already have. Choose the patient, or New patient.', code: 'PATIENT_CHOICE', pick_id: preselect(cands).pick?.patient.id ?? null,
+          candidates: cands.map((c) => ({ id: c.patient.id, first_name: c.patient.first_name, surname: c.patient.surname, date_of_birth: c.patient.date_of_birth, address: c.patient.address, gms_number: c.patient.gms_number, level: c.level, reasons: c.reasons, conflicts: c.conflicts })) }, 409);
+      } else {
+        const t = String(e.recipient_name).trim(); const i = t.lastIndexOf(' ');
+        const np: Json = { id: uid(), first_name: details.first_name || (i < 0 ? t : t.slice(0, i)), surname: details.surname || (i < 0 ? '' : t.slice(i + 1)), date_of_birth: scriptDob, address: e.recipient_address ?? null, gms_number: details.gms ?? null, is_active: true };
+        Object.assign(np, patientKeys(np)); (S as any).patients.push(np); e.patient_id = np.id;
+        if (wantNew && cands.some((c) => c.level !== 'possible')) audit('patient.created_despite_match', {});
+      }
+    }
     const seq = S.entries.filter((x) => x.register_id === e.register_id).length + 1;
     const row = { ...e, id: uid(), seq, quantity: String(e.quantity), recorded_at: new Date().toISOString(), recorded_by_staff_id: st!.id, source: e.inbox_id ? 'pmr' : e.scan_id ? 'scan' : 'manual' };
     if (e.entry_type !== 'correction') { delete row.corrects_entry_id; delete row.correction_reason; }
@@ -300,7 +328,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     S.entries.push(row);
     if (e.inbox_id) { const ib = S.inbox.find((i) => i.id === e.inbox_id); if (ib) ib.status = 'posted'; }
     audit(`cd_entry.${e.entry_type}`, { seq, quantity: e.quantity });
-    return res({ id: row.id, seq, balance: next });
+    return res({ id: row.id, seq, balance: next, patient_id: row.patient_id ?? null, patient_differs: [] });
   }
   if (path === '/api/search') {
     if (needStaff()) return needStaff()!;
@@ -496,6 +524,26 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     demoPatients(); (S as any).patients.push(p);
     return res({ patient: p });
   }
+  if (path === '/api/patients/duplicates') {
+    if (needStaff()) return needStaff()!;
+    const all = demoPatients(); const seen = new Set<string>(); const pairs: Json[] = [];
+    for (const a of all) for (const c of matchPatients({ first_name: a.first_name, surname: a.surname, dob: a.date_of_birth, address: a.address, gms: a.gms_number }, all.filter((b) => b.id !== a.id), 3)) {
+      if (c.level === 'possible') continue; const k = [a.id, c.patient.id].sort().join('|'); if (seen.has(k)) continue; seen.add(k);
+      pairs.push({ a, b: c.patient, level: c.level, reasons: c.reasons });
+    }
+    return res({ pairs });
+  }
+  if ((m = path.match(/^\/api\/patients\/([^/]+)\/merge$/))) {
+    if (needStaff()) return needStaff()!;
+    if (!can.record(st!.role)) return fail(403, 'Your role does not allow this action');
+    const from = demoPatients().find((x) => x.id === m![1]), into = demoPatients().find((x) => x.id === body.into);
+    if (!from || !into || from === into) return fail(404, 'Both patients must be active records of this pharmacy');
+    let moved = 0; for (const e of S.entries as Json[]) if (e.patient_id === from.id) { e.patient_id = into.id; moved++; }
+    for (const k of ['date_of_birth', 'address', 'gms_number']) if (!into[k] && from[k]) into[k] = from[k];
+    from.is_active = false; from.merged_into = into.id;
+    audit('patient.merged', { lines_moved: moved });
+    return res({ ok: true, lines_moved: moved });
+  }
   if (path.startsWith('/api/patients/')) {
     if (needStaff()) return needStaff()!;
     const p = demoPatients().find((x) => x.id === path.split('/')[3]);
@@ -535,7 +583,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     const fd = init?.body as FormData;
     const isRx = fd?.get?.('hint') === 'prescription';
     const extraction = isRx
-      ? { document_type: 'prescription', document_date: today(), reference: 'Rx 10302', supplier_name: null, supplier_address: null, patient_name: 'Eileen Moran', patient_address: '12 Bindon St, Ennis', prescriber_name: 'Dr A. Walsh', prescriber_address: 'Ennis Medical Centre', prescriber_registration: '012345', warnings: [], items: [{ drug_name: 'Oxycodone hydrochloride', strength: '5mg', form: 'capsule', quantity: 28, quantity_unit: 'capsules', pack_description: '28 (twenty-eight)', is_controlled_drug: true, likely_schedule: 2, confidence: 'high', notes: '', brand: 'OxyNorm', packs: null, pack_size: null, quantity_figures: '28', quantity_words: 'twenty-eight', duration_text: null, is_credit: false }] }
+      ? { document_type: 'prescription', document_date: today(), reference: 'Rx 10302', supplier_name: null, supplier_address: null, patient_name: 'MARY KELY', patient_first_name: 'Mary', patient_surname: 'Kely', patient_dob: '1948-07-01', gms_number: '1234567B', patient_address: '14 Main Street, Ennis', prescriber_name: 'Dr A. Walsh', prescriber_address: 'Ennis Medical Centre', prescriber_registration: '012345', warnings: [], items: [{ drug_name: 'Oxycodone hydrochloride', strength: '5mg', form: 'capsule', quantity: 28, quantity_unit: 'capsules', pack_description: '28 (twenty-eight)', is_controlled_drug: true, likely_schedule: 2, confidence: 'high', notes: '', brand: 'OxyNorm', packs: null, pack_size: null, quantity_figures: '28', quantity_words: 'twenty-eight', duration_text: null, is_credit: false }] }
       : { document_type: 'invoice', document_date: today(), reference: 'Invoice 4472210', supplier_name: 'United Drug', supplier_address: 'Magna Business Park, Citywest, Dublin 24', patient_name: null, patient_address: null, prescriber_name: null, prescriber_address: null, prescriber_registration: null, warnings: [], items: [
           { drug_name: 'Oxycodone hydrochloride', strength: '5mg', form: 'capsule', quantity: 112, quantity_unit: 'capsules', pack_description: 'OXYNORM CAPS 5MG 56: CD2', is_controlled_drug: true, likely_schedule: 2, confidence: 'high', notes: '', brand: 'OxyNorm', packs: 2, pack_size: 56, quantity_figures: null, quantity_words: null, duration_text: null, is_credit: false },
           { drug_name: 'Morphine sulfate', strength: '10mg', form: 'prolonged-release tablet', quantity: 60, quantity_unit: 'tablets', pack_description: 'MST CONTINUS 10MG PR TABLETS 60', is_controlled_drug: true, likely_schedule: 2, confidence: 'high', notes: '', brand: 'MST Continus', packs: 1, pack_size: 60, quantity_figures: null, quantity_words: null, duration_text: null, is_credit: false },
@@ -548,10 +596,16 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
       const exact = same.filter((r) => sameStrength(r.product.strength, item.strength));
       const match = exact.length === 1 ? exact[0] : null;
       const qty = decideQuantity(item, extraction.document_type as any);
-      return { item, qty, match_state: match ? 'your_register' : same.length ? 'pick_register' : 'no_register', register_id: match?.id ?? null, register_label: match ? productTitle(match.product) : null, current_balance: match?.balance ?? null, candidates: regs.filter((r) => norm(r.product.drug_name).includes(norm(item.drug_name))).map((r) => ({ id: r.id, label: productTitle(r.product) })), draft: { entry_type: isRx ? 'supply' : 'receipt', transaction_date: today(), quantity: qty.quantity ?? '', supplier_name: extraction.supplier_name, supplier_address: extraction.supplier_address, recipient_name: extraction.patient_name, recipient_address: extraction.patient_address, prescriber_name: extraction.prescriber_name, prescriber_address: extraction.prescriber_address, authority_to_possess: isRx ? `Prescription: ${extraction.prescriber_name}` : null, prescription_ref: extraction.reference, notes: isRx ? null : extraction.reference, scan_id: null } };
+      return { item, qty, match_state: match ? 'your_register' : same.length ? 'pick_register' : 'no_register', register_id: match?.id ?? null, register_label: match ? productTitle(match.product) : null, current_balance: match?.balance ?? null, candidates: regs.filter((r) => norm(r.product.drug_name).includes(norm(item.drug_name))).map((r) => ({ id: r.id, label: productTitle(r.product) })), draft: { entry_type: isRx ? 'supply' : 'receipt', transaction_date: today(), quantity: qty.quantity ?? '', supplier_name: extraction.supplier_name, supplier_address: extraction.supplier_address, recipient_name: extraction.patient_name, recipient_address: extraction.patient_address, patient_dob: (extraction as any).patient_dob ?? null, patient_details: isRx ? { first_name: (extraction as any).patient_first_name, surname: (extraction as any).patient_surname, gms: (extraction as any).gms_number } : null, prescriber_name: extraction.prescriber_name, prescriber_address: extraction.prescriber_address, authority_to_possess: isRx ? `Prescription: ${extraction.prescriber_name}` : null, prescription_ref: extraction.reference, notes: isRx ? null : extraction.reference, scan_id: null } };
     });
     audit('scan.read', { document_type: extraction.document_type });
-    return res({ scan_id: 'demo', extraction, proposals, exempt, ignored: extraction.items.filter((i: any) => !i.is_controlled_drug).length });
+    let patient_match: Json | null = null;
+    if (isRx) {
+      const x: any = extraction;
+      const cands = matchPatients({ full_name: x.patient_name, first_name: x.patient_first_name, surname: x.patient_surname, dob: x.patient_dob, gms: x.gms_number, address: x.patient_address }, demoPatients());
+      patient_match = { pick_id: preselect(cands).pick?.patient.id ?? null, ambiguous: preselect(cands).ambiguous, candidates: cands.map((c) => ({ id: c.patient.id, first_name: c.patient.first_name, surname: c.patient.surname, date_of_birth: c.patient.date_of_birth, address: c.patient.address, gms_number: c.patient.gms_number, level: c.level, reasons: c.reasons, conflicts: c.conflicts })) };
+    }
+    return res({ scan_id: 'demo', extraction, proposals, exempt, patient_match, ignored: extraction.items.filter((i: any) => !i.is_controlled_drug).length });
   }
   if (path === '/api/inbox') {
     if (needStaff()) return needStaff()!;

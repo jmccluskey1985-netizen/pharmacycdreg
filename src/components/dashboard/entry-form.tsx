@@ -7,6 +7,7 @@ import { api, ApiError } from '@/lib/api';
 import { QuickFillInput, type Suggestion } from './quickfill-input';
 import { PatientForm, type PatientRecord } from './patient-form';
 import { Modal } from '@/components/modal';
+import { PatientChoice, pickFields, type PatientPick, type PatientCandidateView } from './patient-choice';
 
 export type EntryType = 'receipt' | 'supply' | 'destruction' | 'patient_return' | 'patient_return_destruction' | 'adjustment_in' | 'adjustment_out' | 'correction';
 
@@ -32,6 +33,10 @@ export interface EntryDraft {
   inbox_id?: string | null;
   patient_id?: string | null;
   patient_dob?: string | null;
+  /** Identifiers read from a script, used to find the patient record (not register columns). */
+  patient_details?: Record<string, string | null | undefined> | null;
+  new_patient?: boolean;
+  update_patient?: string[];
   corrects_entry_id?: string;
   correction_reason?: string;
 }
@@ -55,6 +60,8 @@ interface Props {
   submitLabel?: string;
   onSaved: (result: { id: string; seq: number; balance: number }) => void;
   onCancel?: () => void;
+  /** Patient already chosen outside the form (scan card). */
+  patientPick?: PatientPick;
 }
 
 function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
@@ -67,7 +74,7 @@ function Field({ label, children, hint }: { label: string; children: React.React
   );
 }
 
-export function EntryForm({ registerId, unit, balance, initial, correcting, lockType, submitLabel, onSaved, onCancel }: Props) {
+export function EntryForm({ registerId, unit, balance, initial, correcting, lockType, submitLabel, onSaved, onCancel, patientPick }: Props) {
   const [d, setD] = useState<EntryDraft>({
     entry_type: correcting ? correcting.entry_type : 'receipt',
     transaction_date: today(),
@@ -86,12 +93,15 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
   const [dup, setDup] = useState<{ level: 'block' | 'warn'; message: string } | null>(null);
   const [overriding, setOverriding] = useState(false);
   const [dupReason, setDupReason] = useState('');
+  // Server found existing patients who look like this one: pick one, or New patient.
+  const [choice, setChoice] = useState<{ candidates: PatientCandidateView[]; pick_id: string | null } | null>(null);
+  const [pick, setPick] = useState<PatientPick>(null);
   const set = (k: keyof EntryDraft) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setD({ ...d, [k]: e.target.value });
   const type = d.entry_type;
   const setVal = (k: keyof EntryDraft) => (v: string) => setD((x) => ({ ...x, [k]: v }));
   const pickSupplier = (p: Suggestion) => setD((x) => ({ ...x, supplier_name: p.name, supplier_address: p.address ?? x.supplier_address }));
   // Picking a known patient also fills their usual doctor (from their latest supply), if not set yet.
-  const pickPatient = (p: Suggestion) => setD((x) => {
+  const pickPatient = (p: Suggestion) => { setChoice(null); setPick(null); setD((x) => {
     const doc = p.usual_prescriber && x.entry_type === 'supply' && !x.prescriber_name ? p.usual_prescriber : null;
     return {
       ...x,
@@ -100,7 +110,7 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
       recipient_address: p.address ?? x.recipient_address,
       ...(doc ? { prescriber_name: doc.name, prescriber_address: doc.address ?? x.prescriber_address, authority_to_possess: x.authority_to_possess || `Prescription: ${doc.name}` } : {}),
     };
-  });
+  }); };
   const pickWitness = (p: Suggestion) => setD((x) => ({ ...x, witness_name: p.name, witness_role: p.role ?? x.witness_role }));
   const pickPrescriber = (p: Suggestion) =>
     setD((x) => ({
@@ -124,7 +134,7 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
     setError(null);
     if (!override) { setDup(null); setOverriding(false); }
     try {
-      const body: Record<string, unknown> = { ...d, register_id: registerId, quantity: Number(d.quantity), ...(override ? { allow_duplicate: true, duplicate_reason: dupReason } : {}), ...(late ? { late_reason: lateReason } : {}), ...(type === 'supply' && requisition ? { requisition: true, patient_id: null } : {}) };
+      const body: Record<string, unknown> = { ...d, ...(type === 'supply' || type === 'patient_return' ? { interactive: true, ...pickFields(pick ?? patientPick ?? null) } : {}), register_id: registerId, quantity: Number(d.quantity), ...(override ? { allow_duplicate: true, duplicate_reason: dupReason } : {}), ...(late ? { late_reason: lateReason } : {}), ...(type === 'supply' && requisition ? { requisition: true, patient_id: null } : {}) };
       if (correcting) {
         body.entry_type = 'correction';
         body.corrects_entry_id = correcting.id;
@@ -135,6 +145,12 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
       setDup(null); setOverriding(false); setDupReason('');
       onSaved(res);
     } catch (err) {
+      if (err instanceof ApiError && err.code === 'PATIENT_CHOICE' && err.data?.candidates) {
+        setChoice({ candidates: err.data.candidates, pick_id: err.data.pick_id ?? null });
+        setPick(err.data.pick_id ? { patient_id: err.data.pick_id } : null);
+        setError(null);
+        return;
+      }
       if (err instanceof ApiError && (err.code === 'DUPLICATE' || err.code === 'POSSIBLE_DUPLICATE') && err.status === 409) {
         setDup({ level: err.code === 'DUPLICATE' ? 'block' : 'warn', message: err.message });
         return;
@@ -213,7 +229,7 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
       {type === 'supply' && !requisition && (
         <>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Supplied to (name)"><QuickFillInput kind="patient" required value={d.recipient_name ?? ''} onChange={(v) => setD((x) => ({ ...x, recipient_name: v, patient_id: null }))} onPick={pickPatient} onCreate={setNewPatient} createLabel="New patient" placeholder="Name, DOB (dd/mm/yyyy) or GMS no." /></Field>
+            <Field label="Supplied to (name)"><QuickFillInput kind="patient" required value={d.recipient_name ?? ''} onChange={(v) => { setChoice(null); setPick(null); setD((x) => ({ ...x, recipient_name: v, patient_id: null })); }} onPick={pickPatient} onCreate={setNewPatient} createLabel="New patient" placeholder="Name, DOB (dd/mm/yyyy) or GMS no." /></Field>
             <Field label="Address"><input className="input" required value={d.recipient_address ?? ''} onChange={set('recipient_address')} /></Field>
             <Field label="Prescriber name"><QuickFillInput kind="prescriber" value={d.prescriber_name ?? ''} onChange={setVal('prescriber_name')} onPick={pickPrescriber} placeholder="Name, IMC or GMS no." /></Field>
             <Field label="Prescriber address"><input className="input" value={d.prescriber_address ?? ''} onChange={set('prescriber_address')} /></Field>
@@ -246,7 +262,7 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
 
       {type === 'patient_return' && (
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Returned by (patient name)"><QuickFillInput kind="patient" required value={d.recipient_name ?? ''} onChange={(v) => setD((x) => ({ ...x, recipient_name: v, patient_id: null }))} onPick={pickPatient} onCreate={setNewPatient} createLabel="New patient" /></Field>
+          <Field label="Returned by (patient name)"><QuickFillInput kind="patient" required value={d.recipient_name ?? ''} onChange={(v) => { setChoice(null); setPick(null); setD((x) => ({ ...x, recipient_name: v, patient_id: null })); }} onPick={pickPatient} onCreate={setNewPatient} createLabel="New patient" /></Field>
           <Field label="Address"><input className="input" value={d.recipient_address ?? ''} onChange={set('recipient_address')} /></Field>
           <p className="text-xs text-muted-foreground sm:col-span-2">Patient returns are not pharmacy stock and do not change the balance. Record their destruction separately once witnessed.</p>
         </div>
@@ -257,6 +273,12 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
         <div className={`flex items-center justify-between rounded-lg px-4 py-3 text-sm ${preview < 0 ? 'bg-destructive/10 text-destructive' : 'bg-secondary'}`}>
           <span>Balance after this entry</span>
           <span className="text-lg font-bold tabular-nums">{Number.isFinite(preview) ? preview : '-'} {unit}</span>
+        </div>
+      )}
+      {choice && (
+        <div>
+          <PatientChoice candidates={choice.candidates} pickId={choice.pick_id} script={{ name: d.recipient_name, address: d.recipient_address, dob: d.patient_dob }} value={pick} onChange={setPick} compact />
+          {!pick && <p className="mt-1 text-xs text-muted-foreground">Choose the patient, or New patient, then save again.</p>}
         </div>
       )}
       {error && <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
@@ -281,7 +303,7 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
       {/* Kept on screen while scrolling, so Sign & record never needs a scroll to reach */}
       <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-10 -mx-1 flex gap-3 rounded-xl bg-card/95 px-1 py-2 backdrop-blur lg:bottom-0">
         {onCancel && <button type="button" onClick={onCancel} className="btn-secondary flex-1">Cancel</button>}
-        <button className="btn-primary flex-1" disabled={busy}>{busy && <Loader2 className="h-4 w-4 animate-spin" />} {submitLabel ?? (correcting ? 'Record correction' : 'Sign & record entry')}</button>
+        <button className="btn-primary flex-1" disabled={busy || (!!choice && !pick)}>{busy && <Loader2 className="h-4 w-4 animate-spin" />} {submitLabel ?? (correcting ? 'Record correction' : 'Sign & record entry')}</button>
       </div>
     </form>
       <Modal open={newPatient !== null} onClose={() => setNewPatient(null)} title="New patient">

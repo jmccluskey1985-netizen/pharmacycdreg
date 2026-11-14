@@ -3,7 +3,7 @@ import { brandOf } from '@/lib/product-name';
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Search, UserPlus, UserRound, Download, Printer, Pencil, ArrowLeft, Loader2, Import } from 'lucide-react';
+import { Search, UserPlus, UserRound, Download, Printer, Pencil, ArrowLeft, Loader2, Import, Users } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 import { Modal } from '@/components/modal';
 import { PatientForm, type PatientRecord } from '@/components/dashboard/patient-form';
@@ -23,6 +23,7 @@ export default function PatientsPage() {
   const [open, setOpen] = useState<PatientRecord | null>(null);
   const [importing, setImporting] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [dupes, setDupes] = useState(false);
 
   const load = useCallback(async (query: string) => {
     const d = await api(`/api/patients?q=${encodeURIComponent(query)}`);
@@ -37,6 +38,7 @@ export default function PatientsPage() {
     finally { setImporting(false); }
   }
 
+  if (dupes) return <Duplicates canMerge={!!staff && can.record(staff.role)} onBack={() => { setDupes(false); load(q); }} />;
   if (open) return <PatientDetail patient={open} onBack={() => { setOpen(null); load(q); }} onChanged={setOpen} />;
 
   return (
@@ -48,6 +50,7 @@ export default function PatientsPage() {
         </div>
         <div className="flex gap-2">
           {staff && can.manageStaff(staff.role) && <button onClick={importFromRegister} disabled={importing} className="btn-secondary">{importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Import className="h-4 w-4" />} <span className="hidden sm:inline">From register</span></button>}
+          <button onClick={() => setDupes(true)} className="btn-secondary"><Users className="h-4 w-4" /> <span className="hidden sm:inline">Possible duplicates</span></button>
           <button onClick={() => setAdding(true)} className="btn-primary"><UserPlus className="h-4 w-4" /> New patient</button>
         </div>
       </div>
@@ -144,6 +147,55 @@ function PatientDetail({ patient, onBack, onChanged }: { patient: PatientRecord;
       <Modal open={editing} onClose={() => setEditing(false)} title={`Edit ${name}`} wide>
         {editing && <PatientForm initial={patient} onSaved={(p) => { setEditing(false); onChanged(p); }} onArchived={() => { setEditing(false); onBack(); }} />}
       </Modal>
+    </div>
+  );
+}
+
+type DupP = { id: string; first_name: string; surname: string; date_of_birth: string | null; address: string | null; gms_number: string | null };
+
+/** Records that look like the same person (docs/PATIENT_MATCHING.md §6.3, §9). Merging keeps one record and moves the other's register links to it. */
+function Duplicates({ onBack, canMerge }: { onBack: () => void; canMerge: boolean }) {
+  const [pairs, setPairs] = useState<{ a: DupP; b: DupP; level: string; reasons: string[] }[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const load = useCallback(() => api('/api/patients/duplicates').then((d) => setPairs(d.pairs ?? [])).catch(() => setPairs([])), []);
+  useEffect(() => { load(); }, [load]);
+  async function merge(from: DupP, into: DupP) {
+    if (!window.confirm(`Merge ${from.first_name} ${from.surname} into ${into.first_name} ${into.surname}?\n\nTheir register lines will be linked to the record you keep. Register lines themselves aren't changed. The merge is recorded in the audit trail.`)) return;
+    setBusy(from.id + into.id); setMsg(null);
+    try { const d = await api(`/api/patients/${from.id}/merge`, { method: 'POST', json: { into: into.id } }); setMsg(`Merged. ${d.lines_moved} register line${d.lines_moved === 1 ? '' : 's'} now linked to ${into.first_name} ${into.surname}.`); load(); }
+    catch (e) { setMsg(e instanceof ApiError ? e.message : 'Could not merge'); }
+    finally { setBusy(null); }
+  }
+  const Side = ({ p }: { p: DupP }) => (
+    <div className="min-w-0 flex-1 rounded-lg bg-muted/50 p-3">
+      <p className="font-semibold">{p.first_name} {p.surname}</p>
+      <p className="text-xs text-muted-foreground">{[p.date_of_birth && `DOB ${fmt(p.date_of_birth)}`, p.gms_number && `GMS ${p.gms_number}`].filter(Boolean).join(' · ') || 'No DOB or GMS'}</p>
+      <p className="truncate text-xs text-muted-foreground">{p.address || 'No address'}</p>
+    </div>
+  );
+  return (
+    <div className="mx-auto max-w-4xl">
+      <button onClick={onBack} className="btn-ghost mb-3"><ArrowLeft className="h-4 w-4" /> Patients</button>
+      <h1 className="text-2xl font-bold">Possible duplicates</h1>
+      <p className="mb-4 text-sm text-muted-foreground">Records that look like the same person, from a different spelling of the name or address. Check them, then keep one.{!canMerge && ' Only a pharmacist can merge records.'}</p>
+      {msg && <p className="mb-4 rounded-lg bg-secondary p-3 text-sm">{msg}</p>}
+      {pairs === null && <p className="text-muted-foreground">Looking…</p>}
+      {pairs?.length === 0 && <div className="card text-center text-muted-foreground">No likely duplicates found.</div>}
+      <div className="space-y-3">
+        {pairs?.map(({ a, b, level, reasons }) => (
+          <div key={a.id + b.id} className="card">
+            <p className="mb-2 flex flex-wrap gap-1 text-xs"><span className="badge bg-brand/15 text-primary">{level === 'certain' ? 'Same person' : 'Very likely'}</span>{reasons.map((r) => <span key={r} className="rounded bg-brand/10 px-1.5 py-0.5 text-primary">✓ {r}</span>)}</p>
+            <div className="flex flex-col gap-2 sm:flex-row"><Side p={a} /><Side p={b} /></div>
+            {canMerge && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button disabled={!!busy} onClick={() => merge(b, a)} className="btn-secondary py-1.5 text-sm">Keep {a.first_name} {a.surname} (left)</button>
+                <button disabled={!!busy} onClick={() => merge(a, b)} className="btn-secondary py-1.5 text-sm">Keep {b.first_name} {b.surname} (right)</button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { api, ApiError } from '@/lib/api';
 import { can } from '@/lib/roles';
 import { useStaff } from '@/components/dashboard/staff-context';
 import { EntryForm } from '@/components/dashboard/entry-form';
+import { PatientChoice, type PatientPick } from '@/components/dashboard/patient-choice';
 import { productFor } from '@/data/cd-products';
 
 type Page = { file: File; url: string };
@@ -47,6 +48,7 @@ export default function ScanPage() {
   const [pages, setPages] = useState<Page[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
+  const [patientPick, setPatientPick] = useState<PatientPick>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -132,6 +134,7 @@ export default function ScanPage() {
       fd.append('hint', docType);
       const d = await api('/api/scan', { method: 'POST', body: fd });
       setResult({ ...d, done: {} as Record<number, boolean> });
+      setPatientPick(d.patient_match?.pick_id ? { patient_id: d.patient_match.pick_id } : null);
       setStage('review');
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not read the document');
@@ -143,6 +146,7 @@ export default function ScanPage() {
     pages.forEach((p) => p.url && URL.revokeObjectURL(p.url));
     setPages([]);
     setResult(null);
+    setPatientPick(null);
     setError(null);
     setStage('capture');
   }
@@ -190,11 +194,20 @@ export default function ScanPage() {
           </div>
         )}
 
+        {result.patient_match?.candidates?.length > 0 && result.proposals.length > 0 && (
+          <div className="card mb-4">
+            <PatientChoice candidates={result.patient_match.candidates} pickId={result.patient_match.pick_id} script={{ name: x.patient_name, address: x.patient_address, dob: x.patient_dob }} value={patientPick} onChange={setPatientPick} />
+          </div>
+        )}
+        {result.patient_match && !result.patient_match.candidates?.length && x.patient_name && result.proposals.length > 0 && (
+          <p className="mb-4 rounded-lg bg-muted p-3 text-sm text-muted-foreground"><b className="text-foreground">New patient:</b> nobody like {x.patient_name} on file yet. A record is made when you sign.</p>
+        )}
+
         {result.proposals.length === 0 && <div className="card text-center text-muted-foreground">No controlled drugs found on this document.</div>}
 
         <div className="space-y-4">
           {result.proposals.map((p: any, i: number) => (
-            <ProposalCard key={i} p={p} canOpenBook={!!staff && can.openRegister(staff.role)} autoOpen={result.proposals.length === 1 && !!p.register_id} done={!!result.done[i]} onDone={() => setResult({ ...result, done: { ...result.done, [i]: true } })} canRecord={!!staff && can.record(staff.role)} />
+            <ProposalCard key={i} p={p} patientPick={patientPick} canOpenBook={!!staff && can.openRegister(staff.role)} autoOpen={result.proposals.length === 1 && !!p.register_id} done={!!result.done[i]} onDone={(saved?: { patient_id?: string | null }) => { if (saved?.patient_id) setPatientPick({ patient_id: saved.patient_id }); setResult((cur: any) => ({ ...cur, done: { ...cur.done, [i]: true } })); }} canRecord={!!staff && can.record(staff.role)} />
           ))}
         </div>
 
@@ -332,7 +345,7 @@ export default function ScanPage() {
   );
 }
 
-function ProposalCard({ p, done, onDone, canRecord, autoOpen, canOpenBook }: { p: any; done: boolean; onDone: () => void; canRecord: boolean; autoOpen?: boolean; canOpenBook?: boolean }) {
+function ProposalCard({ p, done, onDone, canRecord, autoOpen, canOpenBook, patientPick }: { p: any; patientPick?: PatientPick; done: boolean; onDone: (saved?: { patient_id?: string | null }) => void; canRecord: boolean; autoOpen?: boolean; canOpenBook?: boolean }) {
   const [registerId, setRegisterId] = useState<string | null>(p.register_id);
   const [candidates, setCandidates] = useState<any[]>(p.candidates);
   const [started, setStarted] = useState<{ id: string; balance: number } | null>(null);
@@ -390,10 +403,11 @@ function ProposalCard({ p, done, onDone, canRecord, autoOpen, canOpenBook }: { p
                 unit={chosen?.label ? p.item.quantity_unit : 'units'}
                 balance={started && registerId === started.id ? started.balance : registerId === p.register_id ? Number(p.current_balance ?? 0) : NaN}
                 initial={p.draft}
+                patientPick={patientPick}
                 lockType
                 submitLabel="Confirm & record"
                 onCancel={() => setOpen(false)}
-                onSaved={() => { setOpen(false); onDone(); }}
+                onSaved={(res: any) => { setOpen(false); onDone(res); }}
               />
             </div>
           )}

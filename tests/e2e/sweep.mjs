@@ -211,6 +211,45 @@ await step('invoice scan: read, check and record a line', async () => {
   if (await page.isVisible('text=/Could not|error/i')) throw new Error('recording failed');
 });
 
+await step('Rx scan: a misspelt name is matched to the existing patient', async () => {
+  await page.goto(B + '/dashboard/scan?type=prescription'); await page.waitForTimeout(1200);
+  await page.setInputFiles('input[type=file]', { name: 'rx.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64') });
+  const read = page.getByRole('button', { name: /Read/ }).first();
+  if (await read.isVisible().catch(() => false)) await read.click();
+  await see('text=Is this one of your patients?', 15000);
+  await see('text=/GMS matches/');
+  await page.getByRole('radio', { name: 'Mary Kelly' }).check();
+  const open = page.locator('button:has-text("Check details & record")');
+  if (await open.count()) await open.first().click();
+  await page.waitForTimeout(600);
+  await click('button:has-text("Confirm & record")'); await page.waitForTimeout(1500);
+  if (await page.isVisible('text=/Could not|below zero/i')) throw new Error('recording failed');
+  await see('text=Recorded');
+});
+
+await step('typed supply: an existing patient is offered before a new record is made', async () => {
+  await page.goto(B + '/dashboard/register/r1'); await see('text=CLASS OF DRUG'); await page.waitForTimeout(600);
+  await openNewEntry(); await click('button:has-text("Supplied")');
+  await page.fill('input[type=number]', '2');
+  await page.locator('input[placeholder*="Name, DOB"]').fill('Patrick Hayes');
+  await page.locator('h1, h2').first().click().catch(() => {});
+  await field('Address').fill('22 Abbey St, Ennis');
+  await click('button:has-text("Sign & record")');
+  await see('text=Is this one of your patients?');
+  await page.getByRole('radio', { name: 'Patrick Hayes' }).first().check();
+  await click('button:has-text("Sign & record")'); await page.waitForTimeout(1200);
+  if (await page.isVisible('text=Is this one of your patients?')) throw new Error('still asking');
+});
+
+await step('patients: possible duplicates can be merged', async () => {
+  await page.goto(B + '/dashboard/patients'); await page.waitForTimeout(800);
+  await click('button:has-text("Possible duplicates")');
+  await see('text=/Keep Patrick Hayes/');
+  page.once('dialog', (d) => d.accept());
+  await click('button:has-text("(left)")'); await page.waitForTimeout(800);
+  await see('text=/Merged\./');
+});
+
 await step('full backup downloads', async () => {
   await page.goto(B + '/dashboard/settings'); await page.waitForTimeout(800);
   const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 8000 }), page.click('a:has-text("Full backup")')]);

@@ -12,6 +12,7 @@ import { identifySupplier, looksLikeOwnPharmacy, checkReference } from '@/lib/in
 import { registerExemption } from '@/lib/cd-catalogue';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { can } from '@/lib/roles';
+import { findPatientMatches, candidateView } from '@/lib/patients';
 
 export const maxDuration = 120;
 
@@ -124,6 +125,11 @@ export async function POST(req: Request) {
           recipient_name: extraction.patient_name,
           recipient_address: extraction.patient_address,
           patient_dob: extraction.patient_dob ?? null,
+          patient_details: isInvoice ? null : {
+            first_name: extraction.patient_first_name ?? null, surname: extraction.patient_surname ?? null,
+            eircode: extraction.patient_eircode ?? null, gms: extraction.gms_number ?? null, dps: extraction.dps_number ?? null,
+            lti: extraction.lti_number ?? null, mrn: extraction.hospital_mrn ?? null,
+          },
           prescriber_name: extraction.prescriber_name,
           prescriber_address: extraction.prescriber_address,
           authority_to_possess: !isInvoice && extraction.prescriber_name ? `Prescription: ${extraction.prescriber_name}${extraction.prescriber_registration ? ` (Reg ${extraction.prescriber_registration})` : ''}${extraction.document_date ? `, dated ${extraction.document_date.split('-').reverse().join('/')}` : ''}` : null,
@@ -136,7 +142,17 @@ export async function POST(req: Request) {
 
     const ignored = extraction.items.filter((i) => !i.is_controlled_drug).length;
     const exempt_lines = exempt.map((i) => ({ label: `${i.brand ?? i.drug_name} ${i.strength}`, reason: registerExemption(i.drug_name, i.strength, i.form, i.brand) }));
-    return NextResponse.json({ scan_id: scan.id, extraction, proposals, ignored, exempt: exempt_lines });
+    // Existing patients who look like the one on the script (docs/PATIENT_MATCHING.md §6)
+    let patient_match = null;
+    if (!isInvoice && extraction.patient_name && proposals.length) {
+      const m = await findPatientMatches(db, account.pharmacyId, {
+        full_name: extraction.patient_name, first_name: extraction.patient_first_name, surname: extraction.patient_surname,
+        dob: /^\d{4}-\d{2}-\d{2}$/.test(extraction.patient_dob ?? '') ? extraction.patient_dob : null, address: extraction.patient_address,
+        eircode: extraction.patient_eircode, gms: extraction.gms_number, dps: extraction.dps_number, lti: extraction.lti_number, mrn: extraction.hospital_mrn,
+      }).catch(() => null);
+      if (m) patient_match = { candidates: m.candidates.map(candidateView), pick_id: m.pick?.patient.id ?? null, ambiguous: m.ambiguous };
+    }
+    return NextResponse.json({ scan_id: scan.id, extraction, proposals, ignored, exempt: exempt_lines, patient_match });
   } catch (err) {
     if (err instanceof ScanError) return NextResponse.json({ error: err.message }, { status: 422 });
     return errorResponse(err);

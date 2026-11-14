@@ -18,6 +18,16 @@ const base = {
   late_reason: z.string().trim().max(300).optional().nullable(),
 };
 
+const card = z.string().trim().max(30).optional().nullable();
+// Which patient record a supply / return belongs to (docs/PATIENT_MATCHING.md §7). None of these
+// are register columns: the route takes them off before the line is written.
+const patientChoice = {
+  new_patient: z.boolean().optional(),          // pharmacist chose "New patient"
+  interactive: z.boolean().optional(),          // a person is at the screen and can be asked to pick
+  update_patient: z.array(z.enum(['address', 'date_of_birth', 'gms_number', 'eircode'])).max(4).optional(), // overwrite these on the record from this script
+  patient_details: z.object({ first_name: z.string().trim().max(80).optional().nullable(), surname: z.string().trim().max(80).optional().nullable(), eircode: card, gms: card, dps: card, lti: card, mrn: card }).partial().optional().nullable(),
+};
+
 // Mandatory statutory fields per entry type (FR5, FR19). The database enforces the
 // same minimums with CHECK constraints, so a bypassed UI still can't write a gap.
 export const EntrySchema = z.discriminatedUnion('entry_type', [
@@ -37,9 +47,10 @@ export const EntrySchema = z.discriminatedUnion('entry_type', [
     patient_id: z.string().uuid().optional().nullable(),
     requisition: z.boolean().optional(), // supplied to a practitioner / business on a signed requisition
     patient_dob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable().catch(null), // for a new patient record only
+    ...patientChoice,
   }),
   z.object({ ...base, entry_type: z.literal('destruction'), quantity: qty, witness_name: s(2), witness_role: s(2), destruction_method: opt }),
-  z.object({ ...base, entry_type: z.literal('patient_return'), quantity: qty, recipient_name: s(2), recipient_address: opt, patient_id: z.string().uuid().optional().nullable() }),
+  z.object({ ...base, entry_type: z.literal('patient_return'), quantity: qty, recipient_name: s(2), recipient_address: opt, patient_id: z.string().uuid().optional().nullable(), patient_dob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable().catch(null), ...patientChoice }),
   z.object({ ...base, entry_type: z.literal('patient_return_destruction'), quantity: qty, witness_name: s(2), witness_role: s(2), destruction_method: opt, recipient_name: opt }),
   // Stock adjustment after a stock check (made through /api/stock-checks/[id]/adjust).
   z.object({ ...base, entry_type: z.literal('adjustment_in'), quantity: qty, notes: s(10) }),

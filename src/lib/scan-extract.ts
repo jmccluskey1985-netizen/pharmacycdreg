@@ -52,6 +52,13 @@ export const ExtractionSchema = z.object({
   patient_name: strN,
   patient_address: strN,
   patient_dob: strN.optional(),
+  patient_first_name: strN.optional(),
+  patient_surname: strN.optional(),
+  patient_eircode: strN.optional(),
+  gms_number: strN.optional(),
+  dps_number: strN.optional(),
+  lti_number: strN.optional(),
+  hospital_mrn: strN.optional(),
   prescriber_name: strN,
   prescriber_address: strN,
   prescriber_registration: strN,
@@ -64,7 +71,7 @@ const nullableString = { type: ['string', 'null'] };
 const JSON_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['document_type', 'document_date', 'reference', 'reference_label', 'supplier_evidence', 'supplier_name', 'supplier_address', 'patient_name', 'patient_address', 'patient_dob', 'prescriber_name', 'prescriber_address', 'prescriber_registration', 'items', 'warnings'],
+  required: ['document_type', 'document_date', 'reference', 'reference_label', 'supplier_evidence', 'supplier_name', 'supplier_address', 'patient_name', 'patient_address', 'patient_dob', 'patient_first_name', 'patient_surname', 'patient_eircode', 'gms_number', 'dps_number', 'lti_number', 'hospital_mrn', 'prescriber_name', 'prescriber_address', 'prescriber_registration', 'items', 'warnings'],
   properties: {
     document_type: { type: 'string', enum: ['prescription', 'invoice', 'other'] },
     document_date: { ...nullableString, description: 'Date on the document as YYYY-MM-DD' },
@@ -75,7 +82,14 @@ const JSON_SCHEMA = {
     supplier_address: nullableString,
     patient_name: { ...nullableString, description: 'Patient (prescriptions only)' },
     patient_address: nullableString,
-    patient_dob: { ...nullableString, description: 'Patient date of birth as YYYY-MM-DD (prescriptions), else null' },
+    patient_dob: { ...nullableString, description: 'Patient date of birth as YYYY-MM-DD, only from the DOB box or a patient sticker (never a stamp, signature or script date), else null' },
+    patient_first_name: { ...nullableString, description: 'Patient first name(s) only. Irish hospital pads print SURNAME first: split correctly. Else null' },
+    patient_surname: { ...nullableString, description: 'Patient surname only, keeping multi-word surnames together (e.g. "Mc Guinness", "O Connor", "Ní Bhriain"). Else null' },
+    patient_eircode: { ...nullableString, description: 'Eircode of the patient home address (7 characters, e.g. "V95 X2Y3") if printed, else null' },
+    gms_number: { ...nullableString, description: 'GMS / medical card number from the script or a scheme card in the photo, keeping any final household letter (e.g. "1234567A"), else null' },
+    dps_number: { ...nullableString, description: 'Drugs Payment Scheme number if shown, else null' },
+    lti_number: { ...nullableString, description: 'Long Term Illness scheme number if shown, else null' },
+    hospital_mrn: { ...nullableString, description: 'Hospital MRN / chart number from a hospital sticker, else null' },
     prescriber_name: nullableString,
     prescriber_address: nullableString,
     prescriber_registration: { ...nullableString, description: 'Medical Council / registration number if shown' },
@@ -134,6 +148,7 @@ Prescriptions:
 - Hospital and discharge prescriptions often state the total as a number of DOSES (e.g. "total to dispense eighteen doses"). Copy it as written (quantity_words "eighteen doses"), set quantity_unit to "doses", and set units_per_dose from the dose and the product strength (5 mg dose of 5 mg capsules = 1). Use the handwritten CD section as the legal wording when present.
 - The prescriber is the person who signed (name and registration number near the signature), not the consultant in the header, unless they are the same.
 - Add a warning if words and figures disagree, either is missing, or the script looks altered.
+- Patient: give the full name in patient_name and also split it into patient_first_name and patient_surname (hospital pads and stickers print SURNAME first). Read identifiers (DOB, eircode, GMS/DPS/LTI number with any household letter, hospital MRN) only where clearly printed for this patient; never take a date from a stamp or signature as the DOB. Do not return PPS numbers.
 
 Rules for everything:
 - Transcribe only what is on the document. If something is not visible, return null, never guess a name, address or quantity.

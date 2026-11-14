@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireStaff, errorResponse, audit } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase/server';
 import { can } from '@/lib/roles';
-import { PatientBody } from '@/lib/patients';
+import { PatientBody, writePatient } from '@/lib/patients';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +31,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     }
     const parsed = PatientBody.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: 'First name is required; check the date of birth' }, { status: 400 });
-    const { data, error } = await db.from('patients').update({ ...parsed.data, updated_at: new Date().toISOString() }).eq('id', params.id).eq('pharmacy_id', account.pharmacyId).select('*').single();
+    const { data: own } = await db.from('patients').select('id').eq('id', params.id).eq('pharmacy_id', account.pharmacyId).maybeSingle();
+    if (!own) return NextResponse.json({ error: 'Patient not found' }, { status: 404 });
+    const { data, error } = await writePatient(db, { ...parsed.data, updated_at: new Date().toISOString() }, params.id);
     if (error || !data) return NextResponse.json({ error: 'Patient not found' }, { status: 404 });
     await audit(account.pharmacyId, 'patient.updated', staff, account.authUserId, { fields: Object.keys(parsed.data) }, { table: 'patients', id: params.id });
     return NextResponse.json({ patient: data });

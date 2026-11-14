@@ -42,8 +42,11 @@ Run them in order. 0001 runs once; every later migration is safe to re-run (`tes
 | 0009_reader_settings | `site_secrets` (encrypted site-wide reader key) |
 | 0010_product_brand | `cd_products.brand` (one register per brand) |
 | 0011_quarantine_destruction_book | `quarantine_items`, `destruction_book` |
-| 0015_no_negative_balance | Database backstop: refuses any register line that leaves the balance below zero |
+| 0012_reminders_notes_feedback_adjustments | Dispensing reminders, feedback and ideas, notes, stock adjustment lines |
+| 0013_integrity_inspector_2fa | Hash-chained register and audit trail, inspector links, require-2FA setting |
 | 0014_vertex_reader | `site_secrets` columns for Google Vertex AI (`reader_provider`, encrypted service-account key, project, location) |
+| 0015_no_negative_balance | Database backstop: refuses any register line that leaves the balance below zero |
+| 0016_patient_matching | Patient identifiers (`dps_number`, `lti_number`, `hospital_mrn`, `eircode`), normalised surname `name_key`, `merged_into`; `merge_patient_links()` (the only change a register line allows: moving its patient link when duplicates are merged). See docs/PATIENT_MATCHING.md |
 | 0013_integrity_inspector_2fa | SHA-256 hash chain on `cd_entries` and `audit_log` (backfills existing rows), `verify_register_chain()` / `verify_audit_chain()`, `inspector_links`, `pharmacies.require_2fa` |
 | 0012_reminders_notes_feedback_adjustments | `dispense_reminders`, `notes` + `note_attachments` (private storage bucket `cd-notes`), `feedback` + `feedback_votes`, entry types `adjustment_in` / `adjustment_out` and the updated `cd_ledger` view |
 
