@@ -46,7 +46,7 @@ Scanning only **reads**. A pharmacist checks and signs every entry before it rea
 - **Matching** (`src/lib/match.ts`) is **brand-aware**:
   - OxyNorm, Shortec, and different fentanyl patch brands each have their own register. One brand is never posted into another brand's book.
   - If only another brand's book exists, the card says so and offers **Start book**, pre-filled from the scan.
-- **Patients:** each read is linked to a patient record (`patients`, migration 0008), which is created if the patient is new.
+- **Patients:** each read is linked to a patient record (`patients`, migration 0008), which is created if the patient is new. How existing patients should be matched and offered for picking, so duplicates aren't created, is in [PATIENT_MATCHING.md](PATIENT_MATCHING.md).
 
 ## 3. Invoices / CD dockets (Uniphar, United Drug, PCO, IMED, Pluripharm)
 
