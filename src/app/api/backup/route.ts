@@ -16,10 +16,10 @@ export async function GET() {
     const { account, staff } = await requireStaff(can.manageStaff);
     const db = createServiceClient();
     const ph = account.pharmacyId;
-    const all = async (table: string, filter: (q: any) => any, order = 'id') => {
+    const all = async (table: string, filter: (q: any) => any, order = 'id', columns = '*') => {
       const out: any[] = [];
       for (let from = 0; ; from += 1000) {
-        const { data, error } = await filter(db.from(table).select('*')).order(order).range(from, from + 999);
+        const { data, error } = await filter(db.from(table).select(columns)).order(order).range(from, from + 999);
         if (error) return out.length ? out : { unavailable: error.message.slice(0, 120) };
         out.push(...(data ?? []));
         if (!data || data.length < 1000) return out;
@@ -35,6 +35,7 @@ export async function GET() {
     const backup = {
       format: 'pharmacycdreg-backup',
       version: 1,
+      restore_with: 'scripts/restore-backup.mjs (docs/BACKUP_AND_RESTORE.md)',
       exported_at: new Date().toISOString(),
       exported_by: staff.full_name,
       pharmacy: p,
@@ -50,7 +51,9 @@ export async function GET() {
       dispense_reminders: await all('dispense_reminders', (q) => q.eq('pharmacy_id', ph)),
       notes: await all('notes', (q) => q.eq('pharmacy_id', ph)),
       note_attachments: await all('note_attachments', (q) => q.eq('pharmacy_id', ph)),
-      audit_log: await all('audit_log', (q) => q.eq('pharmacy_id', ph)),
+      // details_raw keeps each audit record's details exactly as stored (e.g. 28.000, not 28), so a
+      // restore reproduces the same fingerprints (scripts/restore-backup.mjs).
+      audit_log: await all('audit_log', (q) => q.eq('pharmacy_id', ph), 'chain_seq', '*, details_raw:details::text'),
     };
     await audit(ph, 'data.backup_downloaded', staff, account.authUserId, { entries: Array.isArray(backup.entries) ? backup.entries.length : 0 });
     const name = `pharmacycdreg-backup-${new Date().toISOString().slice(0, 10)}.json`;

@@ -27,4 +27,7 @@ for t in tests/db/*.test.sql; do
   echo "== $(basename "$t")"
   if $P -f "$t" >/dev/null 2>"$DIR/err"; then sed -n 's/.*NOTICE:  //p' "$DIR/err"; else sed -n 's/.*NOTICE:  //p' "$DIR/err"; echo "FAIL"; grep -m3 -E "ERROR|FAIL" "$DIR/err"; fail=1; fi
 done
+echo "== restore round trip"
+. "$(dirname "$0")/restore.sh"
+[ "$rfail" = 0 ] || fail=1
 exit $fail
