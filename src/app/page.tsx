@@ -151,7 +151,7 @@ export default function LandingPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-secondary/60 to-background">
+    <main className="theme-light min-h-screen bg-gradient-to-b from-secondary to-background">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(homepageJsonLd()) }} />
       <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-5 sm:px-6">
         <Logo size="md" />
@@ -170,7 +170,7 @@ export default function LandingPage() {
         </div>
 
         <div className="order-2 lg:order-1">
-          <h1 className="text-3xl font-bold leading-tight tracking-tight text-brand-dark dark:text-white sm:text-4xl">
+          <h1 className="text-3xl font-bold leading-tight tracking-tight text-brand-dark sm:text-4xl">
             Your digital Controlled Drugs Register on any device.
           </h1>
           <FadeIn delay={100} as="p" className="mt-4 max-w-xl text-xl font-semibold text-foreground">
@@ -202,7 +202,7 @@ export default function LandingPage() {
       <section className="border-t border-border">
         <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
           <p className="text-sm font-semibold uppercase tracking-widest text-brand">See it in action</p>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-brand-dark dark:text-white">The jobs that eat your time, done in seconds</h2>
+          <h2 className="mt-2 text-3xl font-bold tracking-tight text-brand-dark">The jobs that eat your time, done in seconds</h2>
           <div className="mt-10"><LandingDemos /></div>
         </div>
       </section>
@@ -211,7 +211,7 @@ export default function LandingPage() {
       <section className="border-t border-border bg-card/60">
         <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
           <p className="text-sm font-semibold uppercase tracking-widest text-brand">A look inside</p>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-brand-dark dark:text-white">Built for the dispensary counter</h2>
+          <h2 className="mt-2 text-3xl font-bold tracking-tight text-brand-dark">Built for the dispensary counter</h2>
           <div className="mt-10 space-y-14">
             {PREVIEWS.filter((p: any) => !p.hidden).map((p, i) => (
               <div key={p.src} className={`grid items-center gap-6 lg:gap-10 ${i % 2 ? 'lg:grid-cols-[1fr_1.6fr]' : 'lg:grid-cols-[1.6fr_1fr]'}`}>
@@ -243,7 +243,7 @@ export default function LandingPage() {
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-2">
           <div>
             <p className="text-sm font-semibold uppercase tracking-widest text-brand">Simple pricing</p>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight text-brand-dark dark:text-white">One price. Everything included.</h2>
+            <h2 className="mt-2 text-3xl font-bold tracking-tight text-brand-dark">One price. Everything included.</h2>
             <p className="mt-3 text-lg text-muted-foreground">No bundles, no modules you won&apos;t use, just your Controlled Drugs Register, done properly. Unlimited staff, registers and invoice scans.</p>
             <ul className="mt-6 space-y-3 text-sm">
               <li className="flex gap-3"><BookOpen className="h-5 w-5 flex-shrink-0 text-brand" /> Bring forward balances from your paper book on day one.</li>

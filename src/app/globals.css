@@ -64,6 +64,28 @@
     }
   }
 
+  /* Public pages (landing, security, privacy, terms) always use the light mint theme,
+     even when the phone or computer is set to dark mode. */
+  .theme-light {
+    --background: 240 247 240;
+    --foreground: 17 24 20;
+    --card: 255 255 255;
+    --card-foreground: 17 24 20;
+    --primary: 24 75 33;
+    --primary-foreground: 255 255 255;
+    --secondary: 226 241 226;
+    --secondary-foreground: 24 75 33;
+    --muted: 236 243 236;
+    --muted-foreground: 100 112 104;
+    --border: 218 230 219;
+    --input: 210 218 212;
+    --paper: 255 255 255;
+    --rule: 148 163 184;
+    --ink: 30 41 59;
+    color-scheme: light;
+    background-color: rgb(var(--background));
+    color: rgb(var(--foreground));
+  }
   * { @apply border-border; -webkit-tap-highlight-color: transparent; }
   body { @apply bg-background text-foreground antialiased; }
   input, textarea, select { @apply text-foreground placeholder:text-muted-foreground; }

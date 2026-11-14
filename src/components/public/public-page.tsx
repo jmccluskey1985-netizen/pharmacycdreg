@@ -3,7 +3,7 @@ import { Logo } from '@/components/logo';
 
 export function PublicPage({ title, intro, children }: { title: string; intro?: string; children: React.ReactNode }) {
   return (
-    <main className="min-h-screen bg-background">
+    <main className="theme-light min-h-screen bg-gradient-to-b from-secondary/70 to-background">
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3 px-4 py-4">
           <Link href="/?home=1" aria-label="PharmacyCDReg.ie home"><Logo size="sm" /></Link>
