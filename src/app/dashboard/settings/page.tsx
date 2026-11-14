@@ -8,6 +8,9 @@ import { useStaff } from '@/components/dashboard/staff-context';
 import { can } from '@/lib/roles';
 import { TwoStepSettings } from '@/components/dashboard/two-step';
 import { ReaderSettings } from '@/components/dashboard/reader-settings';
+import { useTheme } from '@/components/dashboard/theme';
+import { THEMES } from '@/lib/theme';
+import { Palette } from 'lucide-react';
 
 interface Settings { name: string; address: string; psi_premises_number: string | null; invoice_names: string | null; lock_minutes: number; locum_default_days: number; stock_check_frequency: string; halo_enabled: boolean; require_2fa?: boolean; migrated: boolean }
 interface Reg { id: string; label: string; unit: string; balance: number; low_stock_level: number | null }
@@ -70,6 +73,7 @@ export default function SettingsPage() {
         </p>
       )}
 
+      <Display />
       <PharmacyDetails s={s} onSaved={onSaved} />
       <Security s={s} onSaved={onSaved} />
       {pharmacy?.is_site_admin && <ReaderSettings />}
@@ -91,6 +95,26 @@ export default function SettingsPage() {
         ))}
       </section>
     </div>
+  );
+}
+
+function Display() {
+  const { theme, setTheme } = useTheme();
+  return (
+    <Section icon={Palette} title="Display" text="Colour mode for the dashboard. It's remembered when you sign in again, on any device.">
+      <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Colour mode">
+        {THEMES.map((t) => (
+          <button key={t.value} type="button" role="radio" aria-checked={theme === t.value} onClick={() => setTheme(t.value)}
+            className={`flex items-center gap-3 rounded-xl border p-3 text-left transition ${theme === t.value ? 'border-primary ring-2 ring-primary/40' : 'border-border hover:bg-muted/50'}`}>
+            <span className="relative h-10 w-14 shrink-0 overflow-hidden rounded-lg border border-border" style={{ background: t.swatch[0] }}>
+              <span className="absolute bottom-1.5 left-1.5 h-2 w-8 rounded" style={{ background: t.swatch[1] }} />
+            </span>
+            <span className="min-w-0 flex-1"><span className="block font-semibold">{t.label}</span><span className="block text-xs text-muted-foreground">{t.text}</span></span>
+            {theme === t.value && <Check className="h-4 w-4 text-primary" />}
+          </button>
+        ))}
+      </div>
+    </Section>
   );
 }
 

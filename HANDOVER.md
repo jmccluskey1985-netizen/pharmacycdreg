@@ -50,7 +50,7 @@ src/lib/
   demo/                     demo mode + training mode (in-browser mock of the API)
 src/data/cd-products.ts     CD catalogue: one product per brand, strengths, schedule paragraph
 src/components/dashboard/   shell (sidebar / icon rail), entry form, new-entry chooser, shelf, …
-supabase/migrations/        0001–0016 (see docs/OPERATIONS.md)
+supabase/migrations/        0001–0017 (see docs/OPERATIONS.md)
 scripts/                    create-pharmacy.mjs, rule tests, GMS list parser
 ```
 
@@ -93,6 +93,7 @@ scripts/                    create-pharmacy.mjs, rule tests, GMS list parser
 - **Help** (`/dashboard/help`), a **Getting started** checklist on the registers page, public **/security**, **/privacy** and **/terms**, an app manifest (install to home screen), error pages with browser-error reporting, `/api/health`, and cookie-free Vercel Analytics.
 - **Feedback & ideas** (`/dashboard/feedback`): ideas, problems or other messages, emailed to `ADMIN_NOTIFY_EMAIL`. The site owner sets a status, replies, and can share an idea under a neutral title on the **ideas board**, where pharmacies vote (one vote each).
 - **Patient matching** (docs/PATIENT_MATCHING.md): scans and typed supplies are matched to existing patients despite spelling differences, with reasons shown; possible duplicates can be merged by a pharmacist.
+- **Colour modes** (Settings → Display): Default (home-page mint), Light, True Black and HSE Dark, matching PharmacyConsultation.ie. Saved on the device and on the login (migration 0017). Public pages always stay mint.
 - **Search:** drug dropdown by strength, and a patient report (all dispensings for a patient).
 - **Audit trail, print and CSV export** for inspection.
 - **Training mode:** a temporary copy of the pharmacy's register in the browser, under an orange bar. Nothing is saved, and it is cleared on refresh.
@@ -129,7 +130,7 @@ Not covered automatically: the real server API routes talking to a real Supabase
 
 - [ ] **Stripe:** create the product and price, webhook and portal (README → Stripe setup); set `STRIPE_*` and `CRON_SECRET`.
 - [ ] **Google sign-in:** finish the Google Cloud client and Supabase provider set-up (docs/OPERATIONS.md §3).
-- [ ] **Migrations:** confirm 0009–0016 have been run in production.
+- [ ] **Migrations:** confirm 0009–0017 have been run in production.
 - [ ] **Document reader:** set up Google Vertex AI (Settings → Document reading) and accept the Google Cloud DPA. File the sub-processor DPAs (`docs/compliance/SUBPROCESSOR_DPAS.md`).
 - [ ] **Company details:** set `NEXT_PUBLIC_COMPANY_NAME`, `NEXT_PUBLIC_COMPANY_ADDRESS` and `NEXT_PUBLIC_CONTACT_EMAIL`. Have a solicitor review /privacy, /terms and `docs/compliance/DPA_TEMPLATE.md`.
 - [ ] **Hardening checklist:** `docs/OPERATIONS.md` §6 (uptime monitor, leaked-password protection, backups and restore test).

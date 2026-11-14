@@ -258,6 +258,17 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Sister service */}
+      <section className="border-t border-border">
+        <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 px-4 py-12 text-center sm:px-6">
+          <p className="text-sm font-semibold uppercase tracking-widest text-brand">Also for your pharmacy</p>
+          <a href="https://www.pharmacyconsultation.ie" target="_blank" rel="noopener" aria-label="PharmacyConsultation.ie (opens in a new tab)" className="rounded-xl bg-white px-5 py-3 shadow-soft ring-1 ring-border transition hover:shadow-md">
+            <img src="/brand/pharmacyconsultation.webp" alt="PharmacyConsultation.ie: Book Your Pharmacy Appointment" width={345} height={74} loading="lazy" className="h-auto w-64 sm:w-80" />
+          </a>
+          <p className="max-w-2xl text-muted-foreground">Online booking and consultation records for the <b className="text-foreground">Common Conditions Service</b>, vaccinations and your other pharmacy consultations. From the same team as PharmacyCDReg.ie.</p>
+        </div>
+      </section>
+
       <PublicFooter />
     </main>
   );

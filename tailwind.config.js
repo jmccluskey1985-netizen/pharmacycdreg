@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: 'class',
+  // dark: styles apply in both dark modes (True Black and HSE Dark)
+  darkMode: ['variant', '&:is(.dark *, .hse-dark *)'],
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {

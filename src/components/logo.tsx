@@ -34,7 +34,7 @@ const sizes = {
 
 export function Logo({ size = 'md', tagline = true, inverse = false, className = '' }: LogoProps) {
   const s = sizes[size];
-  const dark = inverse ? '#FFFFFF' : DARK;
+  const dark = inverse ? '#FFFFFF' : `var(--logo-ink, ${DARK})`; // white in the dark colour modes (globals.css)
   return (
     <div className={`flex items-center gap-2.5 ${className}`} role="img" aria-label="PharmacyCDReg.ie">
       <LogoMark size={s.mark} />

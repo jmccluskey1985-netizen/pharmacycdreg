@@ -516,6 +516,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     return res({ check: c, balance: bal, diff });
   }
   if (path === '/api/audit/event') return res({ ok: true });
+  if (path === '/api/preferences') return res(method === 'GET' ? { theme: null } : { ok: true, saved_to_account: false });
   if (path === '/api/patients/import') return res({ added: 0 });
   if (path === '/api/patients') {
     if (needStaff()) return needStaff()!;

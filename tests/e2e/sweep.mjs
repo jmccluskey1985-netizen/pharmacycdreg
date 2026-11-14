@@ -250,6 +250,17 @@ await step('patients: possible duplicates can be merged', async () => {
   await see('text=/Merged\./');
 });
 
+await step('colour mode: choose True Black, kept after reload, then back to Default', async () => {
+  await page.goto(B + '/dashboard/settings'); await page.waitForTimeout(900);
+  await page.getByRole('radio', { name: /True Black/ }).click(); await page.waitForTimeout(300);
+  await page.reload(); await page.waitForTimeout(1200);
+  if (!(await page.evaluate(() => document.documentElement.classList.contains('dark')))) throw new Error('not remembered');
+  await page.goto(B + '/?home=1'); await page.waitForTimeout(800);
+  if (await page.evaluate(() => document.documentElement.classList.contains('dark'))) throw new Error('home page went dark');
+  await page.goto(B + '/dashboard/settings'); await page.waitForTimeout(900);
+  await page.getByRole('radio', { name: /^Default/ }).click(); await page.waitForTimeout(300);
+});
+
 await step('full backup downloads', async () => {
   await page.goto(B + '/dashboard/settings'); await page.waitForTimeout(800);
   const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 8000 }), page.click('a:has-text("Full backup")')]);
