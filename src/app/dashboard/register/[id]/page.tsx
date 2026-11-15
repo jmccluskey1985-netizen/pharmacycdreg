@@ -49,9 +49,18 @@ function partyCell(r: Raw) {
   return { name: r.recipient_name, address: r.recipient_address };
 }
 
+/** A late entry's notes are "Late entry: <reason>" then any other notes after " · ". */
+function splitLate(notes: string | null | undefined): { reason: string | null; rest: string | null } {
+  if (!notes?.startsWith('Late entry: ')) return { reason: null, rest: notes ?? null };
+  const body = notes.slice('Late entry: '.length);
+  const i = body.indexOf(' · ');
+  return i < 0 ? { reason: body, rest: null } : { reason: body.slice(0, i), rest: body.slice(i + 3) };
+}
+
 function authorityCell(r: Raw) {
-  if (r.entry_type === 'receipt' || r.entry_type.startsWith('adjustment')) return r.notes ?? '';
-  return [r.authority_to_possess || (r.prescriber_name ? `Rx: ${r.prescriber_name}` : ''), r.prescription_ref, r.notes?.startsWith('Late entry') ? r.notes : null].filter(Boolean).join(' · ');
+  const { rest } = splitLate(r.notes); // the late-entry reason goes in a footnote instead
+  if (r.entry_type === 'receipt' || r.entry_type.startsWith('adjustment')) return rest ?? '';
+  return [r.authority_to_possess || (r.prescriber_name ? `Rx: ${r.prescriber_name}` : ''), r.prescription_ref].filter(Boolean).join(' · ');
 }
 
 export default function RegisterBook(props: { params: Promise<{ id: string }> }) {
@@ -101,15 +110,26 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
     const people = new Map(data.staff.map((p) => [p.id, p]));
     const out: Line[] = [];
     const notes: { n: number; text: string }[] = [];
+    const stamp = (iso: string) => new Date(iso).toLocaleString('en-IE', { dateStyle: 'short', timeStyle: 'short' });
+    // Late entry (dated more than a day before it was written): a footnote saying when, who and why.
+    const lateFootnote = (e: Raw) => {
+      const { reason } = splitLate(e.notes);
+      if (!reason) return null;
+      const who = people.get(e.recorded_by_staff_id);
+      const n = notes.length + 1;
+      notes.push({ n, text: `Line ${e.seq}: late entry. Transaction dated ${fmtDate(e.transaction_date)}, entered ${stamp(e.recorded_at)} by ${who?.full_name ?? 'unknown'}${who?.psi_number ? ` (PSI ${who.psi_number})` : ''}. Reason: ${reason}` });
+      return n;
+    };
     for (const e of data.entries) {
       if (e.entry_type === 'correction') continue;
       const led = ledgerById.get(e.id);
       const corrs = correctionsFor.get(e.id) ?? [];
+      const late = lateFootnote(e);
       if (!corrs.length) {
-        out.push({ key: e.id, raw: e, struck: false, balance: led?.running_balance ?? null, footnote: null, correctable: true });
+        out.push({ key: e.id, raw: e, struck: false, balance: led?.running_balance ?? null, footnote: late, correctable: true });
         continue;
       }
-      out.push({ key: e.id, raw: e, struck: true, balance: null, footnote: null, correctable: false });
+      out.push({ key: e.id, raw: e, struck: true, balance: null, footnote: late, correctable: false });
       corrs.forEach((c, i) => {
         const last = i === corrs.length - 1;
         const n = notes.length + 1;
@@ -117,7 +137,7 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
         const prev = i === 0 ? e : corrs[i - 1];
         notes.push({
           n,
-          text: `Line ${e.seq} corrected ${new Date(c.recorded_at).toLocaleString('en-IE', { dateStyle: 'short', timeStyle: 'short' })} by ${who?.full_name ?? 'unknown'}${who?.psi_number ? ` (PSI ${who.psi_number})` : ''}. Amount ${fmtQty(prev.quantity)} → ${fmtQty(c.quantity)}. Reason: ${c.correction_reason}`,
+          text: `Line ${e.seq} corrected ${stamp(c.recorded_at)} by ${who?.full_name ?? 'unknown'}${who?.psi_number ? ` (PSI ${who.psi_number})` : ''}. Amount ${fmtQty(prev.quantity)} → ${fmtQty(c.quantity)}. Reason: ${c.correction_reason}`,
         });
         // A correction row carries the corrected values plus the original's type.
         out.push({ key: c.id, raw: { ...c, entry_type: e.entry_type }, struck: !last, balance: last ? led?.running_balance ?? null : null, footnote: n, correctable: false });
@@ -226,7 +246,7 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
                                 {party.address && <span className="block text-xs opacity-75">{party.address}</span>}
                                 {l.footnote && <sup className="ml-1 font-bold text-red-600">{l.footnote}</sup>}
                                 {r.source === 'scan' && !l.struck && <span className="badge ml-1 bg-brand/15 text-[10px] text-primary no-print">scanned</span>}
-                                {r.notes?.startsWith('Late entry') && <span className="badge ml-1 bg-amber-100 text-[10px] text-amber-900" title={r.notes}>late entry</span>}
+                                {r.notes?.startsWith('Late entry') && <span className="badge ml-1 bg-amber-100 text-[10px] text-amber-900" title={splitLate(r.notes).reason ?? undefined}>late entry</span>}
                               </td>
                               <td className={`${cls} text-xs`}>{authorityCell(r)}</td>
                               <td className={`${cls} text-right font-semibold tabular-nums`}>{inQty}</td>

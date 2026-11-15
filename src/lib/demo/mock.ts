@@ -61,6 +61,8 @@ function seedEntries() {
   // Oxycodone 10mg PR
   add('r2', 'receipt', 20, 140, 's1', BF('Paper register vol. 3, page 101'));
   add('r2', 'supply', 8, 56, 's2', { recipient_name: 'Patrick Hayes', recipient_address: '22 Abbey St, Ennis', prescriber_name: 'Dr A. Walsh', authority_to_possess: 'Prescription: Dr A. Walsh', prescription_ref: 'GMS 88240' });
+  // A late entry: supplied 6 days ago during an outage, entered from the paper fallback sheet 2 days later
+  add('r2', 'supply', 6, 28, 's2', { recipient_name: 'Bridget Lynch', recipient_address: '9 Mill Rd, Ennis', prescriber_name: 'Dr K. Ryan', authority_to_possess: 'Prescription: Dr K. Ryan', prescription_ref: 'Rx 10249', notes: 'Late entry: internet down on the day; entered from the paper fallback sheet' }).recorded_at = new Date(Date.now() - 4 * 864e5).toISOString();
   // MST Continus 10mg
   add('r3', 'receipt', 20, 60, 's1', BF('Paper register vol. 2, page 40'));
   add('r3', 'receipt', 7, 60, 's1', { ...UN, notes: 'Invoice UW-22918' });
