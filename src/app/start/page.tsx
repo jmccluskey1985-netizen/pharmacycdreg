@@ -42,8 +42,8 @@ export default function StartPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-secondary/60 to-background">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
-        <Link href="/"><Logo size="md" /></Link>
-        <Link href="/" className="btn-ghost text-sm"><ArrowLeft className="h-4 w-4" /> Sign in</Link>
+        <Link href="/" className="min-w-0"><Logo size="sm" className="sm:hidden" /><Logo size="md" className="hidden sm:flex" /></Link>
+        <Link href="/" className="btn-ghost shrink-0 px-3 text-sm"><ArrowLeft className="h-4 w-4" /> Sign in</Link>
       </header>
 
       <section className="mx-auto grid max-w-6xl gap-8 px-4 pb-16 sm:px-6 lg:grid-cols-[1.2fr_1fr] lg:gap-12 lg:pt-6">
