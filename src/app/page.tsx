@@ -9,7 +9,7 @@ import { PricingCard } from '@/components/pricing-card';
 import { LoginCard } from '@/components/login-card';
 import { DEMO } from '@/lib/demo/flag';
 import { RegisterCoverPreview } from '@/components/register-cover-preview';
-import { LandingDemos } from '@/components/landing-demos';
+import { LandingDemos, SampleNote } from '@/components/landing-demos';
 import { homepageJsonLd, jsonLd } from '@/lib/structured-data';
 
 const FEATURES = [
@@ -179,6 +179,7 @@ export default function LandingPage() {
           </FadeIn>
           <FadeIn delay={200} className="mt-5 max-w-xl">
             <RegisterCoverPreview src="/previews/register-book.webp" alt="A register page laid out like the paper Controlled Drugs Register" delay={3500} />
+            <SampleNote className="mt-2" />
           </FadeIn>
           <FadeIn delay={300} as="p" className="mt-5 max-w-xl text-lg text-muted-foreground">
             More accurate records, quicker entries and no more rooting through tattered CD books to find the right page. Every receipt, supply and destruction of Schedule 2 drugs is recorded, balanced and searchable, built around the IPU eCDR requirements for Irish community pharmacies.
@@ -215,8 +216,9 @@ export default function LandingPage() {
           <div className="mt-10 space-y-14">
             {PREVIEWS.filter((p: any) => !p.hidden).map((p, i) => (
               <div key={p.src} className={`grid items-center gap-6 lg:gap-10 ${i % 2 ? 'lg:grid-cols-[1fr_1.6fr]' : 'lg:grid-cols-[1.6fr_1fr]'}`}>
-                <figure className={`overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border ${i % 2 ? 'lg:order-2' : ''}`}>
-                  <img src={p.src} alt={p.alt} loading="lazy" className="w-full" />
+                <figure className={i % 2 ? 'lg:order-2' : ''}>
+                  <div className="overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border"><img src={p.src} alt={p.alt} loading="lazy" className="w-full" /></div>
+                  <figcaption><SampleNote className="mt-2" /></figcaption>
                 </figure>
                 <div className={i % 2 ? 'lg:order-1' : ''}>
                   <h3 className="text-2xl font-bold">{p.title}</h3>
@@ -229,12 +231,13 @@ export default function LandingPage() {
                 <h3 className="text-2xl font-bold">Works on your phone</h3>
                 <p className="mt-2 text-lg text-muted-foreground">Check a balance or record an entry from anywhere in the pharmacy. Each person signs in with their own PIN.</p>
               </div>
-              <figure className="mx-auto w-60 overflow-hidden rounded-[2.2rem] bg-black p-2 shadow-soft ring-1 ring-border sm:w-64">
-                <img src="/previews/phone.webp" alt="PharmacyCDReg on a phone: the OxyNorm 5mg capsule register page" loading="lazy" className="w-full rounded-[1.8rem]" />
+              <figure className="mx-auto w-60 sm:w-64">
+                <div className="overflow-hidden rounded-[2.2rem] bg-black p-2 shadow-soft ring-1 ring-border"><img src="/previews/phone.webp" alt="PharmacyCDReg on a phone: the OxyNorm 5mg capsule register page" loading="lazy" className="w-full rounded-[1.8rem]" /></div>
+                <figcaption><SampleNote className="mt-2 text-center" /></figcaption>
               </figure>
             </div>
           </div>
-          <p className="mt-8 text-xs text-muted-foreground">Screens shown with sample data.</p>
+          <p className="mt-8 text-xs text-muted-foreground">All screens and animations use sample data. Names, addresses, prescription numbers and pharmacy details are made up for illustration and are not real patients or pharmacies.</p>
         </div>
       </section>
 

@@ -43,6 +43,11 @@ function Counter({ value, className = '' }: { value: number; className?: string 
   return <span className={`tabular-nums ${className}`}>{shown}</span>;
 }
 
+/** Under every illustration: the people, pharmacies and prescriptions shown are made up. */
+export function SampleNote({ className = '' }: { className?: string }) {
+  return <p className={`text-[11px] leading-snug text-muted-foreground/80 ${className}`}>Illustration only. Patient, prescriber and pharmacy details are fictitious; any resemblance to real people is coincidental.</p>;
+}
+
 function Card({ title, text, children, refEl }: { title: string; text: string; children: React.ReactNode; refEl: React.RefObject<HTMLDivElement | null> }) {
   return (
     <div ref={refEl} className="flex flex-col overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border">
@@ -50,6 +55,7 @@ function Card({ title, text, children, refEl }: { title: string; text: string; c
       <div className="p-5">
         <h3 className="text-lg font-bold">{title}</h3>
         <p className="mt-1 text-sm text-muted-foreground">{text}</p>
+        <SampleNote className="mt-2" />
       </div>
     </div>
   );
@@ -166,6 +172,7 @@ function RxScanDemo() {
           <p className={`mt-3 flex items-center gap-2 text-sm font-semibold text-brand-dark ${fade(recorded)}`}><CheckCircle2 className="h-4 w-4 text-brand" /> Signed by Aoife Byrne (PSI 12345) · balance 70 capsules</p>
           <h3 className="mt-6 text-2xl font-bold">Scan a prescription, sign, done</h3>
           <p className="mt-1 max-w-lg text-muted-foreground">Photograph the prescription with the app. The patient, prescriber, drug and quantity are read for you to check, and one tap writes the line into the right register with the balance worked out.</p>
+          <SampleNote className="mt-2" />
         </div>
       </div>
     </div>
@@ -219,6 +226,7 @@ function InvoiceDemo() {
           </ul>
           <h3 className="mt-6 text-2xl font-bold">Photograph the wholesaler invoice</h3>
           <p className="mt-1 text-muted-foreground">Uniphar, United Drug, PCO and others. Controlled drug lines are picked out, packs × pack size worked out and matched to the right register for you to check. Nothing is recorded until you sign.</p>
+          <SampleNote className="mt-2" />
         </div>
       </div>
     </div>
