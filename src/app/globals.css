@@ -205,3 +205,12 @@
   .book-pages { opacity: 1 !important; transform: none !important; }
   .print-page { break-after: page; box-shadow: none !important; }
 }
+
+/* Data safety sheet: one A4 portrait page, no register footer */
+.data-sheet-page { page: datasheet; }
+@page datasheet {
+  size: A4 portrait;
+  margin: 9mm 10mm;
+  @bottom-left { content: "PharmacyCDReg.ie: data safety at a glance"; font-size: 7pt; color: #777; }
+  @bottom-right { content: none; }
+}

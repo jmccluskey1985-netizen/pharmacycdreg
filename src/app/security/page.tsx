@@ -8,6 +8,7 @@ export const metadata: Metadata = { alternates: { canonical: '/security' }, titl
 export default function SecurityPage() {
   return (
     <PublicPage title="Security & data protection" intro="Your CD register is a legal record with patient data in it. This is how we look after it.">
+      <p className="rounded-lg bg-secondary p-3 text-sm">Need something short for a superintendent or supervising pharmacist? See the one-page <a href="/data-safety" className="font-semibold underline">Data safety at a glance</a> (printable).</p>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(infoPageJsonLd('/security', 'Security & data protection', COMPANY.updatedIso)) }} />
       <H2>Your data stays in the EU</H2>
       <UL>

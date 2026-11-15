@@ -220,6 +220,7 @@ function Data({ regs, reload }: { regs: Reg[]; reload: () => void }) {
         <a href="/api/export" className="btn-secondary w-fit"><Download className="h-4 w-4" /> Export every register (CSV)</a>
         <BackupButton />
         <Link href="/dashboard/fallback-sheet" className="btn-secondary w-fit">Paper fallback sheet</Link>
+        <a href="/data-safety" target="_blank" rel="noopener" className="btn-secondary w-fit">Data safety sheet</a>
       </div>
       <p className="text-xs text-muted-foreground">Keep a monthly full backup somewhere safe outside the pharmacy system (e.g. an encrypted USB key in the safe). It contains patient details, so it&apos;s password protected.</p>
       <div>
