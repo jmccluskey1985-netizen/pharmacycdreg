@@ -27,7 +27,7 @@ async function signedInPage(viewport, pin = '1234') {
   await page.waitForSelector('a[href="/dashboard/register/r1"]', { timeout: 10000 });
   return page;
 }
-const PAGES = ['/dashboard', '/dashboard/register/r1', '/dashboard/scan?type=prescription', '/dashboard/inbox', '/dashboard/search', '/dashboard/patients',
+const PAGES = ['/dashboard', '/dashboard/group', '/dashboard/register/r1', '/dashboard/scan?type=prescription', '/dashboard/inbox', '/dashboard/search', '/dashboard/patients',
   '/dashboard/reminders', '/dashboard/destructions', '/dashboard/notes', '/dashboard/audit', '/dashboard/contacts', '/dashboard/team', '/dashboard/integrations',
   '/dashboard/billing', '/dashboard/settings', '/dashboard/help', '/dashboard/feedback', '/dashboard/fallback-sheet'];
 const PUBLIC = ['/?home=1', '/security', '/privacy', '/terms', '/start', '/data-safety'];

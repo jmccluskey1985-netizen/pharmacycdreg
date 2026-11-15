@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser, Settings, UserRound, ListOrdered, Menu, BellRing, StickyNote, MessageSquarePlus, LifeBuoy, PanelLeftClose, PanelLeftOpen, ShieldCheck, X } from 'lucide-react';
+import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser, Settings, UserRound, ListOrdered, Menu, BellRing, StickyNote, MessageSquarePlus, LifeBuoy, PanelLeftClose, PanelLeftOpen, ShieldCheck, X, Building2 } from 'lucide-react';
 import { NewEntryButton } from './new-entry';
 import { Modal } from '@/components/modal';
 import { TrainingBar, TrainingButton, useTraining } from './training';
@@ -17,6 +17,7 @@ import { FirstRun } from './first-run';
 
 const NAV = [
   { href: '/dashboard', label: 'Registers', icon: BookOpen, show: () => true },
+  { href: '/dashboard/group', label: 'Group overview', icon: Building2, show: can.manageStaff, group: true },
   { href: '/dashboard/scan?type=prescription', label: 'Scan Rx', icon: ScanLine, show: can.scan, primary: true },
   { href: '/dashboard/inbox', label: 'To confirm', icon: Inbox, show: can.record, badge: 'inbox', halo: true },
   { href: '/dashboard/search', label: 'Search', icon: Search, show: () => true },
@@ -49,7 +50,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   if (!hasPins) return <FirstRun />;
   if (locked || !staff) return <PinPad />;
 
-  const items = NAV.filter((n) => n.show(staff.role) && (!(n as any).halo || pharmacy?.halo_enabled) && (!(n as any).admin || pharmacy?.is_site_admin));
+  const items = NAV.filter((n) => n.show(staff.role) && (!(n as any).halo || pharmacy?.halo_enabled) && (!(n as any).admin || pharmacy?.is_site_admin) && (!(n as any).group || ((pharmacy as any)?.pharmacies?.length ?? 0) > 1));
   const active = (href: string) => { const h = href.split('?')[0]; return h === '/dashboard' ? path === h || path.startsWith('/dashboard/register') : path.startsWith(h); };
 
   return (

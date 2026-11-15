@@ -519,6 +519,16 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     return res({ check: c, balance: bal, diff });
   }
   if (path === '/api/audit/event') return res({ ok: true });
+  if (path === '/api/group') {
+    if (needStaff()) return needStaff()!;
+    const regs = regList();
+    const mk = (id: string, name: string, address: string, current: boolean, x: Partial<Json> = {}) => ({ id, name, address, current, status: 'trialing', registers: regs.length, entries_7d: 9, late_30d: 0, reminders_due: 0, awaiting_destruction: 0, stock_checks_overdue: 0, stock_check_frequency: 'monthly', last_stock_check: new Date(Date.now() - 6 * 864e5).toISOString(), discrepancies: 0, ...x });
+    return res({ pharmacies: [
+      mk('demo', S.pharmacy.name, S.pharmacy.address, true, { reminders_due: REM().filter((r) => r.active && r.next_due <= today()).length }),
+      mk('demo-2', 'Riverside Pharmacy (demo)', '4 Bridge St, Ennis', false, { awaiting_destruction: 2, stock_checks_overdue: 1, late_30d: 1 }),
+      mk('demo-3', 'Market Square Pharmacy (demo)', 'Market Sq, Kilrush', false, { status: 'active', entries_7d: 14 }),
+    ] });
+  }
   if (path === '/api/backup') return res({ format: 'pharmacycdreg-backup', version: 1, demo: true, exported_at: new Date().toISOString(), ...S });
   if (path === '/api/preferences') return res(method === 'GET' ? { theme: null } : { ok: true, saved_to_account: false });
   if (path === '/api/patients/import') return res({ added: 0 });

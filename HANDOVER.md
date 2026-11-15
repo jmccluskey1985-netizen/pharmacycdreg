@@ -68,6 +68,7 @@ scripts/                    create-pharmacy.mjs, rule tests, GMS list parser
 - **Accounts:**
   - Pharmacy sign-in by email + password or Google, with optional 2FA.
   - Per-person staff PIN, auto-lock, and roles (superintendent, supervising, pharmacist, support pharmacist, locum, technician, read-only).
+  - **Group overview** (`/dashboard/group`, superintendents with 2+ pharmacies): per pharmacy, registers, entries this week, late entries, reminders due, stock awaiting destruction, overdue stock checks and count mismatches. Counts only, no patient details; audited.
   - A superintendent over several pharmacies: each pharmacy adds them in Team with their own login email; that login gets a pharmacy switcher (sidebar and PIN screen). Switching locks the screen and asks for that pharmacy's PIN, so entries are always signed in the right pharmacy.
 - **Registers:**
   - Bookshelf and table views per CD type.
@@ -140,7 +141,7 @@ Not covered automatically: the real server API routes talking to a real Supabase
 - [ ] **Restore drill:** once a year, restore a Full backup into a throwaway Supabase project with `scripts/restore-backup.mjs` and record the result (docs/BACKUP_AND_RESTORE.md).
 - [ ] **Code (later):** tighten the browser security policy to nonce-based scripts (drop `'unsafe-inline'`); refactor the 26 effects flagged by `react-hooks/set-state-in-effect` (warnings for now).
 - [ ] **Hardening checklist:** `docs/OPERATIONS.md` §6 (uptime monitor, leaked-password protection, backups and restore test).
-- [ ] **Multi-premises groups:** superintendent switching is built (migration 0020). Still to do: a group overview across pharmacies and group pricing.
+- [ ] **Multi-premises groups:** superintendent switching and the **Group overview** page are built. Still to do: group pricing (needs the discount tiers decided, and Stripe).
 - [ ] **Reminders:** consider an email or push notification for due reminders (they're in-app only for now).
 - [ ] **Launch:** set `SIGNUPS_OPEN=1` and remove the `SIGNIN_UNLOCK_CODE` gate when ready.
 - [ ] **IPU evidence pack:** DEC-001 updated to Draft 0.2 (Google Vertex AI EU as the reader; kept outside this public repo because it carries the signatory's name). Before submission, confirm the Google Cloud DPA acceptance date, the prompt-logging exception and the Supabase plan / point-in-time recovery, then sign.
