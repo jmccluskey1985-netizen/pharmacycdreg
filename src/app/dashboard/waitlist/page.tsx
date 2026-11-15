@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Download, Mail, Phone } from 'lucide-react';
+import { Download, Mail, Phone, Building2, Loader2, Copy } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 
 interface Row { id: string; created_at: string; name: string; pharmacy_name: string; email: string; phone: string | null; dispensing_system: string | null; consent_contact: boolean; notes: string | null }
@@ -21,6 +21,7 @@ export default function WaitlistPage() {
         </div>
         <a href="/api/admin/waitlist?format=csv" className="btn-secondary"><Download className="h-4 w-4" /> CSV</a>
       </div>
+      <AddPharmacy />
       <div className="card overflow-x-auto p-0">
         <table className="w-full min-w-[720px] text-sm">
           <thead className="bg-muted/60 text-left text-xs uppercase tracking-wide text-muted-foreground">
@@ -47,5 +48,45 @@ export default function WaitlistPage() {
       </div>
       {rows && rows.length > 0 && <p className="mt-2 text-xs text-muted-foreground">{rows.length} on the list.</p>}
     </div>
+  );
+}
+
+/** Site owner: add a pharmacy and invite its login. They choose their own password from the email. */
+function AddPharmacy() {
+  const [f, setF] = useState({ email: '', pharmacy_name: '', address: '', contact_name: '', complimentary: false });
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string; link?: string | null } | null>(null);
+  const set = (k: 'email' | 'pharmacy_name' | 'address' | 'contact_name') => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
+  async function add(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true); setMsg(null);
+    try {
+      const d = await api('/api/admin/pharmacies', { method: 'POST', json: f });
+      setMsg(d.emailed
+        ? { ok: true, text: `Added ${f.pharmacy_name}. An invite has gone to ${f.email}: they choose a password from the email, then set up their supervising pharmacist and PIN.` }
+        : { ok: true, text: `Added ${f.pharmacy_name}, but the invite email couldn't be sent. Send ${f.email} this one-time link yourself (it expires):`, link: d.link });
+      setF({ email: '', pharmacy_name: '', address: '', contact_name: '', complimentary: false });
+    } catch (err) { setMsg({ ok: false, text: err instanceof ApiError ? err.message : 'Could not add the pharmacy' }); }
+    finally { setBusy(false); }
+  }
+  return (
+    <form onSubmit={add} className="card mb-6 space-y-3">
+      <div className="flex items-center gap-2"><Building2 className="h-5 w-5 text-primary" /><h2 className="font-semibold">Add a pharmacy</h2></div>
+      <p className="text-sm text-muted-foreground">Creates the pharmacy and emails an invite to its login. Only you can do this.</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div><label className="label" htmlFor="ap-email">Login email</label><input id="ap-email" type="email" required className="input" value={f.email} onChange={set('email')} /></div>
+        <div><label className="label" htmlFor="ap-contact">Contact name (optional)</label><input id="ap-contact" className="input" value={f.contact_name} onChange={set('contact_name')} /></div>
+        <div><label className="label" htmlFor="ap-name">Pharmacy name</label><input id="ap-name" required minLength={2} className="input" value={f.pharmacy_name} onChange={set('pharmacy_name')} /></div>
+        <div><label className="label" htmlFor="ap-address">Address</label><input id="ap-address" required minLength={3} className="input" value={f.address} onChange={set('address')} /></div>
+      </div>
+      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.complimentary} onChange={(e) => setF({ ...f, complimentary: e.target.checked })} /> Complimentary (free, never billed). Otherwise they start on the free month.</label>
+      {msg && (
+        <div className={`rounded-lg p-3 text-sm ${msg.ok ? 'bg-secondary' : 'bg-destructive/10 text-destructive'}`}>
+          {msg.text}
+          {msg.link && <div className="mt-2 flex gap-2"><input readOnly className="input py-1 text-xs" value={msg.link} onFocus={(e) => e.target.select()} /><button type="button" className="btn-secondary py-1" onClick={() => navigator.clipboard?.writeText(msg.link!)}><Copy className="h-4 w-4" /> Copy</button></div>}
+        </div>
+      )}
+      <button className="btn-primary" disabled={busy}>{busy && <Loader2 className="h-4 w-4 animate-spin" />} Add pharmacy &amp; send invite</button>
+    </form>
   );
 }
