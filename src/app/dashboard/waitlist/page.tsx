@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Download, Mail, Phone, Building2, Loader2, Copy } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Download, Mail, Phone, Building2, Loader2, Copy, UserPlus, X, Check } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 
 interface Row { id: string; created_at: string; name: string; pharmacy_name: string; email: string; phone: string | null; dispensing_system: string | null; consent_contact: boolean; notes: string | null }
@@ -21,6 +21,7 @@ export default function WaitlistPage() {
         </div>
         <a href="/api/admin/waitlist?format=csv" className="btn-secondary"><Download className="h-4 w-4" /> CSV</a>
       </div>
+      <SignupInvites />
       <AddPharmacy />
       <div className="card overflow-x-auto p-0">
         <table className="w-full min-w-[720px] text-sm">
@@ -88,5 +89,63 @@ function AddPharmacy() {
       )}
       <button className="btn-primary" disabled={busy}>{busy && <Loader2 className="h-4 w-4 animate-spin" />} Add pharmacy &amp; send invite</button>
     </form>
+  );
+}
+
+type Invite = { email: string; invited_at: string; used_at: string | null };
+
+/** Site owner: let specific people create their own account at /start while sign-ups are closed. */
+function SignupInvites() {
+  const [list, setList] = useState<Invite[] | null>(null);
+  const [needsMigration, setNeedsMigration] = useState(false);
+  const [email, setEmail] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string; link?: string } | null>(null);
+  const load = useCallback(() => api('/api/admin/signup-invites').then((d) => { setList(d.invites); setNeedsMigration(!!d.needs_migration); }).catch(() => setList([])), []);
+  useEffect(() => { load(); }, [load]);
+  async function invite(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true); setMsg(null);
+    try {
+      const d = await api('/api/admin/signup-invites', { method: 'POST', json: { email } });
+      setMsg(d.emailed
+        ? { ok: true, text: `Invitation emailed to ${email}. They create their account at the sign-up page with that email.` }
+        : { ok: true, text: `${email} can now sign up. The email couldn't be sent from here, so send them this link yourself:`, link: d.link });
+      setEmail(''); load();
+    } catch (err) { setMsg({ ok: false, text: err instanceof ApiError ? err.message : 'Could not invite' }); }
+    finally { setBusy(false); }
+  }
+  async function remove(em: string) {
+    await api(`/api/admin/signup-invites?email=${encodeURIComponent(em)}`, { method: 'DELETE' }).catch(() => {});
+    load();
+  }
+  return (
+    <section className="card mb-6 space-y-3">
+      <div className="flex items-center gap-2"><UserPlus className="h-5 w-5 text-primary" /><h2 className="font-semibold">Invite to sign up</h2></div>
+      <p className="text-sm text-muted-foreground">Sign-ups are closed to the public. People you invite here can create their own account (their pharmacy details and password) at the sign-up page, once, with this email.</p>
+      {needsMigration && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">Run <code>supabase/migrations/0019_signup_invites.sql</code> in Supabase first.</p>}
+      <form onSubmit={invite} className="flex flex-wrap gap-2">
+        <input type="email" required className="input max-w-sm flex-1" placeholder="name@example.ie" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email to invite" />
+        <button className="btn-primary" disabled={busy}>{busy && <Loader2 className="h-4 w-4 animate-spin" />} Invite</button>
+      </form>
+      {msg && (
+        <div className={`rounded-lg p-3 text-sm ${msg.ok ? 'bg-secondary' : 'bg-destructive/10 text-destructive'}`}>
+          {msg.text}
+          {msg.link && <div className="mt-2 flex gap-2"><input readOnly className="input py-1 text-xs" value={msg.link} onFocus={(e) => e.target.select()} /><button type="button" className="btn-secondary py-1" onClick={() => navigator.clipboard?.writeText(msg.link!)}><Copy className="h-4 w-4" /> Copy</button></div>}
+        </div>
+      )}
+      {!!list?.length && (
+        <ul className="divide-y divide-border rounded-lg border border-border text-sm">
+          {list.map((i) => (
+            <li key={i.email} className="flex items-center gap-3 px-3 py-2">
+              <span className="flex-1 truncate">{i.email}</span>
+              {i.used_at
+                ? <span className="badge bg-brand/15 text-primary"><Check className="mr-1 h-3 w-3" /> Signed up {new Date(i.used_at).toLocaleDateString('en-IE')}</span>
+                : <><span className="badge bg-muted text-muted-foreground">Invited {new Date(i.invited_at).toLocaleDateString('en-IE')}</span><button type="button" onClick={() => remove(i.email)} className="rounded p-1 text-muted-foreground hover:bg-muted" aria-label={`Remove invitation for ${i.email}`}><X className="h-4 w-4" /></button></>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

@@ -49,6 +49,7 @@ Run them in order. 0001 runs once; every later migration is safe to re-run (`tes
 | 0016_patient_matching | Patient identifiers (`dps_number`, `lti_number`, `hospital_mrn`, `eircode`), normalised surname `name_key`, `merged_into`; `merge_patient_links()` (the only change a register line allows: moving its patient link when duplicates are merged). See docs/PATIENT_MATCHING.md |
 | 0017_display_theme | `pharmacy_accounts.theme`: the dashboard colour mode (Default, Light, True Black, HSE Dark) remembered on the login |
 | 0018_rate_limits | Attempt limits shared by every server (PIN unlock, sign-up, access code, scans, Halo feed); keys stored hashed |
+| 0019_signup_invites | Invitation-only sign-up: emails the site owner approves (Waitlist → Invite to sign up) can create their own account at /start while public sign-ups are closed |
 | 0013_integrity_inspector_2fa | SHA-256 hash chain on `cd_entries` and `audit_log` (backfills existing rows), `verify_register_chain()` / `verify_audit_chain()`, `inspector_links`, `pharmacies.require_2fa` |
 | 0012_reminders_notes_feedback_adjustments | `dispense_reminders`, `notes` + `note_attachments` (private storage bucket `cd-notes`), `feedback` + `feedback_votes`, entry types `adjustment_in` / `adjustment_out` and the updated `cd_ledger` view |
 

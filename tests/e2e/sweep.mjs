@@ -30,7 +30,7 @@ async function signedInPage(viewport, pin = '1234') {
 const PAGES = ['/dashboard', '/dashboard/register/r1', '/dashboard/scan?type=prescription', '/dashboard/inbox', '/dashboard/search', '/dashboard/patients',
   '/dashboard/reminders', '/dashboard/destructions', '/dashboard/notes', '/dashboard/audit', '/dashboard/contacts', '/dashboard/team', '/dashboard/integrations',
   '/dashboard/billing', '/dashboard/settings', '/dashboard/help', '/dashboard/feedback', '/dashboard/fallback-sheet'];
-const PUBLIC = ['/?home=1', '/security', '/privacy', '/terms'];
+const PUBLIC = ['/?home=1', '/security', '/privacy', '/terms', '/start'];
 
 // ── 1. Every page, desktop and phone ──
 for (const [label, viewport] of [['desktop', { width: 1366, height: 900 }], ['phone', { width: 390, height: 844 }]]) {

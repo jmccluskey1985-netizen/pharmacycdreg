@@ -34,9 +34,7 @@ export async function POST(req: Request) {
 }
 
 async function handle(req: Request) {
-  if (process.env.SIGNUPS_OPEN !== '1') {
-    return NextResponse.json({ error: 'Sign-ups open soon: please join the waitlist on the home page.' }, { status: 403 });
-  }
+  const open = process.env.SIGNUPS_OPEN === '1';
   const limit = await checkRateLimit(`signup:${clientKey(req)}`, 3, 15 * 60_000);
   if (!limit.ok) return NextResponse.json({ error: 'Too many sign-up attempts. Try again later.' }, { status: 429 });
 
@@ -45,6 +43,13 @@ async function handle(req: Request) {
   const b = parsed.data;
 
   const db = createServiceClient();
+  // While sign-ups are closed, only an email the site owner invited (migration 0019) may sign up, once.
+  let invited = false;
+  if (!open) {
+    const { data: inv } = await db.from('signup_invites').select('email').eq('email', b.email).is('used_at', null).maybeSingle();
+    if (!inv) return NextResponse.json({ error: 'Sign-up is by invitation for now. Use the email address your invitation was sent to, or join the waitlist on the home page.' }, { status: 403 });
+    invited = true;
+  }
   const { data: created, error: userErr } = await db.auth.admin.createUser({ email: b.email, password: b.password, email_confirm: true, user_metadata: { full_name: b.contact_name } });
   if (userErr || !created.user) {
     const exists = /already|registered|exists/i.test(userErr?.message ?? '');
@@ -66,6 +71,7 @@ async function handle(req: Request) {
     return NextResponse.json({ error: noTables ? 'Database not set up yet: run the 3 SQL files from supabase/migrations in the Supabase SQL Editor, then try again.' : `Could not set up the pharmacy: ${phErr?.message}` }, { status: 500 });
   }
   await db.from('pharmacy_accounts').insert({ auth_user_id: created.user.id, pharmacy_id: ph.id });
+  if (invited) await db.from('signup_invites').update({ used_at: new Date().toISOString(), pharmacy_id: ph.id }).eq('email', b.email);
   await db.from('audit_log').insert({ pharmacy_id: ph.id, action: 'pharmacy.signed_up', auth_user_id: created.user.id, details: { pharmacy_name: b.pharmacy_name, contact_name: b.contact_name } });
 
   await sendEmail({

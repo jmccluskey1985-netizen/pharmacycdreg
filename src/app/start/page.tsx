@@ -50,7 +50,7 @@ export default function StartPage() {
         <form onSubmit={submit} className="card space-y-4 sm:p-8">
           <div>
             <h1 className="text-2xl font-bold">Start your free month</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Set up your pharmacy in two minutes. No card needed: your free month starts now, and you subscribe from Billing when you&apos;re ready.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Invited? Use the email address your invitation was sent to. Set up your pharmacy in two minutes. No card needed: your free month starts now, and you subscribe from Billing when you&apos;re ready.</p>
           </div>
           {error && <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
 

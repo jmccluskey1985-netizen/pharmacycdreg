@@ -63,8 +63,6 @@ module.exports = {
       { source: '/api/:path*', headers: [{ key: 'Cache-Control', value: 'private, no-store' }] },
     ];
   },
-  async redirects() {
-    return process.env.SIGNUPS_OPEN === '1' ? [] : [{ source: '/start', destination: '/', permanent: false }];
-  },
+  // /start is always reachable: while sign-ups are closed, /api/signup only accepts invited emails.
   env: { NEXT_PUBLIC_SUPABASE_URL: supabaseUrl, NEXT_PUBLIC_SUPABASE_ANON_KEY: supabaseAnon },
 };
