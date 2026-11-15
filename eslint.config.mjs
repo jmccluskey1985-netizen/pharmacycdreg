@@ -4,9 +4,9 @@ export default [
   ...nextVitals,
   {
     rules: {
-      // New in the React Compiler rule set (ESLint 9 / Next 16). Existing effects that sync state
-      // from props or browser storage are safe; reported as warnings until they're refactored.
-      'react-hooks/set-state-in-effect': 'warn',
+      // Each existing case was reviewed and annotated (they read browser-only state after
+      // hydration); new code is held to the rule.
+      'react-hooks/set-state-in-effect': 'error',
     },
   },
   { ignores: ['.next/**', 'node_modules/**', 'public/**', 'scripts/**', 'tests/**'] },

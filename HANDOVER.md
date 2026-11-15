@@ -139,7 +139,7 @@ Not covered automatically: the real server API routes talking to a real Supabase
 - [ ] **Vercel env:** set `SECRETS_KEY` (32+ random characters, different from `STAFF_SESSION_SECRET`) so stored API keys and staff sessions use separate keys. Then re-save the reader key in Settings so it's encrypted with the new key.
 - [ ] **Uptime monitor** on `https://pharmacycdreg.ie/api/health` (e.g. UptimeRobot, free).
 - [ ] **Restore drill:** once a year, restore a Full backup into a throwaway Supabase project with `scripts/restore-backup.mjs` and record the result (docs/BACKUP_AND_RESTORE.md).
-- [ ] **Code (later):** tighten the browser security policy to nonce-based scripts (drop `'unsafe-inline'`); refactor the 26 effects flagged by `react-hooks/set-state-in-effect` (warnings for now).
+- [x] **Code tidy-ups:** scripts are now nonce-based (`src/proxy.ts` + `src/lib/csp.ts`, `'strict-dynamic'`, no `'unsafe-inline'` for scripts; every page renders per request to carry its nonce). The `react-hooks/set-state-in-effect` cases were reviewed and annotated, and the rule is an error for new code.
 - [ ] **Hardening checklist:** `docs/OPERATIONS.md` §6 (uptime monitor, leaked-password protection, backups and restore test).
 - [ ] **Multi-premises groups:** superintendent switching and the **Group overview** page are built. Still to do: group pricing (needs the discount tiers decided, and Stripe).
 - [ ] **Reminders:** consider an email or push notification for due reminders (they're in-app only for now).

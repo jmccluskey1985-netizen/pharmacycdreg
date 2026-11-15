@@ -44,6 +44,7 @@ export function StaffProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
     refresh();
     const off = onLocked(() => setState((s) => ({ ...s, staff: null, locked: true })));
     return () => { off(); };

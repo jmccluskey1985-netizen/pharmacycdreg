@@ -174,6 +174,7 @@ function Security({ s, onSaved }: { s: Settings; onSaved: (s: Settings) => void 
 function StockChecks({ s, regs, onSaved }: { s: Settings; regs: Reg[]; onSaved: (s: Settings) => void }) {
   const [freq, setFreq] = useState(s.stock_check_frequency);
   const [levels, setLevels] = useState<Record<string, string>>(Object.fromEntries(regs.map((r) => [r.id, r.low_stock_level == null ? '' : String(r.low_stock_level)])));
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
   useEffect(() => { setLevels(Object.fromEntries(regs.map((r) => [r.id, r.low_stock_level == null ? '' : String(r.low_stock_level)]))); }, [regs]);
   const { busy, saved, error, save } = useSaver(onSaved);
   return (

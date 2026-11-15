@@ -20,6 +20,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let saved: string | null = null;
     try { saved = localStorage.getItem(THEME_KEY); } catch {}
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
     if (isTheme(saved)) setThemeState(saved);
     apply(isTheme(saved) ? saved : 'default');
     fetch('/api/preferences', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((d) => {

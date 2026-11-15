@@ -39,10 +39,12 @@ export default function RegistersPage() {
   const [snap, setSnap] = useState(false);
   const [q, setQ] = useState('');
   const [view, setView] = useState<'shelf' | 'table'>('shelf');
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
   useEffect(() => { try { if (localStorage.getItem('cdreg-view') === 'table') setView('table'); } catch {} }, []);
   // Deep links from "New entry → New CD book" and the scanner.
   useEffect(() => {
     const n = new URLSearchParams(window.location.search).get('new');
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
     if (n === 'register') setOpen(true); else if (n === 'list') setFromList(true); else if (n === 'paper') setSnap(true);
     if (n) window.history.replaceState(null, '', '/dashboard');
   }, []);
@@ -53,6 +55,7 @@ export default function RegistersPage() {
 
   // "All CD types": every common CD shows on the shelf; ones not started yet are faint "Start book" cards.
   const [showAll, setShowAll] = useState(true);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
   useEffect(() => { try { if (localStorage.getItem('cdreg-all-cds') === 'off') setShowAll(false); } catch {} }, []);
   const toggleAll = () => setShowAll((v) => { try { localStorage.setItem('cdreg-all-cds', v ? 'off' : 'on'); } catch {} return !v; });
   const [starting, setStarting] = useState<Ghost | null>(null);

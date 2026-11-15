@@ -141,6 +141,7 @@ export default function LandingPage() {
   // Stay unlocked on this device after a correct code (and when sent back here from the dashboard).
   useEffect(() => {
     try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
       if (localStorage.getItem('cdreg-access') === '1' || new URLSearchParams(window.location.search).get('next')) setUnlocked(true);
     } catch {}
   }, []);

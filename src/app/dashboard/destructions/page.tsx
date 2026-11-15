@@ -28,6 +28,7 @@ export default function DestructionsPage() {
   const [tab, setTab] = useState<'witnessed' | 'book'>('witnessed');
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get('tab');
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
     if (t === 'book') setTab('book');
   }, []);
   return (
@@ -162,6 +163,7 @@ function DestructionBook() {
   const [destroying, setDestroying] = useState(false);
   const load = useCallback(() => api('/api/destruction-book').then((d) => { setRows(d.rows); setNeedsMigration(!!d.needs_migration); }).catch(() => setRows([])), []);
   useEffect(() => { load(); }, [load]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
   useEffect(() => { if (new URLSearchParams(window.location.search).get('new') === 'return') setAdding('patient_return'); }, []);
   const waiting = (rows ?? []).filter((r) => !r.destroyed_date);
 

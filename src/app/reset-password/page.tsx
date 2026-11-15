@@ -24,6 +24,7 @@ export default function ResetPassword() {
   useEffect(() => {
     const sb = getSupabaseClient();
     const url = new URL(window.location.href);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
     setWelcome(url.searchParams.get('welcome') === '1');
     (async () => {
       const hash = new URLSearchParams(url.hash.slice(1));

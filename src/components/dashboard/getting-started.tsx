@@ -16,6 +16,7 @@ export function GettingStarted() {
   const [steps, setSteps] = useState<Step[] | null>(null);
   const [hidden, setHidden] = useState(true);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
     try { setHidden(localStorage.getItem(KEY) === '1'); } catch { setHidden(false); }
     if (staff && can.manageStaff(staff.role)) api('/api/onboarding').then((d) => setSteps(d.steps)).catch(() => {});
   }, [staff]);

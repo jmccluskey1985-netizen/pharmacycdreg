@@ -31,6 +31,7 @@ export default function AuditPage() {
     setEvents((e) => [...e, ...d.events]);
     setMore(d.events.length === 100);
   };
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
   useEffect(() => { load(); }, []);
 
   return (

@@ -24,25 +24,7 @@ const supabaseAnon = candidates.find(isKey) || '';
 if (!supabaseUrl) console.warn('\n⚠️  No Supabase project URL found. Set SUPABASE_URL to https://<project>.supabase.co\n');
 if (!supabaseAnon) console.warn('\n⚠️  No Supabase publishable key found. Set SUPABASE_PUBLISHABLE_KEY\n');
 
-// Security headers on every response. The CSP only applies to production builds (the dev
-// server needs eval). Everything the browser loads comes from this site, except the
-// Supabase API it talks to for sign-in.
-const prod = process.env.NODE_ENV === 'production';
-const csp = [
-  "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "font-src 'self' data:",
-  `connect-src 'self' ${supabaseUrl || 'https://*.supabase.co'} https://*.supabase.co wss://*.supabase.co`,
-  "media-src 'self' blob:",
-  "worker-src 'self' blob:",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self' https://checkout.stripe.com https://billing.stripe.com",
-  "frame-ancestors 'none'",
-  'upgrade-insecure-requests',
-].join('; ');
+// Security headers on every response (the Content-Security-Policy is added per request in src/proxy.ts).
 const securityHeaders = [
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
   { key: 'X-Frame-Options', value: 'DENY' },
@@ -50,7 +32,7 @@ const securityHeaders = [
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=(), payment=(), usb=()' },
   { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
-  ...(prod ? [{ key: 'Content-Security-Policy', value: csp }] : []),
+  // Content-Security-Policy is set per request in src/proxy.ts (it carries a script nonce).
 ];
 
 module.exports = {

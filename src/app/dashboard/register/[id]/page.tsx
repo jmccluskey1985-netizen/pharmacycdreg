@@ -74,6 +74,7 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
   useEffect(() => {
     const n = new URLSearchParams(window.location.search).get('new') as EntryType | null;
     if (n && ['receipt', 'supply', 'destruction', 'patient_return'].includes(n)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
       setAddType(n);
       setAdding(true);
       window.history.replaceState(null, '', window.location.pathname);
@@ -93,6 +94,7 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
   }, [params.id]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
     load().then(() => setTimeout(() => setOpened(true), 700));
   }, [load]);
 
@@ -151,6 +153,7 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
   }, [data]);
 
   const pages = Math.max(1, Math.ceil(lines.length / LINES_PER_PAGE));
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
   useEffect(() => setPage(pages - 1), [pages]); // open at the current page, like the paper book
   const pageLines = lines.slice(page * LINES_PER_PAGE, (page + 1) * LINES_PER_PAGE);
   const pageNotes = footnotes.filter((f) => pageLines.some((l) => l.footnote === f.n));

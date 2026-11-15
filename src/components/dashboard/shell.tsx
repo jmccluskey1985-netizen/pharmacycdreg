@@ -43,6 +43,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const [hidden, setHidden] = useState(false);
   const [more, setMore] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
   useEffect(() => { try { setHidden(localStorage.getItem('cdreg-sidebar') === 'hidden'); } catch {} }, []);
   const toggle = () => setHidden((h) => { try { localStorage.setItem('cdreg-sidebar', h ? 'shown' : 'hidden'); } catch {} return !h; });
 
@@ -180,6 +181,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 function TwoStepSuggestion({ session }: { session: string | null }) {
   const key = `cdreg-2fa-dismissed`;
   const [hidden, setHidden] = useState(true);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
   useEffect(() => { let v: string | null = null; try { v = localStorage.getItem(key); } catch {} setHidden(!!session && v === session); }, [session]);
   if (hidden) return null;
   return (

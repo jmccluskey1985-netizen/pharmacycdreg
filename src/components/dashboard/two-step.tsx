@@ -26,6 +26,7 @@ export function TwoStepSettings({ locked = false }: { locked?: boolean }) {
     const { data } = await getSupabaseClient().auth.mfa.listFactors();
     setFactors(((data?.all ?? []) as Factor[]).filter((f) => f.status === 'verified'));
   }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
   useEffect(() => { load(); }, [load]);
 
   async function start() {

@@ -37,6 +37,7 @@ export function LoginCard() {
   };
 
   // Coming back from Google with a problem (e.g. not a pharmacy login).
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
   useEffect(() => { const e = params.get('auth_error'); if (e) setError(e); }, [params]);
 
   async function onGoogle() {
@@ -50,10 +51,12 @@ export function LoginCard() {
   }
 
   // Remember the pharmacy email on this device (the browser's password manager keeps the password).
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
   useEffect(() => { try { const e = localStorage.getItem('cdreg-email'); if (e) setEmail(e); } catch {} }, []);
 
   // Sent back here mid-sign-in (e.g. opened the dashboard before entering the code).
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
     if (!DEMO && params.get('code') === '1') needCode().catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

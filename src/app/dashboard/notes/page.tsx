@@ -39,9 +39,11 @@ export default function NotesPage() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
     setOpenId(sp.get('open')); setRegisterId(sp.get('register_id'));
     if (sp.get('new')) setOpen('new');
   }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
   useEffect(() => { if (openId && notes) { const n = notes.find((x) => x.id === openId); if (n) setOpen(n); setOpenId(null); } }, [openId, notes]);
 
   const cats = useMemo(() => Array.from(new Set((notes ?? []).map((n) => n.category).filter(Boolean) as string[])).sort(), [notes]);

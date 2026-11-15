@@ -42,6 +42,7 @@ export default function ScanPage() {
   const setDocType = (t: 'invoice' | 'prescription') => { setDocTypeState(t); try { localStorage.setItem('cdreg-scan-type', t); } catch {} };
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get('type') ?? (() => { try { return localStorage.getItem('cdreg-scan-type'); } catch { return null; } })();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
     if (t === 'prescription' || t === 'invoice') setDocTypeState(t);
   }, []);
   const [stage, setStage] = useState<Stage>('capture');
@@ -87,6 +88,7 @@ export default function ScanPage() {
   // Start the live viewfinder on phones/tablets; desktops get the upload panel.
   useEffect(() => {
     const touch = window.matchMedia('(pointer: coarse)').matches;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
     if (touch && stage === 'capture') startCamera();
     return stopCamera;
   }, [stage, startCamera, stopCamera]);

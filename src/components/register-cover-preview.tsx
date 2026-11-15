@@ -12,6 +12,7 @@ export function RegisterCoverPreview({ src, alt, cover = '/previews/register-cov
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
     if (typeof IntersectionObserver === 'undefined') { setOpen(true); return; }
     // Wait until the whole cover is on screen, give people time to look at it, then open.
     // Scrolling away before then cancels the countdown, so it never opens unseen.

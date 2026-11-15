@@ -12,6 +12,7 @@ const isOn = () => typeof window !== 'undefined' && !!(window as any).__cdregTra
 export function useTraining() {
   const [on, setOn] = useState(false);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
     setOn(isOn());
     const f = () => setOn(isOn());
     window.addEventListener(EVENT, f);

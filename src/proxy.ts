@@ -1,15 +1,22 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
+import { buildCsp, newNonce } from '@/lib/csp';
 
-// Security headers are set for every route in next.config.js (headers()).
-function withHeaders(response: NextResponse) {
-  return response;
-}
+// Other security headers are set in next.config.js; the CSP is per request (it carries a nonce).
+const PROD = process.env.NODE_ENV === 'production';
 
 const CANONICAL_HOST = process.env.CANONICAL_HOST || 'pharmacycdreg.ie';
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  // Next.js reads the nonce from the request's CSP header and puts it on its own scripts.
+  const nonce = newNonce();
+  const csp = buildCsp(nonce, process.env.NEXT_PUBLIC_SUPABASE_URL);
+  if (PROD) { request.headers.set('x-nonce', nonce); request.headers.set('content-security-policy', csp); }
+  const withHeaders = (response: NextResponse) => {
+    if (PROD) response.headers.set('Content-Security-Policy', csp);
+    return response;
+  };
   // One address, one login: www and the vercel.app address keep separate cookies, so
   // send everyone to the main domain (production only; previews keep their own URL).
   const host = (request.headers.get('host') || '').toLowerCase();
@@ -18,9 +25,9 @@ export async function proxy(request: NextRequest) {
     url.host = CANONICAL_HOST;
     url.protocol = 'https';
     url.port = '';
-    return NextResponse.redirect(url, 308);
+    return withHeaders(NextResponse.redirect(url, 308));
   }
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_DEMO_MODE === '1') return withHeaders(NextResponse.next());
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_DEMO_MODE === '1') return withHeaders(NextResponse.next({ request }));
 
   try {
     const { response, user, needsCode } = await updateSession(request);
@@ -63,9 +70,9 @@ export async function proxy(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = '/';
       url.searchParams.set('next', pathname);
-      return NextResponse.redirect(url);
+      return withHeaders(NextResponse.redirect(url));
     }
-    return withHeaders(NextResponse.next());
+    return withHeaders(NextResponse.next({ request }));
   }
 }
 
