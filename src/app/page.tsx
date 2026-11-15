@@ -178,7 +178,7 @@ export default function LandingPage() {
             <span className="block text-muted-foreground">and more time with your patients.</span>
           </FadeIn>
           <FadeIn delay={200} className="mt-5 max-w-xl">
-            <RegisterCoverPreview src="/previews/register-book.webp" alt="A register page laid out like the paper Controlled Drugs Register" delay={1500} />
+            <RegisterCoverPreview src="/previews/register-book.webp" alt="A register page laid out like the paper Controlled Drugs Register" delay={3500} />
           </FadeIn>
           <FadeIn delay={300} as="p" className="mt-5 max-w-xl text-lg text-muted-foreground">
             More accurate records, quicker entries and no more rooting through tattered CD books to find the right page. Every receipt, supply and destruction of Schedule 2 drugs is recorded, balanced and searchable, built around the IPU eCDR requirements for Irish community pharmacies.

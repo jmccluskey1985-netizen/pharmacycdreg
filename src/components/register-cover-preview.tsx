@@ -3,20 +3,26 @@
 import { useEffect, useRef, useState } from 'react';
 
 /**
- * Landing page: the PharmacyCDReg.ie register cover, which slowly turns open when it scrolls
- * into view (or is tapped) to reveal a register page underneath.
+ * Landing page: the PharmacyCDReg.ie register cover. Once it's fully in view it stays shut for a
+ * few seconds, then slowly turns open (or open it straight away with a tap) to reveal a register page.
  */
-export function RegisterCoverPreview({ src, alt, cover = '/previews/register-cover.webp', delay = 1200 }: { src: string; alt: string; cover?: string; delay?: number }) {
+export function RegisterCoverPreview({ src, alt, cover = '/previews/register-cover.webp', delay = 3000 }: { src: string; alt: string; cover?: string; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     if (typeof IntersectionObserver === 'undefined') { setOpen(true); return; }
-    let t: ReturnType<typeof setTimeout>;
-    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { t = setTimeout(() => setOpen(true), delay); io.disconnect(); } }, { threshold: 0.6 });
+    // Wait until the whole cover is on screen, give people time to look at it, then open.
+    // Scrolling away before then cancels the countdown, so it never opens unseen.
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const io = new IntersectionObserver(([e]) => {
+      const fullyVisible = e.intersectionRatio >= 0.95 || (e.isIntersecting && e.boundingClientRect.height > window.innerHeight * 0.9 && e.intersectionRatio >= 0.8);
+      if (fullyVisible && !t) t = setTimeout(() => { setOpen(true); io.disconnect(); }, delay);
+      else if (!fullyVisible && t) { clearTimeout(t); t = undefined; }
+    }, { threshold: [0, 0.5, 0.8, 0.95, 1] });
     io.observe(el);
-    return () => { io.disconnect(); clearTimeout(t); };
+    return () => { io.disconnect(); if (t) clearTimeout(t); };
   }, [delay]);
 
   return (

@@ -7,7 +7,6 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Download, Plus, Printer, PencilLi
 import { api } from '@/lib/api';
 import { can } from '@/lib/roles';
 import { canWrite } from '@/lib/stripe';
-import { LogoMark } from '@/components/logo';
 import { Modal } from '@/components/modal';
 import { useStaff } from '@/components/dashboard/staff-context';
 import { EntryForm, type EntryType } from '@/components/dashboard/entry-form';
@@ -177,17 +176,15 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
 
       <div className="book-stage">
         <div className={`book ${opened ? 'open' : ''}`}>
-          {/* Cover */}
-          <div className="book-cover no-print flex overflow-hidden bg-white" aria-hidden={opened}>
-            <div className="flex flex-1 flex-col justify-center px-8 sm:px-14">
-              <p className="text-2xl font-extrabold uppercase tracking-wide text-brand-dark sm:text-3xl">Register of Controlled Drugs</p>
-              <p className="mt-2 text-base text-slate-600 sm:text-lg">for recording the obtaining and supplying of controlled drugs</p>
-              <p className="mt-6 text-lg font-bold text-slate-700">{productTitle(p)}</p>
-              {genericLine(p) && <p className="text-sm text-slate-500">{p.class_name}: {genericLine(p)}</p>}
-            </div>
-            <div className="relative hidden w-[38%] items-end justify-end bg-gradient-to-b from-brand-dark to-brand-deep p-6 sm:flex">
-              <span className="absolute inset-y-0 left-0 w-4 bg-brand/60" />
-              <div className="flex items-center gap-2 text-white"><LogoMark size={30} /><span className="text-sm font-semibold">PharmacyCDReg.ie</span></div>
+          {/* Cover: the PharmacyCDReg.ie register book, labelled with this book's product */}
+          <div className="book-cover no-print flex flex-col overflow-hidden bg-[#0d4e6c]" aria-hidden={opened}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/previews/register-cover.webp" alt="" className="h-auto w-full" />
+            {/* Product label: in the blank top corner of the cover, or under the picture on a phone */}
+            <div className="mx-[4.5%] mt-4 self-start rounded-md border border-[#16477a]/25 bg-white/90 px-4 py-2 shadow-sm sm:absolute sm:left-[4.5%] sm:top-[6%] sm:mx-0 sm:mt-0 sm:max-w-[60%]">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#16477a]/70">Product</p>
+              <p className="text-base font-bold leading-tight text-[#16477a] sm:text-xl">{productTitle(p)}</p>
+              {genericLine(p) && <p className="text-xs text-slate-600">{p.class_name}: {genericLine(p)}</p>}
             </div>
           </div>
 
