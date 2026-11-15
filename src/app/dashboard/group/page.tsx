@@ -34,10 +34,10 @@ export default function GroupPage() {
       {!rows && !error && <p className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</p>}
       <div className="grid gap-4 md:grid-cols-2">
         {rows?.map((r) => (
-          <div key={r.id} className={`card ${attention(r) ? 'ring-1 ring-amber-300 dark:ring-amber-700' : ''}`}>
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="flex items-center gap-2 font-bold"><Building2 className="h-4 w-4 flex-shrink-0 text-primary" /><span className="truncate">{r.name}</span>{r.current && <span className="badge bg-brand/15 text-primary">Signed in here</span>}</p>
+          <div key={r.id} className={`card min-w-0 ${attention(r) ? 'ring-1 ring-amber-300 dark:ring-amber-700' : ''}`}>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="flex flex-wrap items-center gap-2 font-bold"><Building2 className="h-4 w-4 flex-shrink-0 text-primary" /><span className="min-w-0 truncate">{r.name}</span>{r.current && <span className="badge bg-brand/15 text-primary">Signed in here</span>}</p>
                 {r.address && <p className="truncate text-xs text-muted-foreground">{r.address}</p>}
               </div>
               {r.status && <span className={`badge ${r.status === 'past_due' || r.status === 'trial_ended' ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200' : 'bg-muted text-muted-foreground'}`}>{STATUS[r.status] ?? r.status}</span>}
@@ -66,8 +66,8 @@ export default function GroupPage() {
 
 function Stat({ label, value, warn, icon: Icon }: { label: string; value: number | string; warn?: boolean; icon?: any }) {
   return (
-    <div className={`rounded-lg p-2 ${warn ? 'bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-100' : 'bg-muted/60'}`}>
-      <dt className="flex items-center gap-1 text-[11px] leading-tight opacity-80">{Icon && <Icon className="h-3 w-3" />}{label}</dt>
+    <div className={`min-w-0 rounded-lg p-2 ${warn ? 'bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-100' : 'bg-muted/60'}`}>
+      <dt className="flex items-start gap-1 break-words text-[11px] leading-tight opacity-80">{Icon && <Icon className="h-3 w-3" />}{label}</dt>
       <dd className="text-lg font-bold tabular-nums">{value}</dd>
     </div>
   );
