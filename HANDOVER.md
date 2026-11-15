@@ -146,7 +146,7 @@ Not covered automatically: the real server API routes talking to a real Supabase
 - [ ] **IPU evidence pack:** DEC-001 updated to Draft 0.2 (Google Vertex AI EU as the reader; kept outside this public repo because it carries the signatory's name). Before submission, confirm the Google Cloud DPA acceptance date, the prompt-logging exception and the Supabase plan / point-in-time recovery, then sign.
 - [ ] **Reader evaluation set:** build a set of anonymised Rx and invoice images with expected outputs, to measure accuracy before and after model changes.
 - [ ] **Halo:** import Halo's CONTROLLED drug list to widen the catalogue (some brand and strength variants are missing; users can add them by hand meanwhile).
-- [ ] **PSI wording:** re-check the destruction and quarantine guidance against current psi.ie text (it couldn't be fetched during the build).
+- [x] **PSI wording:** checked Nov 2026 against the PSI segregation/destruction advice (via search results). Still worth reading the PSI disposal guidelines directly for the patient-return denaturing steps.
 
 ## 8. Known limitations
 

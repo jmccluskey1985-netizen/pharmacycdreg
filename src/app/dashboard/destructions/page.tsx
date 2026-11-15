@@ -233,6 +233,9 @@ function BookForm({ kind, onDone }: { kind: 'patient_return' | 'stock_sch34'; on
   return (
     <form onSubmit={save} className="space-y-4">
       {kind === 'patient_return' && (
+        <p className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">Never return these to stock or reuse them. Keep Schedule 2 and 3 returns in the CD safe, <b className="text-foreground">segregated from live stock and labelled “Patient-returned CDs for destruction”</b>, and destroy them promptly so they don’t build up.</p>
+      )}
+      {kind === 'patient_return' && (
         <div className="grid gap-4 sm:grid-cols-2">
           <div><label className="label">Returned by</label><QuickFillInput kind="patient" required value={f.returned_by_name} onChange={(v) => setF({ ...f, returned_by_name: v })} onPick={(p) => setF({ ...f, returned_by_name: p.name, returned_by_address: p.address ?? f.returned_by_address })} placeholder="Patient or representative" /></div>
           <div><label className="label">Address</label><input className="input" value={f.returned_by_address} onChange={set('returned_by_address')} /></div>

@@ -2,7 +2,7 @@
 
 How PharmacyCDReg records CD stock that is waiting to be destroyed, and how it records the destruction itself. The software keeps the same two records as the paper system.
 
-> **Source caveat.** This summary is based on PSI guidance on the safe custody and destruction of controlled drugs in retail pharmacy businesses, the Misuse of Drugs Regulations 2017 (S.I. 173/2017) as amended, and IPU summaries of both. psi.ie could not be fetched directly while this was written. Check the current PSI guidance before relying on this for an inspection.
+> **Sources.** Checked in November 2026 against the PSI's *Advice on Segregation and Destruction of Controlled Drugs* and its FAQs on CD registers (via psi.ie / thepsi.ie search results; psi.ie itself couldn't be fetched from the build environment), the Misuse of Drugs Regulations 2017 (S.I. 173/2017) as amended, and IPU summaries. The exact patient-return denaturing and witnessing steps are in the PSI's *Guidelines on the Disposal of Medicinal Products for a Retail Pharmacy Business*: check that document for your own written procedure.
 
 ## 1. What the rules say (summary)
 
@@ -15,6 +15,10 @@ How PharmacyCDReg records CD stock that is waiting to be destroyed, and how it r
 | Expired **Schedule 3 / 4** stock | Not entered in the CD register. Record its destruction in the **CD Destruction Record Book**. |
 | Witness for patient returns / Sch 3–4 | No authorised person is required. **Good practice** is a second pharmacist or another staff member as witness. |
 | Method | Denature so the drug can't be recovered, e.g. with a CD denaturing kit, then dispose of it as pharmaceutical waste. |
+| Never reuse returns | Previously dispensed CDs returned to the pharmacy must **never** be put back into stock or reused. |
+| Labelling of returns | Patient-returned Sch 2/3 CDs: in the CD safe, segregated from live stock, labelled **"Patient-returned CDs for destruction"**. |
+| Don't let it build up | Patient returns, expired and damaged CDs should be destroyed **promptly** and not accumulate in the CD safe (it increases the risk of error). |
+| Written procedure | Each pharmacy should have a **written policy and procedure** for the disposal and destruction of CDs. |
 
 ## 2. How PharmacyCDReg implements it
 

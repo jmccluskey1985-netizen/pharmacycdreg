@@ -63,7 +63,7 @@ function QuarantineForm({ registerId, unit, available, needsMigration, onDone }:
   }
   return (
     <form onSubmit={save} className="space-y-4">
-      <p className="text-sm text-muted-foreground">Keep it in the CD safe, <b>segregated and labelled “CDs for destruction”</b>. It stays in the register balance until an authorised person (Garda, PSI authorised officer) witnesses its destruction. Destroy promptly: don’t let it build up.</p>
+      <p className="text-sm text-muted-foreground">Keep it in the CD safe, <b>segregated from live stock and labelled “CDs for destruction: expired” (or damaged)</b>. It stays in the register balance until an authorised person (Garda, PSI authorised officer) witnesses its destruction. Destroy promptly: don’t let it build up.</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <div><label className="label">Amount ({unit})</label><input className="input text-lg font-semibold" type="number" min="0.001" max={available} step="any" inputMode="decimal" required value={f.quantity} onChange={set('quantity')} autoFocus /><p className="mt-1 text-xs text-muted-foreground">Up to {available} {unit}</p></div>
         <div><label className="label">Reason</label><select className="input" value={f.reason} onChange={set('reason')}>{Object.entries(REASONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
