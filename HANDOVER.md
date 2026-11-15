@@ -143,7 +143,7 @@ Not covered automatically: the real server API routes talking to a real Supabase
 - [ ] **Multi-premises groups:** superintendent switching is built (migration 0020). Still to do: a group overview across pharmacies and group pricing.
 - [ ] **Reminders:** consider an email or push notification for due reminders (they're in-app only for now).
 - [ ] **Launch:** set `SIGNUPS_OPEN=1` and remove the `SIGNIN_UNLOCK_CODE` gate when ready.
-- [ ] **IPU evidence pack:** update DEC-001 (data processing) to name OpenRouter with zero data retention as the reader.
+- [ ] **IPU evidence pack:** DEC-001 updated to Draft 0.2 (Google Vertex AI EU as the reader; kept outside this public repo because it carries the signatory's name). Before submission, confirm the Google Cloud DPA acceptance date, the prompt-logging exception and the Supabase plan / point-in-time recovery, then sign.
 - [ ] **Reader evaluation set:** build a set of anonymised Rx and invoice images with expected outputs, to measure accuracy before and after model changes.
 - [ ] **Halo:** import Halo's CONTROLLED drug list to widen the catalogue (some brand and strength variants are missing; users can add them by hand meanwhile).
 - [ ] **PSI wording:** re-check the destruction and quarantine guidance against current psi.ie text (it couldn't be fetched during the build).
