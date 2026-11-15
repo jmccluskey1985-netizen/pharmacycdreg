@@ -83,3 +83,8 @@ do $$ declare a boolean; b boolean; c boolean; d boolean; r integer; begin
   if not (a and b and not d) then raise exception 'FAIL peek'; end if;
 end $$;
 select pg_temp.ok(true, 'attempt limits: refused after the limit, keys stored hashed, failures can be checked without adding');
+
+-- 0020: superintendent / support pharmacist roles; superintendent login across pharmacies
+insert into staff(pharmacy_id,full_name,role) select id,'Super Intendent','superintendent_pharmacist' from pharmacies limit 1;
+insert into staff(pharmacy_id,full_name,role) select id,'Sue Port','support_pharmacist' from pharmacies limit 1;
+select pg_temp.ok((select count(*) = 2 from staff where role in ('superintendent_pharmacist','support_pharmacist')) and to_regclass('public.pharmacy_logins') is not null, 'superintendent and support pharmacist roles; pharmacy_logins table');

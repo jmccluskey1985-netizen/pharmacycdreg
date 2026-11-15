@@ -9,6 +9,7 @@ import { currentBalance } from '@/lib/registers';
 import { canWrite, effectiveStatus } from '@/lib/stripe';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { registerExemption } from '@/lib/cd-catalogue';
+import { isPharmacist } from '@/lib/roles';
 
 export const dynamic = 'force-dynamic';
 
@@ -90,7 +91,7 @@ export async function POST(req: Request) {
     else {
       const { data: st } = await db.from('staff').select('id, role, is_active, access_expires_at').eq('pharmacy_id', k.pharmacy_id).eq('psi_number', psi).eq('is_active', true).maybeSingle();
       const expired = st?.access_expires_at && new Date(st.access_expires_at) < new Date();
-      if (!st || expired || !['supervising_pharmacist', 'pharmacist', 'locum_pharmacist'].includes(st.role)) problem = `Pharmacist PSI ${psi} isn't an active pharmacist on the Team page`;
+      if (!st || expired || !isPharmacist(st.role)) problem = `Pharmacist PSI ${psi} isn't an active pharmacist on the Team page`;
       else staffId = st.id;
     }
     if (!problem && match && (await currentBalance(match.id)) - d.quantity < 0) problem = 'Would take the balance below zero. Check stock';

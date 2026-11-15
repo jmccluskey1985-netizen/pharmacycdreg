@@ -12,6 +12,7 @@ import { STOCK_EFFECT } from '@/lib/entry-schema';
 import { advance } from '@/lib/reminders';
 import { isLate } from '@/lib/late-entry';
 import { findDuplicate } from '@/lib/duplicates';
+import { can as rolesCan, type StaffRole } from '@/lib/roles';
 import { matchPatients as matchP, preselect, patientKeys, type MatchPatient } from '@/lib/patient-match';
 const matchPatients = (probe: Parameters<typeof matchP>[0], pool: Json[], limit?: number) => matchP(probe, pool as unknown as (MatchPatient & Json)[], limit);
 import { genericKey, sameStrength, registerExemption } from '@/lib/cd-catalogue';
@@ -116,10 +117,10 @@ const res = (body: unknown, status = 200) => new Response(JSON.stringify(body), 
 const fail = (status: number, error: string, code?: string) => res({ error, code }, status);
 const me = () => S.staff.find((s) => s.id === S.activeStaffId) ?? null;
 const can = {
-  record: (r: string) => ['supervising_pharmacist', 'pharmacist', 'locum_pharmacist'].includes(r),
-  open: (r: string) => ['supervising_pharmacist', 'pharmacist'].includes(r),
-  manage: (r: string) => r === 'supervising_pharmacist',
-  audit: (r: string) => ['supervising_pharmacist', 'pharmacist', 'read_only'].includes(r),
+  record: (r: string) => rolesCan.record(r as StaffRole),
+  open: (r: string) => rolesCan.openRegister(r as StaffRole),
+  manage: (r: string) => rolesCan.manageStaff(r as StaffRole),
+  audit: (r: string) => rolesCan.viewAudit(r as StaffRole),
   scan: (r: string) => r !== 'read_only',
 };
 function audit(action: string, details: Json = {}) {

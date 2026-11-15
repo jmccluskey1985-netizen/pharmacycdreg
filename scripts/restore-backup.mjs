@@ -161,7 +161,7 @@ for (const t of GUARDED) sql.push(`alter table ${t} enable trigger user;`);
 const pins = [];
 if (!args.includes('--no-temp-pins')) {
   const used = new Set();
-  for (const s of staff.filter((x) => x.role === 'supervising_pharmacist' && x.is_active !== false)) {
+  for (const s of staff.filter((x) => (x.role === 'supervising_pharmacist' || x.role === 'superintendent_pharmacist') && x.is_active !== false)) {
     let pin; do { pin = String(randomInt(0, 1_000_000)).padStart(6, '0'); } while (used.has(pin)); used.add(pin);
     pins.push({ name: s.full_name, pin });
     sql.push(`update staff set pin_hash = ${q(bcrypt.hashSync(pin, 10))} where id = ${q(s.id)};`);

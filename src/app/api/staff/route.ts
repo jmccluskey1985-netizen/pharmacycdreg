@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { requireStaff, requireAccount, errorResponse, audit } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase/server';
 import { hashPin, verifyPin, PIN_PATTERN } from '@/lib/pin';
-import { can } from '@/lib/roles';
+import { can, isLead, STAFF_ROLES, type StaffRole } from '@/lib/roles';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,8 +16,11 @@ export async function GET() {
       .select('id, full_name, role, psi_number, is_active, access_expires_at, created_at, pin_hash')
       .eq('pharmacy_id', account.pharmacyId)
       .order('created_at');
+    // Superintendents whose own login can open this pharmacy (migration 0020)
+    const { data: links } = await db.from('pharmacy_logins').select('staff_id').eq('pharmacy_id', account.pharmacyId);
+    const linked = new Set((links ?? []).map((l) => l.staff_id));
     // Never send PIN hashes to the browser.
-    return NextResponse.json({ staff: (data ?? []).map(({ pin_hash, ...s }) => ({ ...s, has_pin: !!pin_hash })) });
+    return NextResponse.json({ staff: (data ?? []).map(({ pin_hash, ...s }) => ({ ...s, has_pin: !!pin_hash, has_login: linked.has(s.id) })) });
   } catch (err) {
     return errorResponse(err);
   }
@@ -26,7 +29,9 @@ export async function GET() {
 const Body = z.object({
   id: z.string().uuid().optional(),
   full_name: z.string().trim().min(2).max(120),
-  role: z.enum(['supervising_pharmacist', 'pharmacist', 'locum_pharmacist', 'technician', 'read_only']),
+  role: z.enum(STAFF_ROLES as [StaffRole, ...StaffRole[]]),
+  // Superintendent only: their own login email, so it can open this pharmacy as well as their others
+  login_email: z.string().trim().toLowerCase().email().max(200).optional().or(z.literal('')),
   psi_number: z.string().trim().max(20).optional().nullable(),
   pin: z.string().regex(PIN_PATTERN).optional(),
   access_expires_at: z.string().datetime().optional().nullable(),
@@ -57,8 +62,8 @@ export async function POST(req: Request) {
     const bootstrap = (count ?? 0) === 0;
     let actor: any = null;
     if (bootstrap) {
-      if (b.role !== 'supervising_pharmacist' || !b.pin) {
-        return NextResponse.json({ error: 'First set up the supervising pharmacist with a PIN' }, { status: 400 });
+      if (!isLead(b.role) || !b.pin) {
+        return NextResponse.json({ error: 'First set up the supervising (or superintendent) pharmacist with a PIN' }, { status: 400 });
       }
     } else {
       actor = (await requireStaff(can.manageStaff)).staff;
@@ -86,10 +91,40 @@ export async function POST(req: Request) {
       if (error) throw error;
       id = data.id;
     }
-    const { pin, ...logged } = b;
-    await audit(account.pharmacyId, b.id ? 'staff.updated' : 'staff.created', actor, account.authUserId, { ...logged, pin_changed: !!pin }, { table: 'staff', id: id! });
-    return NextResponse.json({ id });
+    // Superintendent login across pharmacies: give or take away this pharmacy from their login
+    let login: { linked: boolean; invited: boolean; error?: string } | null = null;
+    if (b.role !== 'superintendent_pharmacist' || b.is_active === false) {
+      await db.from('pharmacy_logins').delete().eq('pharmacy_id', account.pharmacyId).eq('staff_id', id!);
+    } else if (b.login_email) {
+      login = await linkSuperintendentLogin(db, account.pharmacyId, id!, actor?.id ?? null, b.login_email, new URL(req.url).origin);
+    }
+    const { pin, login_email, ...logged } = b;
+    await audit(account.pharmacyId, b.id ? 'staff.updated' : 'staff.created', actor, account.authUserId, { ...logged, pin_changed: !!pin, login_linked: login?.linked ?? undefined }, { table: 'staff', id: id! });
+    return NextResponse.json({ id, login });
   } catch (err) {
     return errorResponse(err);
   }
+}
+
+/**
+ * Lets a superintendent's own login open this pharmacy. An existing login is linked; a new email
+ * gets an invite to choose a password (and this pharmacy becomes its home pharmacy).
+ */
+async function linkSuperintendentLogin(db: ReturnType<typeof createServiceClient>, pharmacyId: string, staffId: string, addedBy: string | null, email: string, origin: string) {
+  let userId: string | null = null;
+  let invited = false;
+  const inv = await db.auth.admin.inviteUserByEmail(email, { redirectTo: `${origin}/reset-password?welcome=1` });
+  if (inv.data?.user) { userId = inv.data.user.id; invited = true; }
+  else if (/already|registered|exists/i.test(inv.error?.message ?? '')) {
+    // Existing login: look it up without emailing anything
+    const gen = await db.auth.admin.generateLink({ type: 'magiclink', email });
+    userId = gen.data?.user?.id ?? null;
+  }
+  if (!userId) return { linked: false, invited: false, error: 'Could not find or create that login' };
+  const { data: home } = await db.from('pharmacy_accounts').select('pharmacy_id').eq('auth_user_id', userId).maybeSingle();
+  if (!home) await db.from('pharmacy_accounts').insert({ auth_user_id: userId, pharmacy_id: pharmacyId });
+  else if (home.pharmacy_id === pharmacyId) return { linked: true, invited };
+  const { error } = await db.from('pharmacy_logins').upsert({ auth_user_id: userId, pharmacy_id: pharmacyId, staff_id: staffId, added_by_staff_id: addedBy }, { onConflict: 'auth_user_id,pharmacy_id' });
+  if (error) return { linked: false, invited, error: /pharmacy_logins/.test(error.message) ? 'Run migration 0020 in Supabase first' : error.message };
+  return { linked: true, invited };
 }

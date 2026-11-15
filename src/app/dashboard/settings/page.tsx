@@ -61,7 +61,7 @@ export default function SettingsPage() {
   useEffect(() => { if (s && window.location.hash === '#two-step') document.getElementById('two-step')?.scrollIntoView({ behavior: 'smooth' }); }, [s]);
 
   // Everyone can pick their colour mode; the rest of Settings is the supervising pharmacist's.
-  if (!staff || !can.manageStaff(staff.role)) return <div className="mx-auto max-w-3xl space-y-5"><h1 className="text-2xl font-bold">Settings</h1><Display /><p className="text-muted-foreground">Only the supervising pharmacist can change the other settings.</p></div>;
+  if (!staff || !can.manageStaff(staff.role)) return <div className="mx-auto max-w-3xl space-y-5"><h1 className="text-2xl font-bold">Settings</h1><Display /><p className="text-muted-foreground">Only the supervising or superintendent pharmacist can change the other settings.</p></div>;
   if (!s) return <p className="text-muted-foreground">Loading…</p>;
   const onSaved = (x: Settings) => { setS(x); refresh(); };
 

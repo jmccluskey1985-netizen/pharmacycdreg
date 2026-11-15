@@ -25,7 +25,7 @@ export default function SecurityPage() {
       <UL>
         <li>Pharmacy login with password and optional (or required) two-step sign-in with an authenticator app.</li>
         <li>Each person then signs in with their own PIN; every entry carries their name and PSI number. The screen locks after a few minutes without use.</li>
-        <li>Roles: supervising pharmacist, pharmacist, locum (with an end date), technician (drafts only), read-only.</li>
+        <li>Roles: superintendent pharmacist, supervising pharmacist, pharmacist, support pharmacist, locum (with an end date), technician (drafts only), read-only. A superintendent over several pharmacies can switch between them with their own login, and signs in to each with that pharmacy&apos;s PIN.</li>
         <li>Inspectors can be given a time-limited, read-only link that you can revoke at any time.</li>
         <li>The database can only be reached through the app’s server, which checks the login and PIN on every request.</li>
       </UL>

@@ -12,6 +12,7 @@ import { Logo, LogoMark } from '@/components/logo';
 import { ROLE_LABELS, can } from '@/lib/roles';
 import { useStaff } from './staff-context';
 import { PinPad } from './pin-pad';
+import { PharmacySwitcher } from './pharmacy-switcher';
 import { FirstRun } from './first-run';
 
 const NAV = [
@@ -85,7 +86,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <TrainingButton pharmacy={pharmacy} onStarted={refresh} compact className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground" />
           </div>
         ) : <div className="border-t border-border p-4">
-          <p className="text-xs text-muted-foreground">{pharmacy?.name}</p>
+          {(pharmacy as any)?.pharmacies?.length > 1
+            ? <PharmacySwitcher current={pharmacy?.id} pharmacies={(pharmacy as any).pharmacies} />
+            : <p className="text-xs text-muted-foreground">{pharmacy?.name}</p>}
           <p className="mt-2 text-sm font-semibold">{staff.full_name}</p>
           <p className="text-xs text-muted-foreground">{ROLE_LABELS[staff.role]}{staff.psi_number ? ` · PSI ${staff.psi_number}` : ''}</p>
           <button onClick={lock} className="btn-secondary mt-3 w-full text-sm"><Lock className="h-4 w-4" /> Lock / switch user</button>

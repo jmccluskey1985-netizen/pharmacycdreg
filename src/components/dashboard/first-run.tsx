@@ -6,10 +6,10 @@ import { api, ApiError } from '@/lib/api';
 import { LogoMark } from '@/components/logo';
 import { useStaff } from './staff-context';
 
-/** No staff yet: set up the supervising pharmacist (the only person who can add others). */
+/** No staff yet: set up the supervising (or superintendent) pharmacist, who then adds the team. */
 export function FirstRun() {
   const { pharmacy, refresh } = useStaff();
-  const [f, setF] = useState({ full_name: '', psi_number: '', pin: '', pin2: '' });
+  const [f, setF] = useState({ full_name: '', psi_number: '', pin: '', pin2: '', role: 'supervising_pharmacist' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,7 +19,7 @@ export function FirstRun() {
     setBusy(true);
     setError(null);
     try {
-      await api('/api/staff', { method: 'POST', json: { full_name: f.full_name, psi_number: f.psi_number, pin: f.pin, role: 'supervising_pharmacist' } });
+      await api('/api/staff', { method: 'POST', json: { full_name: f.full_name, psi_number: f.psi_number, pin: f.pin, role: f.role } });
       await refresh();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not save');
@@ -35,10 +35,16 @@ export function FirstRun() {
           <LogoMark size={32} />
           <div>
             <h1 className="text-lg font-bold">Set up {pharmacy?.name}</h1>
-            <p className="text-sm text-muted-foreground">Add the supervising pharmacist. They can then add the team.</p>
+            <p className="text-sm text-muted-foreground">Add the supervising pharmacist (or the superintendent). They can then add the team.</p>
           </div>
         </div>
         {error && <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+        <div><label className="label">Role</label>
+          <select className="input" value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })}>
+            <option value="supervising_pharmacist">Supervising pharmacist</option>
+            <option value="superintendent_pharmacist">Superintendent pharmacist</option>
+          </select>
+        </div>
         <div><label className="label">Full name</label><input className="input" required value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></div>
         <div><label className="label">PSI registration number</label><input className="input" required inputMode="numeric" value={f.psi_number} onChange={(e) => setF({ ...f, psi_number: e.target.value })} /></div>
         <div className="grid grid-cols-2 gap-3">

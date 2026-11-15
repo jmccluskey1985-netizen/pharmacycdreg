@@ -1,4 +1,5 @@
 'use client';
+import { PharmacySwitcher } from './pharmacy-switcher';
 
 import { useEffect, useState } from 'react';
 import { Delete, Loader2, LogOut } from 'lucide-react';
@@ -60,7 +61,9 @@ export function PinPad() {
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-b from-brand-dark to-brand-deep px-6 text-white">
       <div className="flex flex-col items-center">
         <LogoMark size={44} />
-        <p className="mt-3 text-sm text-white/70">{pharmacy?.name}</p>
+        {(pharmacy as any)?.pharmacies?.length > 1
+          ? <div className="mx-auto mt-3 max-w-xs"><PharmacySwitcher current={pharmacy?.id} pharmacies={(pharmacy as any).pharmacies} dark /></div>
+          : <p className="mt-3 text-sm text-white/70">{pharmacy?.name}</p>}
         <h1 className="mt-1 text-2xl font-bold">Enter your PIN</h1>
         <p className="mt-1 text-center text-sm text-white/60">Every register entry is signed with your name and PSI number.</p>
       </div>

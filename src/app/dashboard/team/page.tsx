@@ -5,10 +5,10 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Loader2 } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
-import { ROLE_LABELS, type StaffRole } from '@/lib/roles';
+import { ROLE_LABELS, isPharmacist, type StaffRole } from '@/lib/roles';
 import { Modal } from '@/components/modal';
 
-interface Member { id: string; full_name: string; role: StaffRole; psi_number: string | null; is_active: boolean; access_expires_at: string | null; has_pin: boolean }
+interface Member { id: string; full_name: string; role: StaffRole; psi_number: string | null; is_active: boolean; access_expires_at: string | null; has_pin: boolean; has_login?: boolean }
 
 // NFR1–NFR3 + locum workflow: individual users, roles, PINs, temporary access.
 export default function TeamPage() {
@@ -39,6 +39,7 @@ export default function TeamPage() {
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {!s.is_active && <span className="badge bg-muted">Inactive</span>}
                 {!s.has_pin && <span className="badge bg-amber-100 text-amber-900">No PIN</span>}
+                {s.has_login && <span className="badge bg-brand/15 text-primary">Own login</span>}
                 {s.access_expires_at && <span className={`badge ${expired ? 'bg-red-100 text-red-800' : 'bg-sky-100 text-sky-900'}`}>{expired ? 'Expired' : 'Until'} {new Date(s.access_expires_at).toLocaleDateString('en-IE')}</span>}
               </div>
             </button>
@@ -61,17 +62,19 @@ function StaffForm({ initial, onDone }: { initial: Partial<Member>; onDone: () =
     pin: '',
     access_expires_at: initial.access_expires_at ? initial.access_expires_at.slice(0, 10) : '',
     is_active: initial.is_active ?? true,
+    login_email: '',
   });
+  const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const pharmacistRole = ['supervising_pharmacist', 'pharmacist', 'locum_pharmacist'].includes(f.role);
+  const pharmacistRole = isPharmacist(f.role as StaffRole);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      await api('/api/staff', {
+      const res = await api('/api/staff', {
         method: 'POST',
         json: {
           id: initial.id,
@@ -81,8 +84,11 @@ function StaffForm({ initial, onDone }: { initial: Partial<Member>; onDone: () =
           pin: f.pin || undefined,
           access_expires_at: f.access_expires_at ? new Date(f.access_expires_at + 'T23:59:59').toISOString() : null,
           is_active: f.is_active,
+          ...(f.role === 'superintendent_pharmacist' && f.login_email ? { login_email: f.login_email } : {}),
         },
       });
+      if (res.login?.error) { setError(res.login.error); return; }
+      if (res.login?.invited) { setNote(`Saved. An invite has gone to ${f.login_email} to choose a password.`); setTimeout(onDone, 2500); return; }
       onDone();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not save');
@@ -107,11 +113,19 @@ function StaffForm({ initial, onDone }: { initial: Partial<Member>; onDone: () =
       </div>
       {pharmacistRole && <div><label className="label">PSI registration number</label><input className="input" required inputMode="numeric" value={f.psi_number} onChange={(e) => setF({ ...f, psi_number: e.target.value })} /></div>}
       <div><label className="label">{initial.id ? 'New PIN (leave blank to keep)' : 'PIN (4–6 digits)'}</label><input className="input font-mono tracking-widest" type="password" inputMode="numeric" pattern="\d{4,6}" required={!initial.id} value={f.pin} onChange={(e) => setF({ ...f, pin: e.target.value.replace(/\D/g, '').slice(0, 6) })} /></div>
+      {f.role === 'superintendent_pharmacist' && (
+        <div>
+          <label className="label">Their own login email (optional)</label>
+          <input className="input" type="email" value={f.login_email} onChange={(e) => setF({ ...f, login_email: e.target.value })} placeholder={initial.has_login ? 'Already linked: enter a different email to change' : 'e.g. superintendent@group.ie'} />
+          <p className="mt-1 text-xs text-muted-foreground">For a superintendent over several pharmacies: their own personal login (not another pharmacy&apos;s shared login) can then switch between them. They still sign entries here with the PIN above.</p>
+        </div>
+      )}
       <div><label className="label">Access ends (optional: for locums)</label><input className="input" type="date" value={f.access_expires_at} onChange={(e) => setF({ ...f, access_expires_at: e.target.value })} /></div>
       {initial.id && (
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-5 w-5" checked={f.is_active} onChange={(e) => setF({ ...f, is_active: e.target.checked })} /> Active</label>
       )}
       {error && <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+      {note && <p className="rounded-lg bg-secondary p-3 text-sm">{note}</p>}
       <button className="btn-primary w-full" disabled={busy}>{busy && <Loader2 className="h-4 w-4 animate-spin" />} Save</button>
     </form>
   );

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireAccount, requireStaff, errorResponse, HttpError } from '@/lib/access';
+import { requireAccount, requireStaff, errorResponse, HttpError, pharmaciesFor } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getSettings } from '@/lib/settings';
 import { isSiteAdmin } from '@/lib/admin';
@@ -34,7 +34,7 @@ export async function GET() {
       const payload = session?.access_token?.split('.')[1];
       if (payload) loginSession = String(JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')).session_id ?? '') || null;
     } catch { /* no session id: the bar just shows */ }
-    if (pharmacy) Object.assign(pharmacy, { require_2fa: st.require_2fa, twofa_missing: twofaMissing, has_2fa: has2fa, login_session: loginSession, is_site_admin: owner, halo_enabled: halo, lock_minutes: st.lock_minutes, locum_default_days: st.locum_default_days });
+    if (pharmacy) Object.assign(pharmacy, { pharmacies: await pharmaciesFor(account.authUserId, account.homePharmacyId ?? account.pharmacyId).catch(() => []), require_2fa: st.require_2fa, twofa_missing: twofaMissing, has_2fa: has2fa, login_session: loginSession, is_site_admin: owner, halo_enabled: halo, lock_minutes: st.lock_minutes, locum_default_days: st.locum_default_days });
     const { count } = await db.from('staff').select('id', { count: 'exact', head: true }).eq('pharmacy_id', account.pharmacyId).eq('is_active', true).not('pin_hash', 'is', null);
     try {
       const { staff } = await requireStaff();

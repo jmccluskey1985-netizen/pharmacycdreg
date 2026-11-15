@@ -15,7 +15,10 @@ export class HttpError extends Error {
 export interface Account {
   authUserId: string;
   email: string;
+  /** The pharmacy being worked in now. */
   pharmacyId: string;
+  /** The login's own pharmacy (differs only when a superintendent has switched). */
+  homePharmacyId?: string;
 }
 
 export interface Staff {
@@ -36,7 +39,25 @@ export async function requireAccount(): Promise<Account> {
   const db = createServiceClient();
   const { data } = await db.from('pharmacy_accounts').select('pharmacy_id').eq('auth_user_id', user.id).maybeSingle();
   if (!data) throw new HttpError(403, 'This login is not linked to a pharmacy', 'NO_PHARMACY');
-  return { authUserId: user.id, email: user.email ?? '', pharmacyId: data.pharmacy_id };
+  // A superintendent's login can open other pharmacies too (migration 0020). The chosen one is
+  // remembered in a cookie, but only honoured while that pharmacy still grants this login access.
+  const chosen = (await cookies()).get(PHARMACY_COOKIE)?.value;
+  if (chosen && chosen !== data.pharmacy_id && /^[0-9a-f-]{36}$/i.test(chosen)) {
+    const { data: extra } = await db.from('pharmacy_logins').select('pharmacy_id').eq('auth_user_id', user.id).eq('pharmacy_id', chosen).maybeSingle();
+    if (extra) return { authUserId: user.id, email: user.email ?? '', pharmacyId: chosen, homePharmacyId: data.pharmacy_id };
+  }
+  return { authUserId: user.id, email: user.email ?? '', pharmacyId: data.pharmacy_id, homePharmacyId: data.pharmacy_id };
+}
+
+export const PHARMACY_COOKIE = 'cdreg_pharmacy';
+
+/** Every pharmacy this login can open: its home pharmacy first, then any it was given access to. */
+export async function pharmaciesFor(authUserId: string, homePharmacyId: string): Promise<{ id: string; name: string }[]> {
+  const db = createServiceClient();
+  const { data: extra, error } = await db.from('pharmacy_logins').select('pharmacy_id').eq('auth_user_id', authUserId);
+  const ids = [homePharmacyId, ...(error ? [] : (extra ?? []).map((r) => r.pharmacy_id).filter((id) => id !== homePharmacyId))];
+  const { data: rows } = await db.from('pharmacies').select('id, name').in('id', ids);
+  return ids.map((id) => rows?.find((r) => r.id === id)).filter(Boolean) as { id: string; name: string }[];
 }
 
 /** Step 2: the staff member identified by PIN. Re-checked on every request. */

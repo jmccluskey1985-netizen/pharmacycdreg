@@ -50,7 +50,7 @@ src/lib/
   demo/                     demo mode + training mode (in-browser mock of the API)
 src/data/cd-products.ts     CD catalogue: one product per brand, strengths, schedule paragraph
 src/components/dashboard/   shell (sidebar / icon rail), entry form, new-entry chooser, shelf, …
-supabase/migrations/        0001–0019 (see docs/OPERATIONS.md)
+supabase/migrations/        0001–0020 (see docs/OPERATIONS.md)
 scripts/                    create-pharmacy.mjs, rule tests, GMS list parser
 ```
 
@@ -67,7 +67,8 @@ scripts/                    create-pharmacy.mjs, rule tests, GMS list parser
 
 - **Accounts:**
   - Pharmacy sign-in by email + password or Google, with optional 2FA.
-  - Per-person staff PIN, auto-lock, and roles (supervising, pharmacist, locum, technician, read-only).
+  - Per-person staff PIN, auto-lock, and roles (superintendent, supervising, pharmacist, support pharmacist, locum, technician, read-only).
+  - A superintendent over several pharmacies: each pharmacy adds them in Team with their own login email; that login gets a pharmacy switcher (sidebar and PIN screen). Switching locks the screen and asks for that pharmacy's PIN, so entries are always signed in the right pharmacy.
 - **Registers:**
   - Bookshelf and table views per CD type.
   - Start books from the CD list, by typing, from a scan, or by snapping the last paper page (which takes the opening balance and date).
@@ -130,7 +131,7 @@ Not covered automatically: the real server API routes talking to a real Supabase
 
 - [ ] **Stripe:** create the product and price, webhook and portal (README → Stripe setup); set `STRIPE_*` and `CRON_SECRET`.
 - [ ] **Google sign-in:** finish the Google Cloud client and Supabase provider set-up (docs/OPERATIONS.md §3).
-- [ ] **Migrations:** confirm 0009–0019 have been run in production.
+- [ ] **Migrations:** confirm 0009–0020 have been run in production.
 - [ ] **Document reader:** set up Google Vertex AI (Settings → Document reading) and accept the Google Cloud DPA. File the sub-processor DPAs (`docs/compliance/SUBPROCESSOR_DPAS.md`).
 - [ ] **Company details:** set `NEXT_PUBLIC_COMPANY_NAME`, `NEXT_PUBLIC_COMPANY_ADDRESS` and `NEXT_PUBLIC_CONTACT_EMAIL`. Have a solicitor review /privacy, /terms and `docs/compliance/DPA_TEMPLATE.md`.
 - [ ] **Supabase plan:** Pro (daily backups, 7 days) and ideally Point-in-Time Recovery. Turn on leaked-password protection (Authentication → Policies). Run migration 0018.
@@ -139,7 +140,7 @@ Not covered automatically: the real server API routes talking to a real Supabase
 - [ ] **Restore drill:** once a year, restore a Full backup into a throwaway Supabase project with `scripts/restore-backup.mjs` and record the result (docs/BACKUP_AND_RESTORE.md).
 - [ ] **Code (later):** tighten the browser security policy to nonce-based scripts (drop `'unsafe-inline'`); refactor the 26 effects flagged by `react-hooks/set-state-in-effect` (warnings for now).
 - [ ] **Hardening checklist:** `docs/OPERATIONS.md` §6 (uptime monitor, leaked-password protection, backups and restore test).
-- [ ] **Multi-premises groups:** one login across several pharmacies, with a switcher and group pricing. Not built yet; the data model is one pharmacy per login.
+- [ ] **Multi-premises groups:** superintendent switching is built (migration 0020). Still to do: a group overview across pharmacies and group pricing.
 - [ ] **Reminders:** consider an email or push notification for due reminders (they're in-app only for now).
 - [ ] **Launch:** set `SIGNUPS_OPEN=1` and remove the `SIGNIN_UNLOCK_CODE` gate when ready.
 - [ ] **IPU evidence pack:** update DEC-001 (data processing) to name OpenRouter with zero data retention as the reader.
