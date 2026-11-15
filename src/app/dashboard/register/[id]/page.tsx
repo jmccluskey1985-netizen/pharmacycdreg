@@ -176,16 +176,10 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
 
       <div className="book-stage">
         <div className={`book ${opened ? 'open' : ''}`}>
-          {/* Cover: the PharmacyCDReg.ie register book, labelled with this book's product */}
+          {/* Cover: the PharmacyCDReg.ie register book */}
           <div className="book-cover no-print flex flex-col overflow-hidden bg-[#0d4e6c]" aria-hidden={opened}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/previews/register-cover.webp" alt="" className="h-auto w-full" />
-            {/* Product label: in the blank top corner of the cover, or under the picture on a phone */}
-            <div className="mx-[4.5%] mt-4 self-start rounded-md border border-[#16477a]/25 bg-white/90 px-4 py-2 shadow-sm sm:absolute sm:left-[4.5%] sm:top-[6%] sm:mx-0 sm:mt-0 sm:max-w-[60%]">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#16477a]/70">Product</p>
-              <p className="text-base font-bold leading-tight text-[#16477a] sm:text-xl">{productTitle(p)}</p>
-              {genericLine(p) && <p className="text-xs text-slate-600">{p.class_name}: {genericLine(p)}</p>}
-            </div>
           </div>
 
           {/* Pages */}
