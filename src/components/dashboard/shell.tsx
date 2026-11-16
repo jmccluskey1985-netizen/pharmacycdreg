@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser, Settings, UserRound, ListOrdered, Menu, BellRing, StickyNote, MessageSquarePlus, LifeBuoy, PanelLeftClose, PanelLeftOpen, ShieldCheck, X, Building2 } from 'lucide-react';
+import { LogOut, BookOpen, ScanLine, Search, History, Users, Lock, Flame, CreditCard, Inbox, Plug, BookUser, Settings, UserRound, ListOrdered, Menu, BellRing, StickyNote, MessageSquarePlus, LifeBuoy, PanelLeftClose, PanelLeftOpen, ShieldCheck, X, Building2 } from 'lucide-react';
 import { NewEntryButton } from './new-entry';
 import { Modal } from '@/components/modal';
 import { TrainingBar, TrainingButton, useTraining } from './training';
@@ -14,6 +14,15 @@ import { useStaff } from './staff-context';
 import { PinPad } from './pin-pad';
 import { PharmacySwitcher } from './pharmacy-switcher';
 import { FirstRun } from './first-run';
+import { getSupabaseClient } from '@/lib/supabase/client';
+
+/** Sign the pharmacy out of this device completely (not just lock the screen for the next person). */
+async function signOut() {
+  if (!window.confirm('Sign this pharmacy out of this device? Everyone will need the pharmacy login again, not just a PIN.')) return;
+  await fetch('/api/staff/lock', { method: 'POST' }).catch(() => {});
+  await getSupabaseClient().auth.signOut().catch(() => {});
+  window.location.href = '/';
+}
 
 const NAV = [
   { href: '/dashboard', label: 'Registers', icon: BookOpen, show: () => true },
@@ -86,6 +95,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-xs font-bold text-secondary-foreground" title={`${staff.full_name} · ${ROLE_LABELS[staff.role]}`}>{staff.full_name.split(' ').map((w) => w[0]).slice(0, 2).join('')}</span>
             <button onClick={lock} className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground" title="Lock / switch user" aria-label="Lock / switch user"><Lock className="h-5 w-5" /></button>
             <TrainingButton pharmacy={pharmacy} onStarted={refresh} compact className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground" />
+            <button onClick={signOut} className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-destructive" title="Sign out" aria-label="Sign out"><LogOut className="h-5 w-5" /></button>
           </div>
         ) : <div className="border-t border-border p-4">
           {(pharmacy as any)?.pharmacies?.length > 1
@@ -95,6 +105,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <p className="text-xs text-muted-foreground">{ROLE_LABELS[staff.role]}{staff.psi_number ? ` · PSI ${staff.psi_number}` : ''}</p>
           <button onClick={lock} className="btn-secondary mt-3 w-full text-sm"><Lock className="h-4 w-4" /> Lock / switch user</button>
           <TrainingButton pharmacy={pharmacy} onStarted={refresh} className="btn-ghost mt-1 w-full text-sm" />
+          <button onClick={signOut} className="btn-ghost mt-1 w-full text-sm text-muted-foreground hover:text-destructive"><LogOut className="h-4 w-4" /> Sign out</button>
         </div>}
       </aside>
 
@@ -166,6 +177,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               </div>
               <button onClick={() => { setMore(false); lock(); }} className="btn-secondary mt-3 w-full"><Lock className="h-4 w-4" /> Lock / switch user</button>
               <TrainingButton pharmacy={pharmacy} onStarted={() => { setMore(false); refresh(); }} className="btn-ghost mt-1 w-full" />
+              <button onClick={signOut} className="btn-ghost mt-1 w-full text-muted-foreground"><LogOut className="h-4 w-4" /> Sign out</button>
             </Modal>
           </>
         );

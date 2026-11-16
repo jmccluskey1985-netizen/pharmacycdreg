@@ -344,6 +344,14 @@ await step('technician can draft but not sign register entries', async () => {
 
 await step('no page errors during the workflows', async () => { if (page.errors.length) throw new Error(page.errors.slice(0, 3).join(' | ')); });
 
+await step('sign out from the sidebar returns to the home page', async () => {
+  const t = await signedInPage({ width: 1366, height: 900 });
+  t.once('dialog', (d) => d.accept());
+  await t.click('aside button:has-text("Sign out")');
+  await t.waitForURL((u) => u.pathname === '/', { timeout: 8000 });
+  await t.context().close();
+});
+
 await browser.close();
 console.log(`\n${results.filter((r) => r[0] === 'ok  ').length} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
