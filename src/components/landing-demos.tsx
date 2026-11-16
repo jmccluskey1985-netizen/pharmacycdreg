@@ -450,7 +450,7 @@ function InvoiceDemo() {
             <li className="flex items-center gap-1.5"><ScanLine className="h-3.5 w-3.5" /> NovoRapid FlexPen: not a controlled drug</li>
           </ul>
           <h3 className="mt-6 text-2xl font-bold">Photograph the wholesaler invoice</h3>
-          <p className="mt-1 text-muted-foreground">Uniphar, United Drug, PCO and others. Controlled drug lines are picked out, packs × pack size worked out and matched to the right register for you to check. Nothing is recorded until you sign.</p>
+          <p className="mt-1 text-muted-foreground">Uniphar, United Drug, PCO and others. Controlled drug lines are picked out, packs × pack size worked out and matched to the right register, each with a confidence level for you to check. Lines that don’t need a register entry, like Oramorph 10mg/5ml, are left out with the reason shown. Nothing is recorded until you sign.</p>
           <SampleNote className="mt-2" />
         </div>
       </div>

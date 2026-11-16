@@ -16,16 +16,11 @@ const FEATURES = [
   { icon: Clock, title: 'Saves time, every day', text: 'Balances work themselves out, entries take seconds and regular repeat supplies are one click. Stock checks are quicker too.' },
   { icon: Target, title: 'More accurate records', text: 'No arithmetic slips carried down the page. Every entry is checked for duplicates and impossible balances before it’s signed.' },
   { icon: Search, title: 'Find any entry in seconds', text: 'No more rooting through tattered CD books for the right page. Search by drug, patient, prescriber, supplier or date.' },
-  { icon: ScanLine, title: 'Photograph the wholesaler invoice', text: 'Take a photo on your phone. CD lines and pack quantities are read by AI for you to check and confirm. Nothing is recorded until a pharmacist signs it.' },
+  { icon: ScanLine, title: 'Photograph prescriptions and invoices', text: 'Take a photo on your phone or use your scanner. Details are read by AI for you to check and confirm. Nothing is recorded until a pharmacist signs it.' },
   { icon: ShieldCheck, title: 'Nothing is ever overwritten', text: 'Corrections sit alongside the original with who, when and why. A tamper-evident audit trail backs every line.' },
   { icon: BadgeCheck, title: 'Inspection ready', text: 'Print or export any register, or give the inspector a read-only link. Integrity checked in one click.' },
 ];
 
-const PREVIEWS = [
-  // (the register page itself is shown by the cover animation at the top)
-  { src: '/previews/register-book.webp', hidden: true, alt: 'A register page laid out like the paper Controlled Drugs Register, with a correction struck through and footnoted', title: 'The register, page by page', text: 'Same columns as the paper register: date, name and address, authority, amount obtained or supplied, running balance, pharmacist. Corrections are struck through and footnoted, never hidden.' },
-  { src: '/previews/invoice-scan.webp', alt: 'Invoice scan result: OxyNorm 5mg capsules, 2 packs × 56 = 112, matched to the OxyNorm 5mg register', title: 'Invoices read for you', text: 'Photograph the wholesaler invoice. Controlled drug lines are picked out, packs × pack size worked out, matched to the right register, and Schedule 5 lines like Oramorph 10mg/5ml left out. You check and confirm each line.' },
-];
 
 function WaitlistForm() {
   const [f, setF] = useState({ name: '', pharmacy_name: '', email: '', phone: '', dispensing_system: '', consent_contact: false, website: '' });
@@ -186,6 +181,19 @@ export default function LandingPage() {
             More accurate records, quicker entries and no more rooting through tattered CD books to find the right page. Every receipt, supply and destruction of Schedule 2 drugs is recorded, balanced and searchable, built around the IPU eCDR requirements for Irish community pharmacies.
           </FadeIn>
           <TickList className="mt-6 max-w-xl" items={['Running balances calculated for you', 'Duplicate and error checks on every entry', 'Tamper-evident audit trail', 'Read-only links for inspectors', 'Works on phone, tablet and PC', 'Your data stays in the EU']} />
+          <FadeIn delay={150} className="mt-6 max-w-xl rounded-2xl bg-card p-5 shadow-soft ring-2 ring-brand/30">
+            <p className="flex items-center gap-2 font-bold text-brand-dark"><Lock className="h-5 w-5 flex-shrink-0 text-brand" /> Patient data and AI: covered by a written agreement</p>
+            <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
+              <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand" />Scans are read by Google’s Vertex AI in the EU, under Google Cloud’s Data Processing Addendum, a GDPR data processing agreement.</li>
+              <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand" />Under those terms, Google doesn’t use your prescriptions or invoices to train its AI models.</li>
+              <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand" />We don’t keep the photos: only the details read from them, which a pharmacist checks and signs.</li>
+              <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand" />Your pharmacy gets its own data processing agreement with us, too.</li>
+            </ul>
+            <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm font-semibold">
+              <a href="https://cloud.google.com/terms/data-processing-addendum" target="_blank" rel="noopener noreferrer" className="text-primary underline">Google’s data processing agreement ↗</a>
+              <a href="/data-safety" className="text-primary underline">Data safety at a glance</a>
+            </p>
+          </FadeIn>
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             {FEATURES.map((f, i) => (
               <FadeIn key={f.title} delay={i * 90} className="flex gap-3 rounded-xl bg-card/70 p-4 ring-1 ring-border">
@@ -209,34 +217,19 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Previews */}
+      {/* On your phone */}
       <section className="border-t border-border bg-card/60">
         <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brand">A look inside</p>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-brand-dark">Built for the dispensary counter</h2>
-          <div className="mt-10 space-y-14">
-            {PREVIEWS.filter((p: any) => !p.hidden).map((p, i) => (
-              <div key={p.src} className={`grid items-center gap-6 lg:gap-10 ${i % 2 ? 'lg:grid-cols-[1fr_1.6fr]' : 'lg:grid-cols-[1.6fr_1fr]'}`}>
-                <figure className={i % 2 ? 'lg:order-2' : ''}>
-                  <div className="overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border"><img src={p.src} alt={p.alt} loading="lazy" className="w-full" /></div>
-                  <figcaption><SampleNote className="mt-2" /></figcaption>
-                </figure>
-                <div className={i % 2 ? 'lg:order-1' : ''}>
-                  <h3 className="text-2xl font-bold">{p.title}</h3>
-                  <p className="mt-2 text-lg text-muted-foreground">{p.text}</p>
-                </div>
-              </div>
-            ))}
-            <div className="grid items-center gap-6 lg:grid-cols-[1fr_1.6fr] lg:gap-10">
-              <div>
-                <h3 className="text-2xl font-bold">Works on your phone</h3>
-                <p className="mt-2 text-lg text-muted-foreground">Check a balance or record an entry from anywhere in the pharmacy. Each person signs in with their own PIN.</p>
-              </div>
-              <figure className="mx-auto w-60 sm:w-64">
-                <div className="overflow-hidden rounded-[2.2rem] bg-black p-2 shadow-soft ring-1 ring-border"><img src="/previews/phone.webp" alt="PharmacyCDReg on a phone: the OxyNorm 5mg capsule register page" loading="lazy" className="w-full rounded-[1.8rem]" /></div>
-                <figcaption><SampleNote className="mt-2 text-center" /></figcaption>
-              </figure>
+          <div className="grid items-center gap-6 lg:grid-cols-[1fr_1.6fr] lg:gap-10">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-widest text-brand">On the go</p>
+              <h2 className="mt-2 text-3xl font-bold tracking-tight text-brand-dark">Works on your phone</h2>
+              <p className="mt-2 text-lg text-muted-foreground">Check a balance or record an entry from anywhere in the pharmacy. Each person signs in with their own PIN.</p>
             </div>
+            <figure className="mx-auto w-60 sm:w-64">
+              <div className="overflow-hidden rounded-[2.2rem] bg-black p-2 shadow-soft ring-1 ring-border"><img src="/previews/phone.webp" alt="PharmacyCDReg on a phone: the OxyNorm 5mg capsule register page" loading="lazy" className="w-full rounded-[1.8rem]" /></div>
+              <figcaption><SampleNote className="mt-2 text-center" /></figcaption>
+            </figure>
           </div>
           <p className="mt-8 text-xs text-muted-foreground">All screens and animations use sample data. Names, addresses, prescription numbers and pharmacy details are made up for illustration and are not real patients or pharmacies.</p>
         </div>
