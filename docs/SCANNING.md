@@ -75,6 +75,10 @@ The purple HSE **Opioid Substitution Treatment Prescription Form** (GMS010-8082)
 
 A web page can't drive a scanner directly, so on a PC the Scan page watches the folder the scanner saves to (Chrome / Edge, File System Access API). The pharmacist picks the folder once (Scan → *Scanner on this computer* → Connect scanner folder); the folder handle is kept in this browser's IndexedDB only. Files already in the folder are ignored; each new PDF/JPEG/PNG is picked up once its size settles (a prescription is read straight away, invoice pages are added for Read). Nothing in the folder is changed or deleted. Drag-and-drop and Ctrl+V paste also work. Other browsers: choose the file from the scanner's folder.
 
+## 2c. Stock check against a dispensing report
+
+Stock check → *Check against a dispensing report*: a CD report from the dispensing system (PDF, photo, or CSV/text export, sent as text) is read for this register's product only (`src/lib/report-reconcile.ts`). Each line is matched to a register line of the same kind within ±2 days, same quantity, and agreeing name or reference (`reconcile`, unit-tested). Results: *in the register*, *missing* (ticked by default, with a ready draft: patient record address where matched, supplier address from contacts), or *quantity differs* (shown only; fixed by a correction). Ticked lines are posted one by one through `/api/entries` (receipts first, then by date), so the duplicate guard and the late-entry rule apply: lines older than a day carry `Late entry: <footnote>`. The report isn't stored; an audit event records the counts.
+
 ## 3. Invoices / CD dockets (Uniphar, United Drug, PCO, IMED, Pluripharm)
 
 The rules are in `src/lib/invoice-rules.ts`:

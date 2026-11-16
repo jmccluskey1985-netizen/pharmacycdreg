@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ClipboardCheck, Loader2, CheckCircle2, AlertTriangle, Scale } from 'lucide-react';
 import { NoteAttachments, type Attachment } from './note-attachments';
 import { Modal } from '@/components/modal';
+import { ReportCheck } from './report-check';
 import { api, ApiError } from '@/lib/api';
 
 interface Check { id: string; counted: number; register_balance: number; notes: string | null; checked_by_name: string; checked_at: string }
@@ -45,7 +46,7 @@ export function StockCheckButton({ registerId, unit, balance, canRecord, onChang
   return (
     <>
       <button onClick={() => { setOpen(true); setDone(null); }} className="btn-secondary"><ClipboardCheck className="h-4 w-4" /> Stock check</button>
-      <Modal open={open} onClose={() => setOpen(false)} title="Stock check">
+      <Modal open={open} onClose={() => setOpen(false)} title="Stock check" wide>
         <div className="space-y-4">
           {canRecord && (
             <form onSubmit={save} className="space-y-3">
@@ -61,6 +62,7 @@ export function StockCheckButton({ registerId, unit, balance, canRecord, onChang
               <button className="btn-primary w-full" disabled={busy || n == null}>{busy && <Loader2 className="h-4 w-4 animate-spin" />} Sign & record check</button>
             </form>
           )}
+          {canRecord && <ReportCheck registerId={registerId} unit={unit} balance={balance} counted={n} onAdded={() => onChanged?.()} />}
           {amending && <AmendBalance check={amending} unit={unit} onDone={() => { setAmending(null); setDone(null); onChanged?.(); api(`/api/stock-checks?register_id=${registerId}`).then((x) => setChecks(x.checks)); }} onCancel={() => setAmending(null)} />}
           <div>
             <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">Previous checks</p>

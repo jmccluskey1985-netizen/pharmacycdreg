@@ -11,6 +11,7 @@ import { productTitle } from '@/lib/product-name';
 import { STOCK_EFFECT } from '@/lib/entry-schema';
 import { advance } from '@/lib/reminders';
 import { isLate } from '@/lib/late-entry';
+import { reconcile, type ReportRow } from '@/lib/report-reconcile';
 import { findDuplicate } from '@/lib/duplicates';
 import { can as rolesCan, type StaffRole } from '@/lib/roles';
 import { matchPatients as matchP, preselect, patientKeys, type MatchPatient } from '@/lib/patient-match';
@@ -592,6 +593,26 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     if (!can.audit(st!.role)) return fail(403, 'Your role does not allow this action');
     const ev = [...S.audit, ...S.entries.map((e, i) => ({ id: 10000 + i, occurred_at: e.recorded_at, action: `cd_entry.${e.entry_type}`, staff_name: S.staff.find((s) => s.id === e.recorded_by_staff_id)?.full_name, details: { seq: e.seq, quantity: e.quantity, reason: e.correction_reason ?? undefined } }))].sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
     return res({ events: url.searchParams.get('before') ? [] : ev });
+  }
+  if (path === '/api/stock-checks/reconcile' && method === 'POST') {
+    if (needStaff()) return needStaff()!;
+    await new Promise((r) => setTimeout(r, 1200));
+    const regId = init?.body instanceof FormData ? String(init.body.get('register_id')) : '';
+    const reg = regList().find((r: Json) => r.id === regId);
+    if (!reg) return fail(404, 'Register not found');
+    // A made-up dispensing report: this register's recent lines, plus two the register is missing and one with a different quantity
+    const recent = ledger(regId).filter((e) => (e.entry_type === 'supply' || e.entry_type === 'receipt') && e.supplier_name !== 'Balance brought forward');
+    const rows: ReportRow[] = recent.map((e) => ({ date: e.transaction_date, kind: e.entry_type, name: e.entry_type === 'supply' ? e.recipient_name : e.supplier_name, address: null, prescriber: e.prescriber_name ?? null, reference: e.prescription_ref ?? null, quantity: Number(e.quantity), product: null }));
+    if (rows.length > 2) rows[rows.length - 1] = { ...rows[rows.length - 1], quantity: rows[rows.length - 1].quantity * 2 };
+    rows.push({ date: daysAgo(4), kind: 'supply', name: 'Paddy Hehir', address: null, prescriber: 'Dr K. Ryan', reference: 'Rx 10288', quantity: 14, product: null });
+    rows.push({ date: daysAgo(0), kind: 'supply', name: 'Niamh Corcoran', address: '9 Oak Park, Clarecastle, Co. Clare', prescriber: 'Dr A. Walsh', reference: 'Rx 10311', quantity: 14, product: null });
+    const out = reconcile(rows, recent as any);
+    const lines = out.map((r, i) => {
+      const b = { i, ...r, late: isLate(r.row.date) };
+      if (r.status !== 'missing') return b;
+      return { ...b, patient: null, draft: { entry_type: r.row.kind, transaction_date: r.row.date, quantity: r.row.quantity, recipient_name: r.row.name, recipient_address: r.row.address ?? '', prescriber_name: r.row.prescriber, authority_to_possess: `Prescription: ${r.row.prescriber}`, prescription_ref: r.row.reference } };
+    });
+    return res({ lines, skipped: 2, period: { from: daysAgo(30), to: today() }, balance: balance(regId), unit: reg.product.unit, warnings: [] });
   }
   if (path === '/api/scan/labels' && method === 'POST') {
     if (needStaff()) return needStaff()!;

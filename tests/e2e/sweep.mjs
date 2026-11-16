@@ -268,6 +268,20 @@ await step('OST patients onboarded from bag labels', async () => {
   await see('text=/1 added, 1 updated/');
 });
 
+await step('stock check: dispensing report shows missing entries, ticked ones added (late with footnote)', async () => {
+  await page.goto(B + '/dashboard/register/r1'); await page.waitForTimeout(1000);
+  await click('button:has-text("Stock check")');
+  await page.setInputFiles('input[type=file][accept*="csv"]', { name: 'cd-report.csv', mimeType: 'text/csv', buffer: Buffer.from('date,patient,qty\n') });
+  await see('text=Paddy Hehir', 8000);
+  await see('text=/Over 24 hours/');
+  await see('text=/quantity differs/');
+  if (!(await page.isDisabled('button:has-text("Sign & add 2 missing entries")'))) throw new Error('should need an address first');
+  await page.fill('input[placeholder="Patient address (needed for the register)"]', '21 Bridge Street, Ennis');
+  await click('button:has-text("Sign & add 2 missing entries")');
+  await page.waitForTimeout(1500);
+  if ((await page.locator('text=/Added: register line/').count()) !== 2) throw new Error('both not added');
+});
+
 await step('patients: possible duplicates can be merged', async () => {
   await page.goto(B + '/dashboard/patients'); await page.waitForTimeout(800);
   await click('button:has-text("Possible duplicates")');
