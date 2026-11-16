@@ -8,6 +8,7 @@ import { resolvePatientForEntry } from '@/lib/patients';
 import { findDuplicate } from '@/lib/duplicates';
 import { audit } from '@/lib/access';
 import { isLate, LATE_PREFIX } from '@/lib/late-entry';
+import { isOstRef } from '@/lib/ost';
 
 // Make a register entry. Append-only: corrections are new rows (FR10/FR11). The audit
 // row is written by a database trigger, so it can't be skipped from here.
@@ -112,6 +113,17 @@ export async function POST(req: Request) {
     }
     if (inbox_id) {
       await db.from('pmr_inbox').update({ status: 'posted', entry_id: data.id, register_id: reg.id, resolved_by_staff_id: staff.id, resolved_at: new Date().toISOString() }).eq('id', inbox_id);
+    }
+    // OST instalment: link the held form's dispensing rows for this date to the register line
+    if (isOstRef((row as any).prescription_ref)) {
+      try {
+        const serial = String((row as any).prescription_ref).slice(4).trim();
+        const { data: held } = await db.from('ost_prescriptions').select('id, patient_id').eq('pharmacy_id', account.pharmacyId).eq('serial_no', serial).maybeSingle();
+        if (held) {
+          await db.from('ost_dispensings').update({ entry_id: data.id }).eq('prescription_id', held.id).eq('dispensed_on', (row as any).transaction_date).is('entry_id', null);
+          if (!held.patient_id && (row as any).patient_id) await db.from('ost_prescriptions').update({ patient_id: (row as any).patient_id }).eq('id', held.id);
+        }
+      } catch { /* before migration 0022 */ }
     }
     for (const ev of patientEvents) await audit(account.pharmacyId, ev.action, staff, account.authUserId, { ...ev.details, entry_id: data.id }, { table: 'patients', id: String(ev.details.patient_id) }).catch(() => {});
     return NextResponse.json({ id: data.id, seq: data.seq, balance: resulting, patient_id: (row as any).patient_id ?? null, patient_differs: patientDiffers });

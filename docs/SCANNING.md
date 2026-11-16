@@ -46,6 +46,7 @@ Scanning only **reads**. A pharmacist checks and signs every entry before it rea
 - **Matching** (`src/lib/match.ts`) is **brand-aware**:
   - OxyNorm, Shortec, and different fentanyl patch brands each have their own register. One brand is never posted into another brand's book.
   - If only another brand's book exists, the card says so and offers **Start book**, pre-filled from the scan.
+- **OST forms** (methadone / buprenorphine): see 2a below.
 - **Patients** (`src/lib/patient-match.ts`, migration 0016; spec in [PATIENT_MATCHING.md](PATIENT_MATCHING.md)):
   - Names are normalised (accents, apostrophes, `O Brien`/`O'Brien`, `Mc Guinness`/`McGuinness`, surname-first hospital stickers) and compared allowing one misread letter and short forms (Kate/Katherine).
   - The scan card shows **Is this one of your patients?** with each near-match and why it matched (DOB, GMS, eircode, address) or differs. A single certain match is pre-selected. **New patient** is always offered; choosing it despite a very likely match needs a second tap and is audited (`patient.created_despite_match`).
@@ -54,6 +55,18 @@ Scanning only **reads**. A pharmacist checks and signs every entry before it rea
   - Halo, repeats and reminders link a single certain match; otherwise they make a new record and note the near-match (`patient.possible_duplicate`).
   - **Patients → Possible duplicates** lists records that look like the same person; a pharmacist can merge them (`POST /api/patients/[id]/merge`, audited `patient.merged`).
   - PPS numbers are not read or stored.
+
+## 2a. OST prescriptions (methadone / buprenorphine in instalments)
+
+The purple HSE **Opioid Substitution Treatment Prescription Form** (GMS010-8082) is recognised automatically (`ost` in the reader output; rules in `src/lib/ost.ts`, unit-tested in `tests/unit/ost.test.mts`).
+
+- **Read:** serial no., treatment card no., drug as written (e.g. Methadone DTF 1mg/ml, Methadone HCl), dose a day × days, total in figures and words, from/to dates, instalment and supervision boxes, and **every row of the pharmacy's DATE DISPENSED grid** (date, quantity, S = supervised / TA = take-away).
+- **Today:** all rows dated today (e.g. 90 supervised + 540 take-away) become **one supply line for today** in the matching register (brand-aware: each methadone product has its own book), deducted from its balance. The line carries `OST <serial>` as its reference and the breakdown in its notes.
+- **Earlier rows:** shown with their register status. Any date not in the register yet is offered as a **late entry** (reason required).
+- **Held:** the form, its schedule and every dispensing are kept (`ost_prescriptions`, `ost_dispensings`, migration 0022). Each register line links back to the form's row for that date.
+- **Checks:** words vs figures (the smaller total is used), dose × days vs total, dispensed so far vs total, script start/end dates, rows dated in the future, unreadable rows (never guessed), methadone written without form/strength, strengths other than 1mg/ml.
+- **Duplicate guard:** the same form on another day is expected; the same form twice on the same day is blocked.
+- Methadone oral solution is counted in **ml** (1mg/ml, so 90 mg = 90 ml).
 
 ## 3. Invoices / CD dockets (Uniphar, United Drug, PCO, IMED, Pluripharm)
 

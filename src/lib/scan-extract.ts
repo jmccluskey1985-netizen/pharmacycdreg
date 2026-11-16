@@ -41,6 +41,29 @@ const ItemSchema = z.object({
   handwritten_qty: strN.optional(),
 });
 
+const DAY = z.enum(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']);
+/** HSE Opioid Substitution Treatment prescription form (GMS010-8082): the script and its dispensing grid. */
+export const OstSchema = z.object({
+  serial_no: strN, pharmacy_sequence_no: strN.optional(), treatment_card_no: strN.optional(),
+  date_prescribed: strN.optional(), from_date: strN.optional(), to_date: strN.optional(),
+  product: z.enum(['methadone', 'buprenorphine', 'buprenorphine_naloxone']).nullable().catch(null),
+  drug_written: strN.optional(),
+  daily_dose: numN.optional(), dose_unit: strN.optional(), days_at_dose: numN.optional(),
+  total_figures: strN.optional(), total_words: strN.optional(),
+  instalment_daily: z.boolean().nullable().optional().catch(null),
+  instalment_double_sat: z.boolean().nullable().optional().catch(null),
+  instalment_days: z.array(DAY).catch([]),
+  supervised: z.boolean().nullable().optional().catch(null),
+  supervised_daily: z.boolean().nullable().optional().catch(null),
+  supervised_days: z.array(DAY).catch([]),
+  dispensings: z.array(z.object({
+    date: strN, quantity: numN, quantity_text: strN.optional(),
+    mode: z.enum(['supervised', 'take_away']).nullable().catch(null),
+    initialled: z.boolean().nullable().optional().catch(null),
+  })).catch([]),
+});
+export type OstExtraction = z.infer<typeof OstSchema>;
+
 export const ExtractionSchema = z.object({
   document_type: z.enum(['prescription', 'invoice', 'other']).catch('other'),
   document_date: strN,
@@ -64,6 +87,7 @@ export const ExtractionSchema = z.object({
   prescriber_registration: strN,
   items: z.array(ItemSchema).catch([]),
   warnings: z.array(z.string()).catch([]),
+  ost: OstSchema.nullable().optional().catch(null),
 });
 export type Extraction = z.infer<typeof ExtractionSchema>;
 
@@ -71,7 +95,7 @@ const nullableString = { type: ['string', 'null'] };
 const JSON_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['document_type', 'document_date', 'reference', 'reference_label', 'supplier_evidence', 'supplier_name', 'supplier_address', 'patient_name', 'patient_address', 'patient_dob', 'patient_first_name', 'patient_surname', 'patient_eircode', 'gms_number', 'dps_number', 'lti_number', 'hospital_mrn', 'prescriber_name', 'prescriber_address', 'prescriber_registration', 'items', 'warnings'],
+  required: ['document_type', 'document_date', 'reference', 'reference_label', 'supplier_evidence', 'supplier_name', 'supplier_address', 'patient_name', 'patient_address', 'patient_dob', 'patient_first_name', 'patient_surname', 'patient_eircode', 'gms_number', 'dps_number', 'lti_number', 'hospital_mrn', 'prescriber_name', 'prescriber_address', 'prescriber_registration', 'items', 'warnings', 'ost'],
   properties: {
     document_type: { type: 'string', enum: ['prescription', 'invoice', 'other'] },
     document_date: { ...nullableString, description: 'Date on the document as YYYY-MM-DD' },
@@ -123,6 +147,48 @@ const JSON_SCHEMA = {
         },
       },
     },
+    ost: {
+      type: ['object', 'null'],
+      description: 'ONLY for the purple HSE "Opioid Substitution Treatment Prescription Form" (methadone / buprenorphine). null for every other document.',
+      additionalProperties: false,
+      required: ['serial_no', 'pharmacy_sequence_no', 'treatment_card_no', 'date_prescribed', 'from_date', 'to_date', 'product', 'drug_written', 'daily_dose', 'dose_unit', 'days_at_dose', 'total_figures', 'total_words', 'instalment_daily', 'instalment_double_sat', 'instalment_days', 'supervised', 'supervised_daily', 'supervised_days', 'dispensings'],
+      properties: {
+        serial_no: { ...nullableString, description: 'Printed SERIAL NO. (top right), e.g. "7453079"' },
+        pharmacy_sequence_no: { ...nullableString, description: 'Handwritten PHARMACY SEQUENCE NO.' },
+        treatment_card_no: { ...nullableString, description: 'TREATMENT CARD NO., e.g. "PH 3816"' },
+        date_prescribed: { ...nullableString, description: 'DATE PRESCRIBED as YYYY-MM-DD' },
+        from_date: { ...nullableString, description: 'FROM date as YYYY-MM-DD' },
+        to_date: { ...nullableString, description: 'TO date as YYYY-MM-DD' },
+        product: { type: ['string', 'null'], enum: ['methadone', 'buprenorphine', 'buprenorphine_naloxone', null], description: 'Which treatment box is ticked (or written)' },
+        drug_written: { ...nullableString, description: 'DRUG NAME, FORM AND STRENGTH exactly as written, e.g. "METHADONE DTF 1MG/ML ORAL SOLUTION"' },
+        daily_dose: { type: ['number', 'null'], description: 'DOSAGE (QTY PER DAY) as a number, e.g. 90' },
+        dose_unit: { ...nullableString, description: 'Unit written with the dose if any ("ml", "mg"), else null' },
+        days_at_dose: { type: ['number', 'null'], description: 'NO. OF DAYS AT DOSE' },
+        total_figures: { ...nullableString, description: 'TOTAL (QTY) IN FIGURES exactly as written' },
+        total_words: { ...nullableString, description: 'TOTAL IN WORDS exactly as written' },
+        instalment_daily: { type: ['boolean', 'null'], description: 'INSTALMENT INSTRUCTIONS: DAILY ticked' },
+        instalment_double_sat: { type: ['boolean', 'null'], description: 'DAILY (WITH DOUBLE ON SAT.) ticked' },
+        instalment_days: { type: 'array', items: { type: 'string', enum: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] }, description: 'OTHER (TICK): the weekday boxes ticked for collection' },
+        supervised: { type: ['boolean', 'null'], description: 'SUPERVISED: YES ticked = true, NO ticked = false' },
+        supervised_daily: { type: ['boolean', 'null'], description: 'Supervised DAILY ticked' },
+        supervised_days: { type: 'array', items: { type: 'string', enum: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] }, description: 'DAYS FOR SUPERVISION boxes ticked' },
+        dispensings: {
+          type: 'array',
+          description: 'Every filled row of the PHARMACY SECTION "DATE DISPENSED / QUANTITY / PHARMACIST\'S INITIALS" grid, top to bottom. One item per row.',
+          items: {
+            type: 'object', additionalProperties: false,
+            required: ['date', 'quantity', 'quantity_text', 'mode', 'initialled'],
+            properties: {
+              date: { ...nullableString, description: 'DATE DISPENSED as YYYY-MM-DD (the boxes read DD MM YY)' },
+              quantity: { type: ['number', 'null'], description: 'The quantity as a number. If a sum is written (e.g. "90 + 270"), the total' },
+              quantity_text: { ...nullableString, description: 'The QUANTITY cell exactly as written, e.g. "90 (S)", "540 (TA)", "90 + 270 TA"' },
+              mode: { type: ['string', 'null'], enum: ['supervised', 'take_away', null], description: '"(S)" = supervised, "(TA)" = take-away, else null' },
+              initialled: { type: ['boolean', 'null'], description: 'Pharmacist initials present in that row' },
+            },
+          },
+        },
+      },
+    },
     warnings: { type: 'array', items: { type: 'string' }, description: 'Anything the pharmacist must check: illegible, quantity not in words and figures, missing prescriber details, altered entries.' },
   },
 };
@@ -148,6 +214,7 @@ Prescriptions:
 - Hospital and discharge prescriptions often state the total as a number of DOSES (e.g. "total to dispense eighteen doses"). Copy it as written (quantity_words "eighteen doses"), set quantity_unit to "doses", and set units_per_dose from the dose and the product strength (5 mg dose of 5 mg capsules = 1). Use the handwritten CD section as the legal wording when present.
 - The prescriber is the person who signed (name and registration number near the signature), not the consultant in the header, unless they are the same.
 - Add a warning if words and figures disagree, either is missing, or the script looks altered.
+- HSE "Opioid Substitution Treatment Prescription Form" (purple, methadone / buprenorphine): fill the "ost" object as well as the usual fields. Put the drug in items as normal (methadone oral solution is counted in ml: 1mg/ml, so a 90 mg dose is 90 ml), with quantity = TOTAL (QTY). Read every row of the pharmacy's DATE DISPENSED grid exactly; never invent rows. Read dates as day/month/year.
 - Patient: give the full name in patient_name and also split it into patient_first_name and patient_surname (hospital pads and stickers print SURNAME first). Read identifiers (DOB, eircode, GMS/DPS/LTI number with any household letter, hospital MRN) only where clearly printed for this patient; never take a date from a stamp or signature as the DOB. Do not return PPS numbers.
 
 Rules for everything:

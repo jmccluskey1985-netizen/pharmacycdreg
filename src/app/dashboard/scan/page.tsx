@@ -196,6 +196,8 @@ export default function ScanPage() {
           </div>
         )}
 
+        {result.ost && <OstPanel ost={result.ost} />}
+
         {result.patient_match?.candidates?.length > 0 && result.proposals.length > 0 && (
           <div className="card mb-4">
             <PatientChoice candidates={result.patient_match.candidates} pickId={result.patient_match.pick_id} script={{ name: x.patient_name, address: x.patient_address, dob: x.patient_dob }} value={patientPick} onChange={setPatientPick} />
@@ -459,6 +461,45 @@ function StartBook({ item, receipt, onStarted, onCancel }: { item: any; receipt:
         <button type="button" onClick={start} disabled={busy || !f.drug_name || !f.strength || !f.form} className="btn-primary py-1.5">{busy && <Loader2 className="h-4 w-4 animate-spin" />} Start book &amp; continue</button>
         {onCancel && <button type="button" onClick={onCancel} className="btn-ghost py-1.5">Cancel</button>}
       </div>
+    </div>
+  );
+}
+
+const dd = (d: string | null) => (d ? d.split('-').reverse().join('/') : '-');
+const MODE: Record<string, string> = { supervised: 'Supervised', take_away: 'Take-away' };
+
+/** HSE OST form: the script, its schedule and the pharmacy's dispensing grid as read. */
+function OstPanel({ ost }: { ost: any }) {
+  const rows = [...(ost.earlier ?? []).map((r: any) => ({ ...r, when: 'earlier' })), ...(ost.today?.rows ?? []).map((r: any) => ({ ...r, when: 'today' }))];
+  return (
+    <div className="card mb-4 space-y-3 text-sm">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="font-bold">Opioid substitution prescription{ost.serial_no ? ` · Serial ${ost.serial_no}` : ''}</p>
+          <p className="text-muted-foreground">{[ost.treatment_card_no && `Card ${ost.treatment_card_no}`, ost.drug_written].filter(Boolean).join(' · ')}</p>
+        </div>
+        {ost.total != null && <span className="badge bg-brand/15 text-primary">{ost.dispensed_so_far} of {ost.total} dispensed · {ost.remaining} left</span>}
+      </div>
+      <p>{ost.daily_dose != null && <><b>{ost.daily_dose}</b> a day × <b>{ost.days_at_dose ?? '?'}</b> days</>} {ost.from_date && <>· {dd(ost.from_date)} to {dd(ost.to_date)}</>}<br /><span className="text-muted-foreground">{ost.schedule}</span></p>
+      {rows.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[360px] text-left">
+            <thead className="text-xs uppercase tracking-wide text-muted-foreground"><tr><th className="py-1 pr-3">Date dispensed</th><th className="py-1 pr-3">Quantity</th><th className="py-1 pr-3">Type</th><th className="py-1">Register</th></tr></thead>
+            <tbody>
+              {rows.map((r: any, i: number) => (
+                <tr key={i} className={`border-t border-border ${r.when === 'today' ? 'font-semibold' : ''}`}>
+                  <td className="py-1.5 pr-3 tabular-nums">{dd(r.date)}{r.when === 'today' && <span className="ml-1 badge bg-brand/15 text-primary">today</span>}</td>
+                  <td className="py-1.5 pr-3 tabular-nums">{r.quantity}{r.text && r.text.includes('+') && <span className="ml-1 text-xs font-normal text-muted-foreground">({r.text})</span>}</td>
+                  <td className="py-1.5 pr-3">{MODE[r.mode] ?? '-'}</td>
+                  <td className="py-1.5">{r.when === 'today' ? <span className="text-primary">Record below</span> : r.in_register ? <span className="text-primary">✓ In the register</span> : <span className="text-amber-700 dark:text-amber-300">⚠ Not in the register</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {ost.flags?.length > 0 && <ul className="space-y-1 rounded-lg bg-amber-50 p-2.5 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-100">{ost.flags.map((f: string, i: number) => <li key={i}>⚠ {f}</li>)}</ul>}
+      <p className="text-xs text-muted-foreground">Today’s supervised dose and take-away are recorded as one supply for today. The form and every dispensing on it are kept, so later days on the same form are checked against it.</p>
     </div>
   );
 }

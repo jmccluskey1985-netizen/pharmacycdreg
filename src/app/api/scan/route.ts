@@ -13,6 +13,8 @@ import { registerExemption } from '@/lib/cd-catalogue';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { can } from '@/lib/roles';
 import { findPatientMatches, candidateView } from '@/lib/patients';
+import { decideOst, ostRef } from '@/lib/ost';
+import { irishToday } from '@/lib/late-entry';
 
 export const maxDuration = 120;
 
@@ -140,6 +142,54 @@ export async function POST(req: Request) {
       };
     }));
 
+    // OST form (methadone / buprenorphine in instalments): today's rows are the supply; the form
+    // is held with its schedule; earlier rows not yet in the register are offered as late entries.
+    let ost: any = null;
+    if (!isInvoice && extraction.ost && proposals.length) {
+      const o = extraction.ost;
+      const today = irishToday();
+      const dec = decideOst(o, today);
+      const ref = o.serial_no ? ostRef(o.serial_no) : null;
+      const base = proposals[0];
+      base.draft = { ...base.draft, transaction_date: today, quantity: dec.today.total || '', prescription_ref: ref ?? base.draft.prescription_ref, notes: dec.today.breakdown ? `OST instalment: ${dec.today.breakdown}` : 'OST instalment' };
+      base.qty = { ...base.qty, quantity: dec.today.total || null, label: dec.today.total ? `Dispensed today: ${dec.today.breakdown ?? dec.today.total}` : 'Nothing dated today on the form', flags: [...dec.flags, ...base.qty.flags.filter((f: string) => !/words and figures|quantity/i.test(f))] };
+      (base as any).ost_role = 'today';
+      // Which earlier dispensing dates are already in this register?
+      const inRegister = new Set<string>();
+      if (base.register_id && ref && dec.earlier.length) {
+        const { data } = await db.from('cd_entries').select('transaction_date').eq('register_id', base.register_id).eq('prescription_ref', ref).in('transaction_date', Array.from(new Set(dec.earlier.map((e) => e.date))));
+        for (const e of data ?? []) inRegister.add(e.transaction_date);
+      }
+      const byDate = new Map<string, typeof dec.earlier>();
+      for (const e of dec.earlier) byDate.set(e.date, [...(byDate.get(e.date) ?? []), e]);
+      const missing = Array.from(byDate.entries()).filter(([d]) => !inRegister.has(d));
+      for (const [d, rows] of missing) {
+        const q = rows.reduce((n, x) => n + x.quantity, 0);
+        const parts = rows.map((x) => `${x.quantity} ${x.mode === 'supervised' ? 'supervised' : x.mode === 'take_away' ? 'take-away' : 'dispensed'}`).join(' + ');
+        proposals.push({ ...base, ost_role: 'earlier', qty: { ...base.qty, quantity: q, label: `Dispensed ${d.split('-').reverse().join('/')}, not in the register yet`, flags: ['Recorded as a late entry: say why it wasn’t entered on the day.'] }, draft: { ...base.draft, transaction_date: d, quantity: q, notes: `OST instalment: ${parts}` } } as any);
+      }
+      ost = {
+        serial_no: o.serial_no, treatment_card_no: o.treatment_card_no ?? null, product: o.product, drug_written: o.drug_written ?? null,
+        daily_dose: o.daily_dose ?? null, days_at_dose: o.days_at_dose ?? null, from_date: o.from_date ?? null, to_date: o.to_date ?? null,
+        total: dec.total, dispensed_so_far: dec.dispensedSoFar, remaining: dec.remaining, schedule: dec.schedule,
+        today: dec.today, earlier: dec.earlier.map((e) => ({ ...e, in_register: inRegister.has(e.date) })), flags: dec.flags,
+      };
+      // Hold the form and its dispensing grid (reference record; the register is still cd_entries)
+      if (o.serial_no) {
+        try {
+          const { data: held } = await db.from('ost_prescriptions').upsert({
+            pharmacy_id: account.pharmacyId, serial_no: o.serial_no.replace(/\s+/g, ''), patient_name: extraction.patient_name, treatment_card_no: o.treatment_card_no ?? null,
+            product: o.product, drug_written: o.drug_written ?? null, register_id: base.register_id, daily_dose: o.daily_dose ?? null, days_at_dose: o.days_at_dose ?? null,
+            total_qty: dec.total, date_prescribed: o.date_prescribed ?? null, from_date: o.from_date ?? null, to_date: o.to_date ?? null,
+            schedule: { instalment_daily: o.instalment_daily, instalment_double_sat: o.instalment_double_sat, instalment_days: o.instalment_days, supervised: o.supervised, supervised_daily: o.supervised_daily, supervised_days: o.supervised_days, text: dec.schedule },
+            prescriber_name: extraction.prescriber_name, prescriber_registration: extraction.prescriber_registration, scan_id: scan.id, updated_at: new Date().toISOString(),
+          }, { onConflict: 'pharmacy_id,serial_no' }).select('id').single();
+          const rows = [...dec.earlier, ...dec.today.rows];
+          if (held && rows.length) await db.from('ost_dispensings').upsert(rows.map((x) => ({ prescription_id: held.id, dispensed_on: x.date, quantity: x.quantity, mode: x.mode })), { onConflict: 'prescription_id,dispensed_on,mode,quantity', ignoreDuplicates: true });
+        } catch { /* before migration 0022: the scan still works */ }
+      }
+    }
+
     const ignored = extraction.items.filter((i) => !i.is_controlled_drug).length;
     const exempt_lines = exempt.map((i) => ({ label: `${i.brand ?? i.drug_name} ${i.strength}`, reason: registerExemption(i.drug_name, i.strength, i.form, i.brand) }));
     // Existing patients who look like the one on the script (docs/PATIENT_MATCHING.md §6)
@@ -152,7 +202,7 @@ export async function POST(req: Request) {
       }).catch(() => null);
       if (m) patient_match = { candidates: m.candidates.map(candidateView), pick_id: m.pick?.patient.id ?? null, ambiguous: m.ambiguous };
     }
-    return NextResponse.json({ scan_id: scan.id, extraction, proposals, ignored, exempt: exempt_lines, patient_match });
+    return NextResponse.json({ scan_id: scan.id, extraction, proposals, ignored, exempt: exempt_lines, patient_match, ost });
   } catch (err) {
     if (err instanceof ScanError) return NextResponse.json({ error: err.message }, { status: 422 });
     return errorResponse(err);

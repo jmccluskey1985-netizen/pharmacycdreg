@@ -91,3 +91,10 @@ select pg_temp.ok((select count(*) = 2 from staff where role in ('superintendent
 
 -- 0021: every public function pins its search_path
 select pg_temp.ok(not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.prokind = 'f' and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) c where c like 'search_path=%') and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')), 'every database function has a fixed search path');
+
+-- 0022: OST prescriptions held once per serial; instalments kept per date
+insert into ost_prescriptions(pharmacy_id, serial_no, product, daily_dose, days_at_dose, total_qty) select id, '9000001', 'methadone', 60, 7, 420 from pharmacies limit 1;
+insert into ost_dispensings(prescription_id, dispensed_on, quantity, mode) select id, current_date, 60, 'supervised' from ost_prescriptions where serial_no = '9000001';
+insert into ost_dispensings(prescription_id, dispensed_on, quantity, mode) select id, current_date, 360, 'take_away' from ost_prescriptions where serial_no = '9000001';
+select pg_temp.expect_error($$ insert into ost_prescriptions(pharmacy_id, serial_no) select id, '9000001' from pharmacies limit 1 $$, 'duplicate key');
+select pg_temp.ok((select count(*) = 2 from ost_dispensings), 'OST form held once per serial number; supervised and take-away rows kept');

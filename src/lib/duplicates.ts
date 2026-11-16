@@ -1,3 +1,4 @@
+import { isOstRef } from './ost';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
@@ -68,8 +69,12 @@ export async function findDuplicate(db: SupabaseClient, registerId: string, e: R
   if (!name) return null;
   const { data } = await db.from('cd_ledger').select('id, seq, quantity, recipient_name, prescriber_name, prescription_ref, authority_to_possess, transaction_date').eq('register_id', registerId).eq('entry_type', 'supply').gte('transaction_date', addDays(date, -60)).lte('transaction_date', addDays(date, 60)).limit(1000);
   const mine = (data ?? []).filter((r) => sameName(r.recipient_name, name));
+  // OST (methadone / buprenorphine) forms are dispensed in instalments on the same serial number:
+  // the same form on another day is expected; only the same form on the same day is a duplicate.
+  const instalment = isOstRef(e.prescription_ref);
   const tokens = [...refTokens(e.prescription_ref), ...authorityTokens(e.authority_to_possess)];
   for (const r of mine) {
+    if (instalment && r.transaction_date !== date) continue;
     const theirs = [...refTokens(r.prescription_ref), ...authorityTokens(r.authority_to_possess)];
     const hit = tokens.find((t) => theirs.includes(t));
     if (hit) return { level: 'block', seq: r.seq, message: `This prescription (${hit}) was already supplied to ${name}: line ${r.seq}, ${Number(r.quantity)} on ${r.transaction_date}.` };
@@ -79,7 +84,7 @@ export async function findDuplicate(db: SupabaseClient, registerId: string, e: R
   }
   for (const r of mine) {
     const days = Math.abs(new Date(r.transaction_date).getTime() - new Date(date).getTime()) / DAY;
-    if (Number(r.quantity) === qty && days <= 3 && (!e.prescriber_name || !r.prescriber_name || sameName(e.prescriber_name, r.prescriber_name))) {
+    if (!instalment && Number(r.quantity) === qty && days <= 3 && (!e.prescriber_name || !r.prescriber_name || sameName(e.prescriber_name, r.prescriber_name))) {
       return { level: 'warn', seq: r.seq, message: `${qty} were supplied to ${name} on ${r.transaction_date} (line ${r.seq}${r.prescriber_name ? `, Rx ${r.prescriber_name}` : ''}). Make sure this isn’t the same prescription.` };
     }
   }

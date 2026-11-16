@@ -228,6 +228,23 @@ await step('Rx scan: a misspelt name is matched to the existing patient', async 
   await see('text=Recorded');
 });
 
+await step('OST methadone form: today\'s supervised + take-away recorded as one supply', async () => {
+  await page.goto(B + '/dashboard/scan?type=prescription'); await page.waitForTimeout(1200);
+  await page.setInputFiles('input[type=file]', { name: 'ost-form.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64') });
+  const read = page.getByRole('button', { name: /Read/ }).first();
+  if (await read.isVisible().catch(() => false)) await read.click();
+  await see('text=Opioid substitution prescription', 15000);
+  await see('text=/Dispensed today: 75 supervised \\+ 300 take-away/');
+  await see('text=/Not in the register/');
+  const open = page.locator('button:has-text("Check details & record")');
+  if (await open.count()) await open.first().click();
+  await page.waitForTimeout(600);
+  const qty = await page.locator('input[type=number]').first().inputValue();
+  if (qty !== '375') throw new Error('today quantity ' + qty);
+  await click('button:has-text("Confirm & record") >> nth=0'); await page.waitForTimeout(1500);
+  await see('text=Recorded');
+});
+
 await step('typed supply: an existing patient is offered before a new record is made', async () => {
   await page.goto(B + '/dashboard/register/r1'); await see('text=CLASS OF DRUG'); await page.waitForTimeout(600);
   await openNewEntry(); await click('button:has-text("Supplied")');

@@ -50,7 +50,7 @@ src/lib/
   demo/                     demo mode + training mode (in-browser mock of the API)
 src/data/cd-products.ts     CD catalogue: one product per brand, strengths, schedule paragraph
 src/components/dashboard/   shell (sidebar / icon rail), entry form, new-entry chooser, shelf, …
-supabase/migrations/        0001–0021 (see docs/OPERATIONS.md)
+supabase/migrations/        0001–0022 (see docs/OPERATIONS.md)
 scripts/                    create-pharmacy.mjs, rule tests, GMS list parser
 ```
 
@@ -81,6 +81,7 @@ scripts/                    create-pharmacy.mjs, rule tests, GMS list parser
   - Select rows Excel-style → **Repeat for today**.
   - Quick-fill for patients, prescribers (incl. the national GMS list), suppliers (Uniphar, United Drug, PCO, IMED, Pluripharm) and witnesses.
   - Usual-doctor and collected-by chips.
+- **OST (methadone / buprenorphine) forms:** today's supervised + take-away rows become one supply; the form and its instalments are held; missed earlier days are offered as late entries (docs/SCANNING.md §2a).
 - **Scanning:** Rx (fewest steps: Scan Rx → check → sign), invoices and CD dockets, paper register pages. There is a duplicate guard on everything.
 - **Destruction:** set aside (quarantine) Sch 2 stock → witnessed destruction; a separate CD Destruction Record Book for patient returns and Sch 3/4 stock.
 - **Stock checks** with a required note when the count doesn't match; low-stock level per register. After investigating, a pharmacist can **amend the balance** to the count. This adds a signed STOCK ADJUSTMENT line (`adjustment_in` / `adjustment_out`) with the investigation text; it's refused if the register changed since the count. The investigation can be saved as a note with photos.
@@ -132,7 +133,7 @@ Not covered automatically: the real server API routes talking to a real Supabase
 
 - [ ] **Stripe:** create the product and price, webhook and portal (README → Stripe setup); set `STRIPE_*` and `CRON_SECRET`.
 - [ ] **Google sign-in:** finish the Google Cloud client and Supabase provider set-up (docs/OPERATIONS.md §3).
-- [ ] **Migrations:** confirm 0009–0021 have been run in production.
+- [ ] **Migrations:** confirm 0009–0022 have been run in production.
 - [ ] **Document reader:** set up Google Vertex AI (Settings → Document reading) and accept the Google Cloud DPA. File the sub-processor DPAs (`docs/compliance/SUBPROCESSOR_DPAS.md`).
 - [ ] **Company details:** set `NEXT_PUBLIC_COMPANY_NAME`, `NEXT_PUBLIC_COMPANY_ADDRESS` and `NEXT_PUBLIC_CONTACT_EMAIL`. Have a solicitor review /privacy, /terms and `docs/compliance/DPA_TEMPLATE.md`.
 - [ ] **Supabase plan:** Pro (daily backups, 7 days) and ideally Point-in-Time Recovery. Turn on leaked-password protection (Authentication → Policies). Run migration 0018.

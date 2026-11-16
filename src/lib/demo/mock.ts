@@ -36,6 +36,7 @@ const PRODUCTS = [
   P('p3', 'Morphine sulfate', 'Morphine', 'prolonged-release tablet', '10mg', 'tablets', { brand: 'MST Continus' }),
   P('p4', 'Fentanyl', 'Fentanyl', 'transdermal patch', '25mcg/hr', 'patches', { brand: 'Durogesic' }),
   P('p5', 'Methylphenidate hydrochloride', 'Methylphenidate', 'prolonged-release tablet', '18mg', 'tablets', { brand: 'Concerta XL' }),
+  P('p6', 'Methadone hydrochloride', 'Methadone', 'oral solution', '1mg/ml', 'ml', { brand: 'Methadone DTF' }),
 ];
 
 function seedEntries() {
@@ -72,6 +73,9 @@ function seedEntries() {
   add('r4', 'supply', 4, 5, 's2', { recipient_name: 'Thomas Burke', recipient_address: 'Ard Na Gréine, Ennis', prescriber_name: 'Dr L. Nolan', authority_to_possess: 'Prescription: Dr L. Nolan', prescription_ref: 'Rx 10255' });
   // Methylphenidate
   add('r5', 'receipt', 20, 60, 's1', BF('Paper register vol. 1, page 12'));
+  // Methadone DTF 1mg/ml (OST)
+  add('r6', 'receipt', 20, 5000, 's1', BF('Paper register vol. 2, page 3'));
+  add('r6', 'supply', 2, 420, 's2', { recipient_name: 'Gerard Lynch', recipient_address: '5 Mill Rd, Ennis', prescriber_name: 'Dr K. Ryan', authority_to_possess: 'Prescription: Dr K. Ryan', prescription_ref: 'OST 9000017', notes: 'OST instalment: 60 supervised + 360 take-away' });
   return out;
 }
 
@@ -597,6 +601,8 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     await new Promise((r) => setTimeout(r, 1800));
     const fd = init?.body as FormData;
     const isRx = fd?.get?.('hint') === 'prescription';
+    // A file named like "ost…" plays the HSE OST (methadone) form, with made-up details
+    const isOst = isRx && /ost/i.test(String((fd?.get?.('file') as File | null)?.name ?? ''));
     const extraction = isRx
       ? { document_type: 'prescription', document_date: today(), reference: 'Rx 10302', supplier_name: null, supplier_address: null, patient_name: 'MARY KELY', patient_first_name: 'Mary', patient_surname: 'Kely', patient_dob: '1948-07-01', gms_number: '1234567B', patient_address: '14 Main Street, Ennis', prescriber_name: 'Dr A. Walsh', prescriber_address: 'Ennis Medical Centre', prescriber_registration: '012345', warnings: [], items: [{ drug_name: 'Oxycodone hydrochloride', strength: '5mg', form: 'capsule', quantity: 28, quantity_unit: 'capsules', pack_description: '28 (twenty-eight)', is_controlled_drug: true, likely_schedule: 2, confidence: 'high', notes: '', brand: 'OxyNorm', packs: null, pack_size: null, quantity_figures: '28', quantity_words: 'twenty-eight', duration_text: null, is_credit: false }] }
       : { document_type: 'invoice', document_date: today(), reference: 'Invoice 4472210', supplier_name: 'United Drug', supplier_address: 'Magna Business Park, Citywest, Dublin 24', patient_name: null, patient_address: null, prescriber_name: null, prescriber_address: null, prescriber_registration: null, warnings: [], items: [
@@ -620,7 +626,22 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
       const cands = matchPatients({ full_name: x.patient_name, first_name: x.patient_first_name, surname: x.patient_surname, dob: x.patient_dob, gms: x.gms_number, address: x.patient_address }, demoPatients());
       patient_match = { pick_id: preselect(cands).pick?.patient.id ?? null, ambiguous: preselect(cands).ambiguous, candidates: cands.map((c) => ({ id: c.patient.id, first_name: c.patient.first_name, surname: c.patient.surname, date_of_birth: c.patient.date_of_birth, address: c.patient.address, gms_number: c.patient.gms_number, level: c.level, reasons: c.reasons, conflicts: c.conflicts })) };
     }
-    return res({ scan_id: 'demo', extraction, proposals, exempt, patient_match, ignored: extraction.items.filter((i: any) => !i.is_controlled_drug).length });
+    let ost: Json | null = null;
+    if (isOst) {
+      const { decideOst, ostRef } = await import('@/lib/ost');
+      const t = today(), y = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+      const form: any = { serial_no: '9000024', pharmacy_sequence_no: '31', treatment_card_no: 'PH 4417', date_prescribed: y, from_date: y, to_date: new Date(Date.now() + 5 * 864e5).toISOString().slice(0, 10), product: 'methadone', drug_written: 'METHADONE DTF 1MG/ML ORAL SOLUTION', daily_dose: 75, dose_unit: null, days_at_dose: 7, total_figures: '525', total_words: 'five hundred and twenty five', instalment_daily: null, instalment_double_sat: null, instalment_days: ['wed', 'sat'], supervised: true, supervised_daily: null, supervised_days: ['wed'], dispensings: [{ date: y, quantity: 75, quantity_text: '75 (S)', mode: 'supervised', initialled: true }, { date: t, quantity: 75, quantity_text: '75 (S)', mode: 'supervised', initialled: true }, { date: t, quantity: 300, quantity_text: '300 (TA)', mode: 'take_away', initialled: true }] };
+      const dec = decideOst(form, t);
+      const reg = regList().find((r: Json) => r.product.drug_name.startsWith('Methadone'));
+      const draft = { entry_type: 'supply', transaction_date: t, quantity: dec.today.total, recipient_name: 'Declan Farrell', recipient_address: '12 Abbey Court, Ennis', prescriber_name: 'Dr K. Ryan', prescriber_address: 'Abbey Street Surgery, Ennis', authority_to_possess: 'Prescription: Dr K. Ryan', prescription_ref: ostRef(form.serial_no), notes: `OST instalment: ${dec.today.breakdown}`, scan_id: null };
+      const item = { drug_name: 'Methadone hydrochloride', strength: '1mg/ml', form: 'oral solution', quantity: 525, quantity_unit: 'ml', pack_description: '525 (five hundred and twenty five)', is_controlled_drug: true, likely_schedule: 2, confidence: 'high', notes: '', brand: 'Methadone DTF', packs: null, pack_size: null, quantity_figures: '525', quantity_words: 'five hundred and twenty five', duration_text: '7 days', is_credit: false };
+      const base = { item, qty: { quantity: dec.today.total, label: `Dispensed today: ${dec.today.breakdown}`, flags: dec.flags }, match_state: reg ? 'your_register' : 'no_register', register_id: reg?.id ?? null, register_label: reg ? productTitle(reg.product) : null, current_balance: reg?.balance ?? null, candidates: reg ? [{ id: reg.id, label: productTitle(reg.product) }] : [], draft };
+      const missing = dec.earlier.map((e) => ({ ...base, qty: { quantity: e.quantity, label: `Dispensed ${e.date.split('-').reverse().join('/')}, not in the register yet`, flags: ['Recorded as a late entry: say why it wasn’t entered on the day.'] }, draft: { ...draft, transaction_date: e.date, quantity: e.quantity, notes: `OST instalment: ${e.quantity} supervised` } }));
+      proposals.splice(0, proposals.length, base as any, ...(missing as any[]));
+      Object.assign(extraction, { patient_name: 'Declan Farrell', patient_address: '12 Abbey Court, Ennis', reference: form.serial_no, items: [item] });
+      ost = { serial_no: form.serial_no, treatment_card_no: form.treatment_card_no, product: 'methadone', drug_written: form.drug_written, daily_dose: 75, days_at_dose: 7, from_date: form.from_date, to_date: form.to_date, total: dec.total, dispensed_so_far: dec.dispensedSoFar, remaining: dec.remaining, schedule: dec.schedule, today: dec.today, earlier: dec.earlier.map((e) => ({ ...e, in_register: false })), flags: dec.flags };
+    }
+    return res({ scan_id: 'demo', extraction, proposals, exempt, patient_match: isOst ? null : patient_match, ost, ignored: extraction.items.filter((i: any) => !i.is_controlled_drug).length });
   }
   if (path === '/api/inbox') {
     if (needStaff()) return needStaff()!;
