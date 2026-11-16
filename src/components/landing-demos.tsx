@@ -587,34 +587,37 @@ function IntegrityDemo() {
 function StockReportDemo() {
   const { ref, phase } = usePhases([1800, 1700, 1200, 2600, 1700, 900, 3800, 600]);
   const REPORT = [
-    { d: '02/11/26', n: 'United Drug', q: '+112', ok: 'line 2' },
-    { d: '05/11/26', n: 'Mary Kelly', q: '−28', ok: 'line 3' },
-    { d: '07/11/26', n: 'John Murphy', q: '−28', ok: 'line 4' },
-    { d: '12/11/26', n: 'Paddy Hehir', q: '−14', miss: 'late' },
-    { d: '14/11/26', n: 'Seán O’Brien', q: '−28', ok: 'line 5' },
-    { d: '15/11/26', n: 'Niamh Corcoran', q: '−14', miss: 'new' },
+    { d: '05/11/2026', n: 'Kelly Mary', q: 28 },
+    { d: '07/11/2026', n: 'Murphy John', q: 28 },
+    { d: '12/11/2026', n: 'Hehir* Paddy', q: 14, miss: 'late' },
+    { d: '14/11/2026', n: 'O’Brien Seán', q: 28 },
+    { d: '15/11/2026', n: 'Corcoran Niamh', q: 14, miss: 'new' },
   ];
+  const tidy = (n: string) => n.replace('*', '').split(' ').reverse().join(' ');
+  const short = (d: string) => d.slice(0, 6) + d.slice(8);
   const read = phase >= 3;
   const added = phase >= 6;
   return (
     <div ref={ref} className="overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border">
-      <div className="grid gap-6 bg-gradient-to-b from-secondary/70 to-background p-5 md:grid-cols-[minmax(0,17rem)_1fr] md:p-8" aria-hidden="true">
-        {/* The report (paper / PDF from the dispensing system) */}
-        <div className="relative mx-auto w-full max-w-[17rem]">
-          <div className={`relative overflow-hidden rounded-md bg-white p-3 font-mono text-[9px] leading-snug text-slate-700 shadow-xl ring-1 ring-slate-200 transition-all duration-700 ${phase >= 1 ? 'translate-y-0 rotate-0 opacity-100' : 'translate-y-6 -rotate-3 opacity-0'}`}>
-            <p className="text-[10px] font-bold text-slate-900">CD DISPENSING REPORT</p>
-            <p className="text-slate-500">Sample Pharmacy, Ennis · Dispensing system</p>
-            <p className="mt-1 border-b border-slate-300 pb-1 font-semibold text-slate-900">OxyNorm 5mg capsules · 01/11/26 – 16/11/26</p>
-            <div className="mt-1 grid grid-cols-[3.6rem_1fr_2rem] gap-x-1 text-[8px] font-bold uppercase text-slate-500"><span>Date</span><span>Patient / supplier</span><span className="text-right">Qty</span></div>
-            {REPORT.map((r) => (
-              <div key={r.n} className={`grid grid-cols-[3.6rem_1fr_2rem] gap-x-1 rounded-sm px-0.5 transition-colors duration-500 ${read && r.miss ? (added ? 'bg-brand/20' : 'bg-amber-200/80') : ''}`}>
-                <span>{r.d}</span><span className="truncate">{r.n}</span><span className="text-right">{r.q}</span>
-              </div>
-            ))}
-            <p className="mt-1 border-t border-slate-300 pt-1 text-right font-semibold">6 transactions</p>
-            {phase === 1 && <span className="demo-sweep absolute inset-x-1 h-0.5 bg-brand/80 shadow-[0_0_12px_2px_rgba(84,189,80,.7)]" />}
+      <div className="grid gap-6 bg-gradient-to-b from-secondary/70 to-background p-5 md:grid-cols-[minmax(0,21rem)_1fr] md:p-8" aria-hidden="true">
+        {/* The report: a printed drug search report from the dispensing system, photographed on the desk */}
+        <div className="relative mx-auto w-full max-w-[21rem]">
+          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-stone-300 to-stone-400 p-3">
+            <div className={`relative overflow-hidden bg-white px-2.5 pb-3 pt-2 font-sans text-[8.5px] leading-tight text-slate-800 shadow-lg transition-all duration-700 ${phase >= 1 ? 'translate-y-0 rotate-[-1.5deg] opacity-100' : 'translate-y-6 -rotate-6 opacity-0'}`}>
+              <div className="flex items-end justify-between"><p className="text-[7px] font-semibold text-slate-600">Sample Pharmacy</p><p className="text-[8px] font-bold tracking-wide text-slate-700">DRUG SEARCH REPORT</p></div>
+              <div className="mt-1.5 grid grid-cols-[3.4rem_0.9fr_1.4fr_1.1rem] gap-x-1 bg-[#b9c8e8] px-1 py-0.5 text-[7.5px] text-slate-800"><span>Date Dispensed</span><span>Patient Name</span><span>Script Dispensed As</span><span className="text-right">Qty</span></div>
+              {REPORT.map((r) => (
+                <div key={r.n} className={`grid grid-cols-[3.4rem_0.9fr_1.4fr_1.1rem] gap-x-1 px-1 py-[1.5px] transition-colors duration-500 ${read && r.miss ? (added ? 'bg-brand/25' : 'bg-amber-200') : ''}`}>
+                  <span>{r.d}</span><span className="truncate">{r.n}</span><span className="whitespace-nowrap text-[7.5px]">OXYNORM 5MG HARD CAPS</span><span className="text-right">{r.q}</span>
+                </div>
+              ))}
+              {phase === 1 && <span className="demo-sweep absolute inset-x-1 h-0.5 bg-brand/80 shadow-[0_0_12px_2px_rgba(84,189,80,.7)]" />}
+            </div>
+            {/* the phone's shadow across the page */}
+            <div className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-48 rotate-[-12deg] rounded-full bg-black/25 blur-xl" />
+            {phase === 1 && <div className="demo-flash absolute inset-0 bg-white" />}
           </div>
-          <p className={`mt-2 text-center text-xs font-semibold text-muted-foreground ${fade(phase >= 1)}`}>PDF, photo or CSV export</p>
+          <p className={`mt-2 text-center text-xs font-semibold text-muted-foreground ${fade(phase >= 1)}`}>Photo of the printed report, or a PDF / CSV</p>
         </div>
 
         {/* The stock check */}
@@ -631,15 +634,15 @@ function StockReportDemo() {
             {read && (
               <div className="mt-2 space-y-1.5">
                 <div className={`flex flex-wrap gap-1.5 text-[10px] ${fade(read)}`}>
-                  <span className="rounded-full bg-brand/15 px-2 py-0.5 font-semibold text-brand-dark">4 in the register</span>
+                  <span className="rounded-full bg-brand/15 px-2 py-0.5 font-semibold text-brand-dark">3 in the register</span>
                   <span className="rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-900">2 missing</span>
                 </div>
                 {REPORT.filter((r) => r.miss).map((r, i) => (
                   <div key={r.n} className={`rounded-lg p-2 ring-1 transition-all duration-500 ${added ? 'bg-brand/10 ring-brand/30' : 'bg-amber-50 ring-amber-300'} ${fade(read)}`} style={{ transitionDelay: phase === 3 ? `${300 + i * 300}ms` : '0ms' }}>
                     <div className="flex items-center gap-2">
                       <span className={`flex h-3.5 w-3.5 items-center justify-center rounded-sm text-[9px] font-bold text-white bg-brand`}>✓</span>
-                      <b>{r.d}</b><span className="rounded bg-slate-100 px-1 text-[8px] font-bold uppercase text-slate-600">Supply</span><span className="font-semibold">{r.n}</span>
-                      <b className="ml-auto text-red-700">{r.q}</b>
+                      <b>{short(r.d)}</b><span className="rounded bg-slate-100 px-1 text-[8px] font-bold uppercase text-slate-600">Supply</span><span className="font-semibold">{tidy(r.n)}</span>
+                      <b className="ml-auto text-red-700">−{r.q}</b>
                     </div>
                     {r.miss === 'late' && <p className="mt-1 pl-5 text-[10px] font-semibold text-violet-800">⏱ Over 24 hours: late entry with footnote</p>}
                     {added && <p className="mt-0.5 pl-5 text-[10px] font-semibold text-brand-dark">✓ Added: register line {r.miss === 'late' ? 14 : 15}</p>}
@@ -656,7 +659,7 @@ function StockReportDemo() {
             )}
           </div>
           <h3 className="mt-6 text-2xl font-bold">Stock check that finds the missing entries</h3>
-          <p className="mt-1 max-w-lg text-muted-foreground">Count doesn’t match? Upload the CD report from your dispensing system. Every line is checked against the register, anything missing is highlighted, and you tick the ones to add. One signature adds them all, with a late-entry footnote on anything over 24 hours old.</p>
+          <p className="mt-1 max-w-lg text-muted-foreground">Count doesn’t match? Photograph the drug search report from your dispensing system, or upload it as a PDF or CSV. Every line is checked against the register, anything missing is highlighted, and you tick the ones to add. One signature adds them all, with a late-entry footnote on anything over 24 hours old.</p>
           <SampleNote className="mt-2" />
         </div>
       </div>
