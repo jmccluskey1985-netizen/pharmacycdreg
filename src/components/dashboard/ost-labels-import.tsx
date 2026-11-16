@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { OstOnboardDemo } from '@/components/ost-onboard-demo';
 import { Loader2, Tags, Check } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 import { Modal } from '@/components/modal';
@@ -54,7 +55,8 @@ export function OstLabelsImport({ onDone, autoOpen = false }: { onDone: () => vo
       <button onClick={() => setOpen(true)} className="btn-secondary"><Tags className="h-4 w-4" /> <span className="hidden sm:inline">From bag labels</span></button>
       <Modal open={open} onClose={close} title="OST patients from bag labels" wide>
         <div className="space-y-3 text-sm">
-          <p className="text-muted-foreground">A one-off start: lay out a bag label for each of your methadone and buprenorphine patients and photograph them (several per photo is fine). Printed labels give accurate names, addresses and your dispensing system’s patient code, e.g. <b>(W75)</b>, which then identifies the patient on every OST form. The photos aren’t kept.</p>
+          <p className="text-muted-foreground">A one-off start: lay out a bag label for each of your methadone and buprenorphine patients and photograph them (several per photo is fine). Printed labels give accurate names, addresses and your dispensing system’s patient code, e.g. <b>(F12)</b>, which then identifies the patient on every OST form. The photos aren’t kept.</p>
+          {!rows && !busy && <OstOnboardDemo compact />}
           {!rows && (
             <label className={`btn-primary w-fit cursor-pointer ${busy ? 'pointer-events-none opacity-60' : ''}`}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Tags className="h-4 w-4" />} {busy ? 'Reading labels…' : 'Take or choose photos'}

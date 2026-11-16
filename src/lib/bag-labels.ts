@@ -30,7 +30,7 @@ export const BAG_LABELS_JSON_SCHEMA = {
         required: ['patient_name', 'patient_address', 'pmr_code', 'drug_name', 'brand', 'strength', 'form', 'daily_dose', 'dose_text', 'treatment_card_no', 'label_date'],
         properties: {
           patient_name: { ...s, description: 'Patient name as printed, WITHOUT any code in brackets' },
-          pmr_code: { ...s, description: 'The short patient code printed in brackets after the name, e.g. "W75" from "Michelle WALSH (W75)", else null' },
+          pmr_code: { ...s, description: 'The short patient code printed in brackets after the name, e.g. "F12" from "Declan FARRELL (F12)", else null' },
           patient_address: { ...s, description: 'Patient address if printed, else null' },
           drug_name: { ...s, description: 'Generic name if a medicine is printed (bag labels often have none), e.g. "Methadone hydrochloride", else null' },
           brand: { ...s, description: 'Brand or product as printed (e.g. "Methadone DTF", "Physeptone", "Pinadone"), else null' },
@@ -47,5 +47,5 @@ export const BAG_LABELS_JSON_SCHEMA = {
   },
 };
 
-export const BAG_LABELS_SYSTEM = `You read pharmacy labels (printed bag labels and medicine labels) in an Irish community pharmacy, to build the list of opioid substitution (methadone / buprenorphine) patients. Bag labels usually show a date, the patient's name (often with a short dispensing-system code in brackets, e.g. "(W75)"), the address and a charge line ("Non Chargeable", "Amount Due"); they don't name the medicine. Transcribe exactly what is printed: never guess a name, address, code or dose. Ignore the pharmacy's own name and address and the charge line. Return JSON only.`;
+export const BAG_LABELS_SYSTEM = `You read pharmacy labels (printed bag labels and medicine labels) in an Irish community pharmacy, to build the list of opioid substitution (methadone / buprenorphine) patients. Bag labels usually show a date, the patient's name (often with a short dispensing-system code in brackets, e.g. "(F12)"), the address and a charge line ("Non Chargeable", "Amount Due"); they don't name the medicine. Transcribe exactly what is printed: never guess a name, address, code or dose. Ignore the pharmacy's own name and address and the charge line. Return JSON only.`;
 export const bagLabelsPrompt = (n: number) => `${n} photo(s) of patient labels. List every patient label you can read, one item each.`;

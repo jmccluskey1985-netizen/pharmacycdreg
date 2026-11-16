@@ -72,7 +72,7 @@ export function PatientForm({ initial, typedName, onSaved, onArchived }: { initi
         {f.is_ost && (
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <div><label className="label">Treatment card no.</label><input className="input" value={f.treatment_card_no} onChange={set('treatment_card_no')} placeholder="e.g. PH 4417" /></div>
-            <div><label className="label">Dispensing system code</label><input className="input" value={f.pmr_code} onChange={set('pmr_code')} placeholder="e.g. W75 (on bag labels)" /></div>
+            <div><label className="label">Dispensing system code</label><input className="input" value={f.pmr_code} onChange={set('pmr_code')} placeholder="e.g. F12 (on bag labels)" /></div>
             <div><label className="label">Usual product</label>
               <select className="input" value={f.ost_register_id} onChange={set('ost_register_id')}>
                 <option value="">Choose…</option>

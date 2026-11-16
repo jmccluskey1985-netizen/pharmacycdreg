@@ -10,6 +10,7 @@ import { useStaff } from '@/components/dashboard/staff-context';
 import { EntryForm } from '@/components/dashboard/entry-form';
 import { PatientChoice, type PatientPick } from '@/components/dashboard/patient-choice';
 import { productFor } from '@/data/cd-products';
+import { ScannerFolder } from '@/components/dashboard/scanner-folder';
 
 type Page = { file: File; url: string };
 type Stage = 'capture' | 'reading' | 'review';
@@ -113,17 +114,29 @@ export default function ScanPage() {
     setTimeout(() => setToast(null), 3500);
   }
 
-  async function addFiles(list: FileList | null) {
+  async function addFiles(list: FileList | File[] | null) {
     if (!list) return;
     const added: Page[] = [];
-    for (const f of Array.from(list).slice(0, 10 - pages.length)) {
+    for (const f of Array.from(list).filter((f) => /^image\/|application\/pdf/.test(f.type)).slice(0, 10 - pages.length)) {
       const file = await compress(f, f.name);
       added.push({ file, url: f.type === 'application/pdf' ? '' : URL.createObjectURL(file) });
     }
     const next = [...pages, ...added];
     setPages(next);
     if (docType === 'prescription' && added.length) read(next);
+    else if (added.length) { setToast(`Page ${next.length} added: tap Read, or scan the next page`); setTimeout(() => setToast(null), 3500); }
   }
+
+  // Desktop: drop a file on the page, or paste a copied image (Ctrl+V)
+  const [dragging, setDragging] = useState(false);
+  const addRef = useRef(addFiles);
+  useEffect(() => { addRef.current = addFiles; });
+  useEffect(() => {
+    if (stage !== 'capture') return;
+    const onPaste = (e: ClipboardEvent) => { const fs = Array.from(e.clipboardData?.files ?? []); if (fs.length) { e.preventDefault(); addRef.current(fs); } };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [stage]);
 
   async function read(list: Page[] = pages) {
     if (!list.length) return;
@@ -298,7 +311,12 @@ export default function ScanPage() {
 
       {/* Upload panel (desktop, or no camera) */}
       {!live && (
-        <div className="card flex flex-col items-center px-6 py-10 text-center">
+        <div
+          className={`card flex flex-col items-center px-6 py-10 text-center transition ${dragging ? 'ring-4 ring-brand/40' : ''}`}
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files); }}
+        >
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand/15 text-brand"><Camera className="h-8 w-8" /></div>
           <h1 className="text-xl font-bold">{docType === 'invoice' ? 'Scan a wholesaler invoice' : 'Scan a prescription'}</h1>
           <p className="mt-1 max-w-md text-sm text-muted-foreground">
@@ -309,6 +327,9 @@ export default function ScanPage() {
             {camera !== 'unavailable' && <button onClick={startCamera} className="btn-secondary"><Camera className="h-4 w-4" /> Use camera</button>}
           </div>
           {camera === 'unavailable' && <p className="mt-3 text-xs text-muted-foreground">Camera not available: choose a photo instead.</p>}
+          <p className="mt-3 hidden text-xs text-muted-foreground sm:block">Or drag a scan onto this box, or paste one (Ctrl+V).</p>
+          {toast && <p className="mt-3 rounded-full bg-brand/15 px-3 py-1 text-xs font-semibold text-brand-dark" role="status">{toast}</p>}
+          <ScannerFolder active={stage === 'capture'} label={docType === 'invoice' ? 'invoice page' : 'prescription'} onFile={(f) => addFiles([f])} />
         </div>
       )}
 

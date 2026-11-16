@@ -10,7 +10,7 @@ import { BellRing, CheckCircle2, ScanLine, ShieldCheck, Camera, Loader2, ImagePl
  */
 
 /** Steps through phases 0..n-1 while visible (durations in ms), then starts again. */
-function usePhases(durations: number[]) {
+export function usePhases(durations: number[]) {
   const ref = useRef<HTMLDivElement>(null);
   const [phase, setPhase] = useState(0);
   const [visible, setVisible] = useState(false);
@@ -63,7 +63,7 @@ const fade = (on: boolean, extra = '') => `transition-all duration-500 ease-out 
 
 
 /* 0. Prescription scanned with the app's camera, then recorded in the register */
-const HAND = { fontFamily: '"Segoe Script","Bradley Hand","Snell Roundhand","Comic Sans MS",cursive' };
+export const HAND = { fontFamily: '"Segoe Script","Bradley Hand","Snell Roundhand","Comic Sans MS",cursive' };
 function FakeRx() {
   return (
     <div className="h-full w-full rounded-md bg-[#fffdf7] p-[7%] text-slate-800 shadow-inner">
@@ -178,35 +178,137 @@ function RxScanDemo() {
 }
 
 
-/* OST (methadone) form: the purple HSE form, its dispensing grid read, today's instalment recorded.
-   Every name, address and number here is made up. */
-function FakeOstForm() {
-  const cell = 'border border-[#7d6aa6]/50 bg-white/80 px-0.5';
+/* OST (methadone) form: laid out like the purple HSE form (GMS010-8082), its dispensing grid read,
+   today's instalment recorded. Every name, address and number here is made up. */
+const OST_DAYS = ['MON', 'TUES', 'WED', 'THURS', 'FRI', 'SAT', 'SUN'];
+function OstTick({ on }: { on?: boolean }) {
+  return <span className="relative inline-block h-[6px] w-[6px] flex-shrink-0 border border-[#6f5d96] bg-white">{on && <span className="absolute -top-[3px] left-[1px] text-[7px] leading-none text-slate-900" style={HAND}>✓</span>}</span>;
+}
+function OstDays({ on }: { on: string[] }) {
   return (
-    <div className="h-full w-full overflow-hidden rounded-md bg-[#dcd4ea] text-[5.5px] leading-tight text-slate-800 shadow-inner">
-      <div className="flex items-center justify-between bg-[#4a3a6e] px-1.5 py-1 text-white">
-        <p className="text-[6px] font-bold tracking-wide">OPIOID SUBSTITUTION TREATMENT<br />PRESCRIPTION FORM</p>
-        <p className="rounded bg-white px-1 font-mono text-[6px] font-bold text-slate-900">9000024</p>
+    <span className="inline-flex flex-col items-end">
+      <span className="flex">{OST_DAYS.map((d) => <span key={d} className="relative h-[6px] w-[7px] border border-[#6f5d96] bg-white">{on.includes(d) && <span className="absolute -top-[3px] left-[1px] text-[7px] leading-none text-slate-900" style={HAND}>✓</span>}</span>)}</span>
+      <span className="flex text-[2.2px] text-[#4a3a6e]">{OST_DAYS.map((d) => <span key={d} className="w-[7px] text-center">{d}</span>)}</span>
+    </span>
+  );
+}
+function FakeOstForm() {
+  const L = 'text-[3.2px] font-semibold uppercase tracking-tight text-[#4a3a6e]';
+  const box = 'border border-[#6f5d96] bg-white';
+  const hand = (sz = 6.5) => ({ ...HAND, fontSize: `${sz}px`, lineHeight: 1 });
+  const rows: [string, string, string][] = [['15 11 26', '75 (S)', 'AB'], ['16 11 26', '75 (S)', 'AB'], ['16 11 26', '300 (TA)', 'AB']];
+  return (
+    <div className="flex h-full w-full flex-col overflow-hidden rounded-[3px] bg-[#c6b9da] text-slate-800 shadow-md">
+      {/* Title and numbers */}
+      <div className="flex items-start justify-between gap-1 px-1 pt-1">
+        <p className="flex items-center gap-[2px] rounded-[1px] bg-[#45366a] px-1 py-[2px] text-[4.2px] font-extrabold leading-[1.1] tracking-wide text-white"><span className="h-[4px] w-[4px] rounded-full bg-white" />OPIOID SUBSTITUTION TREATMENT<br />PRESCRIPTION FORM</p>
+        <div className="flex gap-1">
+          <div><p className={L}>Pharmacy sequence no.</p><p className={`${box} relative h-[9px] w-[30px]`}><span className="absolute left-[9px] top-[-1px] rounded-full border border-slate-800 px-[2px]" style={hand(6)}>24</span></p></div>
+          <div><p className={L}>Serial no.</p><p className={`${box} h-[9px] w-[30px] text-center font-mono text-[6px] font-bold leading-[8px]`}>9000024</p></div>
+        </div>
       </div>
-      <div className="space-y-1 p-1.5">
-        <div className="grid grid-cols-2 gap-1">
-          <div><p className="text-[4.5px] text-[#4a3a6e]">SURNAME</p><p className={`${cell} text-[7px]`} style={HAND}>Farrell</p><p className="text-[4.5px] text-[#4a3a6e]">FIRST NAME</p><p className={`${cell} text-[7px]`} style={HAND}>Declan</p></div>
-          <div><p className="text-[4.5px] text-[#4a3a6e]">ADDRESS</p><p className={`${cell} text-[6.5px]`} style={HAND}>12 Abbey Ct, Ennis</p><p className="text-[4.5px] text-[#4a3a6e]">TREATMENT CARD NO.</p><p className={`${cell} font-mono text-[6.5px]`}>PH 4417</p></div>
-        </div>
-        <div className="rounded-sm bg-[#eef3ee] p-1">
-          <p className="text-[4.5px] text-[#4a3a6e]">DRUG NAME, FORM AND STRENGTH</p>
-          <p className={`${cell} text-[6px] font-bold`}>METHADONE DTF 1MG/ML ORAL SOLUTION</p>
-          <div className="mt-0.5 grid grid-cols-5 gap-0.5 text-center">
-            {[['FROM', '15/11/26'], ['TO', '21/11/26'], ['DOSE', '75'], ['DAYS', '7'], ['TOTAL', '525']].map(([k, v]) => <div key={k}><p className="text-[4px] text-[#4a3a6e]">{k}</p><p className={`${cell} text-[6.5px]`} style={HAND}>{v}</p></div>)}
-          </div>
-          <p className="mt-0.5 text-[6.5px]" style={HAND}>five hundred and twenty five</p>
-        </div>
+      {/* Patient details */}
+      <div className="mt-[2px] grid grid-cols-[1fr_1fr_1fr] gap-1 px-1">
         <div>
-          <p className="text-[4.5px] font-bold text-[#4a3a6e]">PHARMACY SECTION · DATE DISPENSED / QUANTITY</p>
-          {[['15/11/26', '75 (S)'], ['16/11/26', '75 (S)'], ['16/11/26', '300 (TA)']].map(([d, q], i) => (
-            <div key={i} className="grid grid-cols-[1fr_1fr_0.6fr] gap-0.5"><span className={`${cell} text-[6.5px]`} style={HAND}>{d}</span><span className={`${cell} text-[6.5px]`} style={HAND}>{q}</span><span className={`${cell} text-[6.5px]`} style={HAND}>✓</span></div>
-          ))}
+          <p className={L}>Patient details</p>
+          <div className="flex items-center gap-[2px]"><span className={`${L} w-[14px]`}>Surname</span><span className={`${box} h-[7px] flex-1 pl-[2px]`} style={hand(6.5)}>Farrell</span></div>
+          <div className="mt-[1px] flex items-center gap-[2px]"><span className={`${L} w-[14px]`}>First name</span><span className={`${box} h-[7px] flex-1 pl-[2px]`} style={hand(6.5)}>Declan</span></div>
         </div>
+        <div className="flex gap-[2px]"><span className={L}>Address</span><span className={`${box} flex-1 px-[2px] pt-[1px]`} style={hand(5)}>12 Abbey Court<br />Ennis<br />Co. Clare</span></div>
+        <div>
+          <div className="flex items-center justify-between"><span className={L}>Patient’s age if under 12 years</span><span className={`${box} h-[5px] w-[10px]`} /></div>
+          <div className="mt-[2px] flex items-center justify-between gap-[2px]"><span className={L}>Treatment card no.</span><span className={`${box} h-[7px] w-[34px] whitespace-nowrap pl-[1px] font-mono text-[5px] font-bold leading-[6px]`}>PH <span style={hand(5.5)}>4417</span></span></div>
+        </div>
+      </div>
+      {/* Prescription details + instructions */}
+      <div className="mt-[3px] grid grid-cols-[1.08fr_1fr] gap-[3px] px-1">
+        <div className="space-y-[2px] border border-[#8f80b0] bg-[#e7ece8] p-[2px]">
+          <div className="flex gap-[2px]">
+            <div><p className={L}>Prescription details</p><p className={L}>Date prescribed</p><p className={`${box} h-[7px] w-[22px] whitespace-nowrap pl-[1px]`} style={hand(4.4)}>14 11 26</p></div>
+            <div className="flex-1"><p className={L}>Drug name, form and strength</p><p className={`${box} min-h-[11px] px-[2px] pt-[1px]`} style={hand(4.4)}>Methadone DTF 1mg/ml oral solution</p></div>
+          </div>
+          <div className="grid grid-cols-5 border border-[#6f5d96] bg-white text-center">
+            {[['From', '15 11 26'], ['To', '21 11 26'], ['Dosage (qty per day)', '75'], ['No. of days at dose', '7'], ['Total (qty) in figures', '525']].map(([k, v], i) => (
+              <div key={k} className={i ? 'border-l border-[#6f5d96]' : ''}><p className="bg-[#e7ece8] text-[2.6px] font-semibold uppercase leading-[1.05] text-[#4a3a6e]">{k}</p><p className="h-[7px] whitespace-nowrap" style={hand(v.length > 3 ? 4.2 : 5.5)}>{v}</p></div>
+            ))}
+          </div>
+          <div className="flex items-end gap-[2px]"><span className={L}>Total in words</span><span className="flex-1 whitespace-nowrap border-b border-[#6f5d96]" style={hand(4.8)}>five hundred &amp; twenty five</span></div>
+          <p className="text-[2.3px] italic text-[#4a3a6e]">(NOT MORE THAN 7 DAYS SUPPLY SHOULD BE PRESCRIBED EXCEPT IN EXCEPTIONAL CIRCUMSTANCES)</p>
+          <div className="flex items-end gap-[2px]"><span className={`${L} w-[20px]`}>Doctor’s signature</span><span className="flex-1 border-b border-[#6f5d96]" style={hand(6)}>ABrennan</span></div>
+          <div className="flex items-center gap-[2px]"><span className={`${L} w-[20px]`}>Registration no.</span><span className={`${box} h-[6px] w-[30px] pl-[1px]`} style={hand(5)}>0 0 0 1 2 3</span></div>
+          <div className="flex items-center gap-[2px]"><span className={`${L} w-[20px]`}>Doctor’s GMS no.</span><span className={`${box} h-[6px] w-[26px] pl-[1px]`} style={hand(5)}>0 0 9 9 9</span></div>
+          <p className={L}>Doctor’s name, address and telephone number or stamp</p>
+          <p className={`${box} h-[12px] px-[3px]`} style={hand(4.6)}>Dr Aoife Brennan<br />Sample Health Centre, Ennis</p>
+        </div>
+        <div className="space-y-[2px] border border-[#8f80b0] bg-[#e7ece8] p-[2px]">
+          <div className="grid grid-cols-2 gap-[2px]">
+            <div className="space-y-[1px]">
+              <p className="text-[3px] font-bold uppercase leading-tight text-[#2f2547]">Opioid substitution treatment</p>
+              {[['Methadone', true], ['Buprenorphine', false], ['Buprenorphine/naloxone', false]].map(([k, on]) => <p key={k as string} className="flex items-center gap-[2px] text-[3px] uppercase text-[#2f2547]"><OstTick on={on as boolean} />{k}</p>)}
+            </div>
+            <div className="space-y-[1px]">
+              <p className="text-[3px] font-bold uppercase leading-tight text-[#2f2547]">Opioid overdose therapy (for emergency use only)</p>
+              <p className="flex items-center gap-[2px] text-[3px] uppercase text-[#2f2547]"><OstTick />Naloxone nasal spray</p>
+            </div>
+          </div>
+          <p className="text-[3.2px] font-bold uppercase text-[#2f2547]">Instalment instructions</p>
+          <p className={L}>Intervals</p>
+          <p className="flex items-center justify-between text-[3px] uppercase text-[#2f2547]">Daily <OstTick /></p>
+          <p className="flex items-center justify-between text-[3px] uppercase text-[#2f2547]">Daily (with double on Sat.) <OstTick /></p>
+          <p className="flex items-center justify-between text-[3px] uppercase text-[#2f2547]">Other (tick) <OstDays on={['MON', 'SAT', 'SUN']} /></p>
+          <p className="pt-[1px] text-[3.2px] font-bold uppercase text-[#2f2547]">Supervision instructions</p>
+          <p className="flex items-center justify-between text-[3px] uppercase text-[#2f2547]">Supervised <span className="flex gap-[1px] text-[2.4px]">YES<OstTick on />NO<OstTick /></span></p>
+          <p className="flex items-center justify-between text-[3px] uppercase text-[#2f2547]">Daily <OstTick /></p>
+          <p className="flex items-center justify-between text-[3px] uppercase text-[#2f2547]">Days for supervision <OstDays on={['MON', 'SAT', 'SUN']} /></p>
+          <p className="flex items-center justify-between text-[2.6px] uppercase text-[#2f2547]">Double dose every second day (bup./naloxone only) <OstTick /></p>
+          <p className="flex items-center justify-between text-[2.6px] uppercase text-[#2f2547]">Additional bank holiday supply <OstTick /></p>
+        </div>
+      </div>
+      {/* Pharmacy section */}
+      <div className="mt-[3px] flex-1 bg-[#b3a4cc] px-1 pb-1 pt-[2px]">
+        <div className="flex items-end gap-[3px]">
+          <span className="text-[3.4px] font-bold uppercase text-[#2f2547]">Pharmacy section</span>
+          <span className={L}>Pharmacy GMS no.</span><span className={`${box} h-[6px] w-[20px] pl-[1px]`} style={hand(4.5)}>0 0 0 0</span>
+        </div>
+        <div className="mt-[2px] grid grid-cols-[1.08fr_1fr] gap-[3px]">
+          <div>
+            <div className="grid grid-cols-[1fr_1fr_1fr_0.6fr] gap-[2px]">
+              <div><p className={L}>Drug code</p><p className={`${box} h-[7px] pl-[1px] tracking-[1.5px]`} style={hand(5.5)}>46115</p></div>
+              <div><p className={L}>Quantity</p><p className={`${box} h-[7px] text-center`} style={hand(5.5)}>525</p></div>
+              <div><p className={L}>No. of instalments</p><p className={`${box} h-[7px] text-center`} style={hand(5.5)}>3</p></div>
+              <div><p className={L}>Days sup.</p><p className={`${box} h-[7px] text-center`} style={hand(5.5)}>3</p></div>
+            </div>
+            <div className="mt-[2px] grid grid-cols-[1fr_1fr_0.7fr] text-[3px] font-semibold uppercase text-[#4a3a6e]"><span>Date dispensed</span><span>Quantity</span><span>Pharmacist’s initials</span></div>
+            <div className="border border-[#6f5d96] bg-white">
+              {Array.from({ length: 4 }, (_, i) => rows[i] ?? ['', '', '']).map(([d, q, n], i) => (
+                <div key={i} className="grid h-[7px] grid-cols-[1fr_1fr_0.7fr] whitespace-nowrap border-t border-[#8f80b0] first:border-t-0">
+                  <span className="pl-[1px]" style={hand(4.5)}>{d}</span>
+                  <span className="border-l border-[#8f80b0] pl-[2px]" style={hand(5.5)}>{q}</span>
+                  <span className="border-l border-[#8f80b0] pl-[2px]" style={hand(5.5)}>{n}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col">
+            <p className={L}>Pharmacy name &amp; address stamp</p>
+            <div className="flex h-[22px] items-center justify-center bg-white">
+              <div className="rotate-[-3deg] border border-slate-700 px-[3px] py-[1px] text-center font-semibold leading-[1.15] text-slate-700">
+                <p className="text-[3.6px] font-bold">Sample Pharmacy</p>
+                <p className="text-[3px]">Main Street, Ennis</p>
+                <p className="text-[4.2px] font-bold tracking-wider">15 NOV 2026</p>
+              </div>
+            </div>
+            <p className="mt-[3px] text-[2.6px] uppercase text-[#2f2547]">I verify that I have dispensed the item(s) specified hereon</p>
+            <p className="flex items-end gap-[2px] text-[2.6px] uppercase text-[#2f2547]">Pharmacist’s signature <span className="flex-1 border-b border-[#6f5d96]" style={hand(5.5)}>ABurke</span></p>
+            <p className="mt-[2px] text-[2.6px] uppercase text-[#2f2547]">I verify that I have received the item(s) specified hereon</p>
+            <p className="flex items-end gap-[2px] text-[2.6px] uppercase text-[#2f2547]">Signature <span className="flex-1 border-b border-[#6f5d96]" style={hand(5.5)}>D Farrell</span></p>
+          </div>
+        </div>
+      </div>
+      {/* Footer */}
+      <div className="bg-[#ece9e1] px-1 py-[2px]">
+        <p className="text-[2.8px] font-bold uppercase text-[#2f2547]">To be completed in the case of non-opiate dependent person (for methadone use only)</p>
+        <p className="text-[2.2px] text-[#4a3a6e]">Sample form for illustration · details are fictional</p>
       </div>
     </div>
   );

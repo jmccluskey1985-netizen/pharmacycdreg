@@ -56,8 +56,8 @@ eq('treatment card + one-letter misspelling → certain', top({ full_name: 'Decl
 const otherCard = matchPatients({ full_name: 'Declan Farrell', card: 'PH 9999' }, ostPool).find((c) => c.patient.id === 'ost1');
 eq('same name, different treatment card → conflict, not certain', [otherCard?.level, otherCard?.conflicts.includes('Different treatment card')], ['possible', true]);
 
-const pmrPool = [P('w75', 'Michaela', 'Walshe', { pmr_code: 'W75' })];
-eq('dispensing system code from a bag label + similar name → certain', top({ full_name: 'Michaela Walsh', pmr: 'w 75' }, pmrPool), ['w75', 'certain']);
+const pmrPool = [P('f12', 'Declan', 'Farrell', { pmr_code: 'F12' })];
+eq('dispensing system code from a bag label + similar name → certain', top({ full_name: 'Declan Farell', pmr: 'f 12' }, pmrPool), ['f12', 'certain']);
 
 // Record-to-record (Possible duplicates): no full_name, first name and surname given separately
 const recDup = matchPatients({ first_name: 'Mary', surname: "O'Brien", dob: '1950-03-12' }, pool);

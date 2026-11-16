@@ -1,11 +1,19 @@
 'use client';
 
 import Link from 'next/link';
+import { OstOnboardDemo } from '@/components/ost-onboard-demo';
 import { useState } from 'react';
 import { Search } from 'lucide-react';
 
-const GUIDES: { title: string; tags: string; steps: (string | React.JSX.Element)[]; link?: { href: string; label: string } }[] = [
+const GUIDES: { title: string; tags: string; steps: (string | React.JSX.Element)[]; link?: { href: string; label: string }; visual?: React.ReactNode }[] = [
   { title: 'Record a supply from a prescription', tags: 'scan rx dispense supply', steps: ['Tap Scan Rx (top of every page).', 'Photograph the prescription: it reads the patient, prescriber, drug and quantity.', 'Check every field against the prescription, then Sign & record. Nothing is recorded until you sign.'], link: { href: '/dashboard/scan?type=prescription', label: 'Scan Rx' } },
+  { title: 'Use the scanner on your PC instead of a photo', tags: 'scanner scan pc computer desktop folder pdf invoice prescription', steps: [
+    'Open Scan Rx in Chrome or Edge on the PC that has the scanner.',
+    'Under Scanner on this computer, click Connect scanner folder and choose the folder your scanner saves to (e.g. Pictures › Scans or Documents › Scanned Documents; your scanner app’s settings show it).',
+    'Set the scanner to save as PDF or JPEG. If Chrome asks, choose Allow on every visit.',
+    'Now just press Scan on the scanner: a prescription is read as soon as it lands; invoice pages are added one by one, then click Read.',
+    'You can also drag a scanned file onto the page, or paste it with Ctrl+V. Files in the folder are never changed or deleted.',
+  ] },
   { title: 'Book in a delivery (invoice / CD docket)', tags: 'invoice receipt wholesaler uniphar united drug pco', steps: ['New entry → From an invoice → Photograph the invoice.', 'It works out packs × pack size and picks up the invoice number (not your account number).', 'Check each line and sign. The same invoice can’t be booked in twice.'] },
   { title: 'Type an entry by hand', tags: 'manual entry type', steps: ['Open the drug’s register and click the next empty row (or New entry).', 'Start typing a patient, doctor or supplier, known ones fill in automatically.', 'Check the balance preview, then Sign & record.'] },
   { title: 'Correct a mistake', tags: 'correction wrong error amend', steps: ['On the register, click the pencil on the wrong line.', 'Enter the right details and the reason.', 'The original stays visible, struck through, with a footnote, that’s what the law requires.'] },
@@ -14,12 +22,12 @@ const GUIDES: { title: string; tags: string; steps: (string | React.JSX.Element)
     'Do this once, at the start: it means OST forms are matched to the right patient even when the handwriting or address on the form is hard to read.',
     'Patients → From bag labels (or the step in Getting started).',
     'Lay out one printed bag label per OST patient (from your dispensing system) and photograph them, several per photo is fine.',
-    'It reads each name, address and the code in brackets after the name, e.g. (W75): that is the patient’s code in your dispensing system.',
+    'It reads each name, address and the code in brackets after the name, e.g. (F12): that is the patient’s code in your dispensing system.',
     'Choose the product for everyone (e.g. Methadone DTF), change any patient on a different product, and add the treatment card number (PH…) from their HSE card if you have it.',
     'Check each row is linked to the right existing patient, or will be added as new, then Save to the OST list.',
     'From then on, scanning an OST form matches the patient by treatment card or dispensing code first, so an unclear name or missing address doesn’t matter.',
     'New patient later? Add them the same way, or open their record → OST section and tick OST patient. Patients → OST patients shows the list.',
-  ], link: { href: '/dashboard/patients?ost=labels', label: 'Add OST patients from bag labels' } },
+  ], link: { href: '/dashboard/patients?ost=labels', label: 'Add OST patients from bag labels' }, visual: <OstOnboardDemo compact /> },
   { title: 'Stock check and discrepancies', tags: 'stock check count balance discrepancy adjust', steps: ['On the register: Stock check → count the CD safe (include stock set aside for destruction).', 'If it doesn’t match, recount and look at recent entries, invoices and prescriptions first.', 'Still wrong? Amend balance adds a signed stock-adjustment line with what you found, and can save it as a note with photos.'] },
   { title: 'Expired stock and destructions', tags: 'expired destruction quarantine witness', steps: ['Expired Schedule 2 stock: Set aside on the register. It stays in the balance, labelled in the CD safe.', 'When an authorised witness attends: Destructions → tick the items → Record witnessed destruction.', 'Patient returns and expired Sch 3/4 stock go in the separate CD Destruction Record Book.'], link: { href: '/dashboard/destructions', label: 'Destructions' } },
   { title: 'An inspection', tags: 'inspection inspector psi audit print', steps: ['Audit trail → Verify integrity shows the register hasn’t been altered.', 'Audit trail → Inspector access creates a read-only link that expires on its own.', 'Every register prints (or saves as PDF) in the statutory layout with page numbers.'], link: { href: '/dashboard/audit', label: 'Audit trail' } },
@@ -41,8 +49,9 @@ export default function HelpPage() {
       <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input className="input pl-9" placeholder="Search, e.g. correction, destruction, inspection" value={q} onChange={(e) => setQ(e.target.value)} /></div>
       <div className="grid gap-3 md:grid-cols-2">
         {shown.map((g) => (
-          <details key={g.title} className="card group p-4" open={!!q}>
+          <details key={g.title} className={`card group p-4 ${g.visual ? 'md:col-span-2' : ''}`} open={!!q || !!g.visual}>
             <summary className="cursor-pointer list-none font-semibold">{g.title}</summary>
+            {g.visual && <div className="mt-3">{g.visual}</div>}
             <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm">{g.steps.map((s, i) => <li key={i}>{s}</li>)}</ol>
             {g.link && <Link href={g.link.href} className="mt-2 inline-block text-sm font-semibold text-primary underline">{g.link.label} →</Link>}
           </details>

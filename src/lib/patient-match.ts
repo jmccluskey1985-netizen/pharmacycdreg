@@ -34,7 +34,7 @@ export interface PatientProbe {
   mrn?: string | null;
   /** HSE opioid substitution treatment card, e.g. "PH 1234" */
   card?: string | null;
-  /** The dispensing system's patient code from a bag label, e.g. "W75" */
+  /** The dispensing system's patient code from a bag label, e.g. "F12" */
   pmr?: string | null;
 }
 
