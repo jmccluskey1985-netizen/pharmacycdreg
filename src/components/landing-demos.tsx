@@ -325,9 +325,9 @@ function OstScanDemo() {
   const recorded = phase >= 5;
   return (
     <div ref={ref} className="overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border">
-      <div className="grid gap-6 bg-gradient-to-b from-secondary/70 to-background p-5 md:grid-cols-[1fr_minmax(0,15rem)] md:p-8" aria-hidden="true">
+      <div className="grid gap-6 bg-gradient-to-b from-secondary/70 to-background p-5 md:grid-cols-[minmax(0,15rem)_1fr] md:p-8" aria-hidden="true">
         {/* Register */}
-        <div className="order-2 flex min-w-0 flex-col md:order-1 md:pt-10">
+        <div className="order-2 flex min-w-0 flex-col md:pt-10">
           <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Methadone DTF 1mg/ml oral solution · register (ml)</p>
           <div className="mt-2 overflow-x-auto rounded-lg bg-white text-[11px] text-slate-800 shadow ring-1 ring-slate-200">
             <div className="grid min-w-[26rem] grid-cols-[3.2rem_1fr_7rem_2.6rem_3.4rem] bg-slate-100 px-3 py-2 text-[9px] font-bold uppercase tracking-wide text-slate-500"><span>Date</span><span>Supplied to</span><span>Authority</span><span className="text-right">Out</span><span className="text-right">Balance</span></div>
@@ -350,7 +350,7 @@ function OstScanDemo() {
         </div>
 
         {/* Phone */}
-        <div className="order-1 mx-auto w-[15rem] rounded-[2.2rem] bg-slate-900 p-2 shadow-xl md:order-2">
+        <div className="order-1 mx-auto w-[15rem] rounded-[2.2rem] bg-slate-900 p-2 shadow-xl">
           <div className="relative h-[27rem] overflow-hidden rounded-[1.8rem] bg-black">
             {phase <= 1 && (
               <>
@@ -363,8 +363,10 @@ function OstScanDemo() {
                   </div>
                 </div>
                 <p className="absolute inset-x-0 top-3 mx-auto w-max rounded-full bg-black/60 px-2.5 py-1 text-[9px] font-medium text-white">Line up the OST form inside the frame</p>
-                <div className="absolute inset-x-0 bottom-0 flex items-center justify-center bg-gradient-to-t from-black/80 to-transparent px-4 pb-4 pt-8">
+                <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/80 to-transparent px-4 pb-4 pt-8">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white"><ImagePlus className="h-4 w-4" /></span>
                   <span className={`flex h-14 w-14 items-center justify-center rounded-full border-4 border-white bg-white/20 transition-transform duration-150 ${phase === 1 ? 'scale-90' : ''}`}><span className="h-10 w-10 rounded-full bg-white" /></span>
+                  <span className="h-8 w-8" />
                 </div>
                 {phase === 1 && <div className="demo-flash absolute inset-0 bg-white" />}
               </>
