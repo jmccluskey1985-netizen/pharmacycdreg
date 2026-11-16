@@ -5,7 +5,8 @@ import { BellRing, CheckCircle2, ScanLine, ShieldCheck, Camera, Loader2, ImagePl
 
 /**
  * "See it in action": four small looping animations of what the dashboard does. Pure React + CSS,
- * no video. Each one only runs while it's on screen, and stays still for reduced-motion users.
+ * no video. Each one only runs while it's on screen. They play on every computer (including ones
+ * with Windows animations turned off) because the owner wants them seen; the movement is gentle.
  */
 
 /** Steps through phases 0..n-1 while visible (durations in ms), then starts again. */
@@ -13,9 +14,7 @@ function usePhases(durations: number[]) {
   const ref = useRef<HTMLDivElement>(null);
   const [phase, setPhase] = useState(0);
   const [visible, setVisible] = useState(false);
-  const reduced = useRef(false);
   useEffect(() => {
-    reduced.current = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const el = ref.current;
     if (!el || typeof IntersectionObserver === 'undefined') { setVisible(true); return; }
     const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), { threshold: 0.35 });
@@ -24,7 +23,6 @@ function usePhases(durations: number[]) {
   }, []);
   useEffect(() => {
     if (!visible) return;
-    if (reduced.current) { setPhase(durations.length - 1); return; }
     const t = setTimeout(() => setPhase((p) => (p + 1) % durations.length), durations[phase]);
     return () => clearTimeout(t);
   }, [visible, phase, durations]);

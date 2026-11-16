@@ -15,18 +15,17 @@ export function FadeIn({ children, delay = 0, className = '', as: Tag = 'div' }:
   }, []);
   return (
     <Tag ref={ref as any} style={{ transitionDelay: `${delay}ms` }}
-      className={`transition-all duration-700 ease-out motion-reduce:transition-none ${shown ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'} ${className}`}>
+      className={`transition-all duration-700 ease-out ${shown ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'} ${className}`}>
       {children}
     </Tag>
   );
 }
 
-/** One phrase at a time, gently swapped every few seconds. Still for reduced-motion users. */
+/** One phrase at a time, gently swapped every few seconds. */
 export function RotatingWords({ words, interval = 2600, className = '' }: { words: string[]; interval?: number; className?: string }) {
   const [i, setI] = useState(0);
   const [out, setOut] = useState(false);
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     const t = setInterval(() => {
       setOut(true);
       setTimeout(() => { setI((x) => (x + 1) % words.length); setOut(false); }, 350);

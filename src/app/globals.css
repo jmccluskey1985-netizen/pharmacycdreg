@@ -158,7 +158,6 @@
 @keyframes scanSweep { from { top: -2rem; } to { top: 100%; } }
 .bell-ring { animation: bellRing 1.2s ease-in-out infinite; transform-origin: 50% 10%; }
 @keyframes bellRing { 0%,60%,100% { transform: rotate(0); } 10% { transform: rotate(16deg); } 20% { transform: rotate(-14deg); } 30% { transform: rotate(10deg); } 40% { transform: rotate(-6deg); } }
-@media (prefers-reduced-motion: reduce) { .scan-sweep, .bell-ring, .demo-sweep, .demo-flash { animation: none; } }
 /* Landing page ticks: circle pops in, then the tick draws itself. */
 .ticks .tick-item { opacity: 0; transform: translateY(6px); }
 .ticks .tick-circle { transform: scale(.4); transform-origin: center; transform-box: fill-box; }
@@ -169,23 +168,19 @@
 @keyframes tickIn { to { opacity: 1; transform: none; } }
 @keyframes tickPop { to { transform: scale(1); } }
 @keyframes tickDraw { to { stroke-dashoffset: 0; } }
-@media (prefers-reduced-motion: reduce) {
-  .ticks .tick-item, .ticks .tick-circle, .ticks .tick-path { opacity: 1; transform: none; stroke-dashoffset: 0; animation: none !important; }
-}
 /* Landing page: a slower, more deliberate turn. */
 .book-slow .book-cover { transition-duration: 2.6s, 2.6s; transition-timing-function: cubic-bezier(.45,.05,.3,1); }
 .book-pages { opacity: 0; transform: scale(.985); transition: opacity .5s .55s, transform .6s .5s; }
 .book.open .book-pages { opacity: 1; transform: none; }
 .page-turn { animation: pageTurn .45s ease-out; }
 @keyframes pageTurn { from { opacity: .2; transform: translateX(14px); } to { opacity: 1; transform: none; } }
-/* Reduced motion (often off on work PCs and remote desktops): no 3D turn, but a calm cross-fade
-   from the cover to the page, so the change can still be seen. */
+/* Reduced motion (often off on work PCs and remote desktops): in the app, no 3D turn but a calm
+   cross-fade. The public landing page's animations play regardless (the owner's choice). */
 @media (prefers-reduced-motion: reduce) {
-  .book-cover { transition: opacity 1.2s ease-in-out; }
-  .book.open .book-cover { transform: none; opacity: 0; }
-  .book-slow .book-cover { transition: opacity 2s ease-in-out; }
-  .book-pages { transition: opacity 1.2s .4s; transform: none; }
-  .book-slow .book-pages { transition: opacity 2s .6s; }
+  /* Dashboard registers only: the landing page's book (.book-slow) always turns */
+  .book:not(.book-slow) .book-cover { transition: opacity 1.2s ease-in-out; }
+  .book.open:not(.book-slow) .book-cover { transform: none; opacity: 0; }
+  .book:not(.book-slow) .book-pages { transition: opacity 1.2s .4s; transform: none; }
   .page-turn { animation: none; }
 }
 
