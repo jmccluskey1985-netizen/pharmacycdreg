@@ -88,3 +88,6 @@ select pg_temp.ok(true, 'attempt limits: refused after the limit, keys stored ha
 insert into staff(pharmacy_id,full_name,role) select id,'Super Intendent','superintendent_pharmacist' from pharmacies limit 1;
 insert into staff(pharmacy_id,full_name,role) select id,'Sue Port','support_pharmacist' from pharmacies limit 1;
 select pg_temp.ok((select count(*) = 2 from staff where role in ('superintendent_pharmacist','support_pharmacist')) and to_regclass('public.pharmacy_logins') is not null, 'superintendent and support pharmacist roles; pharmacy_logins table');
+
+-- 0021: every public function pins its search_path
+select pg_temp.ok(not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.prokind = 'f' and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) c where c like 'search_path=%') and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')), 'every database function has a fixed search path');

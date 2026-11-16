@@ -12,7 +12,7 @@ export const COMPANY = {
 
 /** Companies that process data on our behalf (GDPR Art. 28 sub-processors). */
 export const SUBPROCESSORS = [
-  { name: 'Supabase Inc.', purpose: 'Database, sign-in and file storage (register, patients, notes, photos)', location: 'EU (Ireland / Frankfurt region)', safeguard: 'EU hosting; DPA with Standard Contractual Clauses' },
+  { name: 'Supabase Inc.', purpose: 'Database, sign-in and file storage (register, patients, notes, photos)', location: 'EU (Paris, France: eu-west-3)', safeguard: 'EU hosting; DPA with Standard Contractual Clauses' },
   { name: 'Vercel Inc.', purpose: 'Web hosting and the app’s servers', location: 'Servers pinned to Dublin (dub1)', safeguard: 'DPA with Standard Contractual Clauses' },
   { name: 'Google Cloud EMEA Ltd. (Vertex AI)', purpose: 'Reads photos of prescriptions, invoices and register pages with an AI model. Only when you scan', location: 'EU (Vertex AI EU multi-region)', safeguard: 'Cloud Data Processing Addendum; data not used to train models; processed in the EU' },
   { name: 'Stripe Payments Europe Ltd.', purpose: 'Subscription billing (no patient data)', location: 'Ireland / EU', safeguard: 'DPA' },
