@@ -12,6 +12,19 @@ import { RegisterCoverPreview } from '@/components/register-cover-preview';
 import { LandingDemos, SampleNote } from '@/components/landing-demos';
 import { homepageJsonLd, jsonLd } from '@/lib/structured-data';
 
+/** Plain answers to what pharmacists ask first. Every answer must stay true of the live system. */
+const DATA_QA: { q: string; a: string; detail: string; more: string }[] = [
+  { q: 'Is there a data processing agreement with the AI provider?', a: 'Yes', detail: 'Google Cloud’s Data Processing Addendum, a GDPR agreement, covers the AI that reads your scans.', more: 'https://cloud.google.com/terms/data-processing-addendum' },
+  { q: 'Is my data used to train AI?', a: 'No', detail: 'Under those terms, Google doesn’t use your prescriptions or invoices to train its models.', more: 'https://cloud.google.com/vertex-ai/generative-ai/docs/data-governance' },
+  { q: 'Where is it processed?', a: 'EU', detail: 'Scans are read by Google’s Vertex AI in the EU, and the register is hosted in the EU.', more: '/data-safety' },
+  { q: 'Are the photos stored?', a: 'No', detail: 'We don’t keep them: only the details read from them.', more: '/privacy' },
+  { q: 'Can the AI change my register?', a: 'No', detail: 'It only suggests. Nothing is recorded until a pharmacist checks it and signs with their PIN.', more: '/security' },
+  { q: 'How is my data kept secure?', a: 'Encrypted', detail: 'Encrypted in transit and at rest. Two locks: the pharmacy login (two-step sign-in available) and each person’s own PIN. Roles limit what staff can do and screens lock when left idle.', more: '/security' },
+  { q: 'Can register entries be changed or deleted?', a: 'Never', detail: 'Corrections are new lines beside the original. Every line is sealed with a fingerprint, so any tampering shows up in one click.', more: '/security' },
+  { q: 'Is my register backed up?', a: 'Yes', detail: 'Download a password-protected full backup any time. A restore tool rebuilds it and proves every line matches, and a weekly email keeps each register’s fingerprint outside the system.', more: '/data-safety' },
+  { q: 'Is patient data used for marketing?', a: 'Never', detail: 'It’s used only to keep your register.', more: '/privacy' },
+];
+
 const FEATURES = [
   { icon: Clock, title: 'Saves time, every day', text: 'Balances work themselves out, entries take seconds and regular repeat supplies are one click. Stock checks are quicker too.' },
   { icon: Target, title: 'More accurate records', text: 'No arithmetic slips carried down the page. Every entry is checked for duplicates and impossible balances before it’s signed.' },
@@ -180,20 +193,14 @@ export default function LandingPage() {
           <FadeIn delay={300} as="p" className="mt-5 max-w-xl text-lg text-muted-foreground">
             More accurate records, quicker entries and no more rooting through tattered CD books to find the right page. Every receipt, supply and destruction of Schedule 2 drugs is recorded, balanced and searchable, built around the IPU eCDR requirements for Irish community pharmacies.
           </FadeIn>
-          <TickList className="mt-6 max-w-xl" items={['Running balances calculated for you', 'Duplicate and error checks on every entry', 'Tamper-evident audit trail', 'Read-only links for inspectors', 'Works on phone, tablet and PC', 'Your data stays in the EU']} />
-          <FadeIn delay={150} className="mt-6 max-w-xl rounded-2xl bg-card p-5 shadow-soft ring-2 ring-brand/30">
-            <p className="flex items-center gap-2 font-bold text-brand-dark"><Lock className="h-5 w-5 flex-shrink-0 text-brand" /> Patient data and AI: covered by a written agreement</p>
-            <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
-              <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand" />Scans are read by Google’s Vertex AI in the EU, under Google Cloud’s Data Processing Addendum, a GDPR data processing agreement.</li>
-              <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand" />Under those terms, Google doesn’t use your prescriptions or invoices to train its AI models.</li>
-              <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand" />We don’t keep the photos: only the details read from them, which a pharmacist checks and signs.</li>
-              <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand" />Your pharmacy gets its own data processing agreement with us, too.</li>
-            </ul>
-            <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm font-semibold">
-              <a href="https://cloud.google.com/terms/data-processing-addendum" target="_blank" rel="noopener noreferrer" className="text-primary underline">Google’s data processing agreement ↗</a>
-              <a href="/data-safety" className="text-primary underline">Data safety at a glance</a>
-            </p>
+          <FadeIn delay={150} className="mt-6 max-w-xl">
+            <a href="#data" className="group flex flex-wrap items-center gap-2 rounded-2xl bg-brand-dark/95 px-4 py-3 text-sm text-white shadow-soft transition hover:bg-brand-dark">
+              <Lock className="h-4 w-4 flex-shrink-0 text-brand" />
+              {['Data processing agreement in place', 'Processed in the EU', 'Not used to train AI', 'Encrypted and backed up'].map((t) => <span key={t} className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-medium ring-1 ring-white/15">{t}</span>)}
+              <span className="ml-auto text-xs font-semibold text-brand group-hover:underline">Your questions answered ↓</span>
+            </a>
           </FadeIn>
+          <TickList className="mt-6 max-w-xl" items={['Running balances calculated for you', 'Duplicate and error checks on every entry', 'Tamper-evident audit trail', 'Read-only links for inspectors', 'Works on phone, tablet and PC', 'Your data stays in the EU']} />
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             {FEATURES.map((f, i) => (
               <FadeIn key={f.title} delay={i * 90} className="flex gap-3 rounded-xl bg-card/70 p-4 ring-1 ring-border">
@@ -204,6 +211,34 @@ export default function LandingPage() {
                 </div>
               </FadeIn>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Patient data and AI, answered */}
+      <section id="data" className="relative scroll-mt-4 overflow-hidden bg-brand-dark text-white">
+        <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-brand/30 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-brand/20 blur-3xl" />
+        <div className="relative mx-auto max-w-6xl px-4 py-14 sm:px-6">
+          <p className="text-sm font-semibold uppercase tracking-widest text-brand">Peace of mind</p>
+          <h2 className="mt-2 text-3xl font-bold tracking-tight">Your data, security and AI, answered</h2>
+          <p className="mt-2 max-w-2xl text-white/70">The questions pharmacists ask us first, in plain words.</p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {DATA_QA.map((r, i) => (
+              <FadeIn key={r.q} delay={i * 80} className="h-full">
+                <a href={r.more} {...(r.more.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})} className="group flex h-full flex-col rounded-2xl bg-white/[0.06] p-5 ring-1 ring-white/10 backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:ring-brand/50">
+                  <p className="text-3xl font-extrabold tracking-tight text-brand">{r.a}</p>
+                  <p className="mt-2 font-semibold">{r.q}</p>
+                  <p className="mt-1 text-sm text-white/70">{r.detail}</p>
+                  <p className="mt-auto pt-3 text-xs font-semibold text-brand opacity-80 group-hover:opacity-100">Find out more {r.more.startsWith('http') ? '↗' : '→'}</p>
+                </a>
+              </FadeIn>
+            ))}
+          </div>
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <a href="https://cloud.google.com/terms/data-processing-addendum" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-brand-dark transition hover:brightness-110"><ShieldCheck className="h-4 w-4" /> Google’s data processing agreement ↗</a>
+            <a href="/data-safety" className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold ring-1 ring-white/20 transition hover:bg-white/15"><Lock className="h-4 w-4" /> Data safety at a glance</a>
+            <span className="text-sm text-white/60">Your pharmacy also gets its own data processing agreement with us.</span>
           </div>
         </div>
       </section>

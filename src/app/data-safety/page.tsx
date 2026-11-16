@@ -55,6 +55,7 @@ const SECTIONS = [
       'Photos are read by Google’s Gemini on Vertex AI in the EU, under Google Cloud’s data processing terms. Google doesn’t use them to train models.',
       'Photos aren’t kept after reading: only the details read from them, for a pharmacist to check.',
       'Nothing is recorded until a pharmacist checks it and signs with their PIN.',
+      'Patient details are used only to keep your register: never for marketing.',
     ],
   },
   {
