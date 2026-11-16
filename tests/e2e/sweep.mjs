@@ -259,6 +259,15 @@ await step('typed supply: an existing patient is offered before a new record is 
   if (await page.isVisible('text=Is this one of your patients?')) throw new Error('still asking');
 });
 
+await step('OST patients onboarded from bag labels', async () => {
+  await page.goto(B + '/dashboard/patients?ost=labels'); await page.waitForTimeout(1000);
+  await see('text=OST patients from bag labels');
+  await page.setInputFiles('input[type=file][multiple]', { name: 'labels.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64') });
+  await see('text=Aisling Moran', 8000);
+  await click('button:has-text("Save 2 to the OST list")');
+  await see('text=/1 added, 1 updated/');
+});
+
 await step('patients: possible duplicates can be merged', async () => {
   await page.goto(B + '/dashboard/patients'); await page.waitForTimeout(800);
   await click('button:has-text("Possible duplicates")');

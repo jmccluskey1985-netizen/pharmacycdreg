@@ -44,7 +44,7 @@ const ItemSchema = z.object({
 const DAY = z.enum(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']);
 /** HSE Opioid Substitution Treatment prescription form (GMS010-8082): the script and its dispensing grid. */
 export const OstSchema = z.object({
-  serial_no: strN, pharmacy_sequence_no: strN.optional(), treatment_card_no: strN.optional(),
+  serial_no: strN, pharmacy_sequence_no: strN.optional(), treatment_card_no: strN.optional(), drug_code: strN.optional(),
   date_prescribed: strN.optional(), from_date: strN.optional(), to_date: strN.optional(),
   product: z.enum(['methadone', 'buprenorphine', 'buprenorphine_naloxone']).nullable().catch(null),
   drug_written: strN.optional(),
@@ -151,11 +151,12 @@ const JSON_SCHEMA = {
       type: ['object', 'null'],
       description: 'ONLY for the purple HSE "Opioid Substitution Treatment Prescription Form" (methadone / buprenorphine). null for every other document.',
       additionalProperties: false,
-      required: ['serial_no', 'pharmacy_sequence_no', 'treatment_card_no', 'date_prescribed', 'from_date', 'to_date', 'product', 'drug_written', 'daily_dose', 'dose_unit', 'days_at_dose', 'total_figures', 'total_words', 'instalment_daily', 'instalment_double_sat', 'instalment_days', 'supervised', 'supervised_daily', 'supervised_days', 'dispensings'],
+      required: ['serial_no', 'pharmacy_sequence_no', 'treatment_card_no', 'drug_code', 'date_prescribed', 'from_date', 'to_date', 'product', 'drug_written', 'daily_dose', 'dose_unit', 'days_at_dose', 'total_figures', 'total_words', 'instalment_daily', 'instalment_double_sat', 'instalment_days', 'supervised', 'supervised_daily', 'supervised_days', 'dispensings'],
       properties: {
         serial_no: { ...nullableString, description: 'Printed SERIAL NO. (top right), e.g. "7453079"' },
         pharmacy_sequence_no: { ...nullableString, description: 'Handwritten PHARMACY SEQUENCE NO.' },
         treatment_card_no: { ...nullableString, description: 'TREATMENT CARD NO., e.g. "PH 3816"' },
+        drug_code: { ...nullableString, description: 'PHARMACY SECTION → DRUG CODE boxes (the product dispensed, e.g. "46115"), digits only, else null' },
         date_prescribed: { ...nullableString, description: 'DATE PRESCRIBED as YYYY-MM-DD' },
         from_date: { ...nullableString, description: 'FROM date as YYYY-MM-DD' },
         to_date: { ...nullableString, description: 'TO date as YYYY-MM-DD' },

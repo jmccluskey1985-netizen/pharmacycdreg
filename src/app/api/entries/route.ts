@@ -77,7 +77,7 @@ export async function POST(req: Request) {
       const d = choice.details;
       const r = await resolvePatientForEntry(db, account.pharmacyId, {
         patientId: f.patient_id ?? null, newPatient: choice.newPatient, interactive: choice.interactive, update: choice.update,
-        probe: { full_name: f.recipient_name, first_name: d.first_name, surname: d.surname, address: f.recipient_address ?? null, dob, eircode: d.eircode, gms: d.gms, dps: d.dps, lti: d.lti, mrn: d.mrn },
+        probe: { full_name: f.recipient_name, first_name: d.first_name, surname: d.surname, address: f.recipient_address ?? null, dob, eircode: d.eircode, gms: d.gms, dps: d.dps, lti: d.lti, mrn: d.mrn, card: d.card },
         gp: f.entry_type === 'supply' ? { name: f.prescriber_name ?? null, address: f.prescriber_address ?? null } : undefined,
       }).catch(() => ({ kind: 'none' as const }));
       if (r.kind === 'choose') {
@@ -122,6 +122,14 @@ export async function POST(req: Request) {
         if (held) {
           await db.from('ost_dispensings').update({ entry_id: data.id }).eq('prescription_id', held.id).eq('dispensed_on', (row as any).transaction_date).is('entry_id', null);
           if (!held.patient_id && (row as any).patient_id) await db.from('ost_prescriptions').update({ patient_id: (row as any).patient_id }).eq('id', held.id);
+        }
+        // Learn this form's DRUG CODE → register, and keep the patient on the OST list with their card
+        const code = String(choice.details.drug_code ?? '').replace(/\D/g, '');
+        if (code) await db.from('ost_drug_codes').upsert({ pharmacy_id: account.pharmacyId, drug_code: code, register_id: reg.id, label: null, updated_at: new Date().toISOString() }, { onConflict: 'pharmacy_id,drug_code' });
+        if ((row as any).patient_id) {
+          const upd: Record<string, unknown> = { is_ost: true, ost_register_id: reg.id, updated_at: new Date().toISOString() };
+          if (choice.details.card) upd.treatment_card_no = String(choice.details.card).replace(/\s+/g, '').toUpperCase();
+          await db.from('patients').update(upd).eq('id', (row as any).patient_id).eq('pharmacy_id', account.pharmacyId);
         }
       } catch { /* before migration 0022 */ }
     }

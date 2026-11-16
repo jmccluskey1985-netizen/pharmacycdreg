@@ -178,6 +178,129 @@ function RxScanDemo() {
 }
 
 
+/* OST (methadone) form: the purple HSE form, its dispensing grid read, today's instalment recorded.
+   Every name, address and number here is made up. */
+function FakeOstForm() {
+  const cell = 'border border-[#7d6aa6]/50 bg-white/80 px-0.5';
+  return (
+    <div className="h-full w-full overflow-hidden rounded-md bg-[#dcd4ea] text-[5.5px] leading-tight text-slate-800 shadow-inner">
+      <div className="flex items-center justify-between bg-[#4a3a6e] px-1.5 py-1 text-white">
+        <p className="text-[6px] font-bold tracking-wide">OPIOID SUBSTITUTION TREATMENT<br />PRESCRIPTION FORM</p>
+        <p className="rounded bg-white px-1 font-mono text-[6px] font-bold text-slate-900">9000024</p>
+      </div>
+      <div className="space-y-1 p-1.5">
+        <div className="grid grid-cols-2 gap-1">
+          <div><p className="text-[4.5px] text-[#4a3a6e]">SURNAME</p><p className={`${cell} text-[7px]`} style={HAND}>Farrell</p><p className="text-[4.5px] text-[#4a3a6e]">FIRST NAME</p><p className={`${cell} text-[7px]`} style={HAND}>Declan</p></div>
+          <div><p className="text-[4.5px] text-[#4a3a6e]">ADDRESS</p><p className={`${cell} text-[6.5px]`} style={HAND}>12 Abbey Ct, Ennis</p><p className="text-[4.5px] text-[#4a3a6e]">TREATMENT CARD NO.</p><p className={`${cell} font-mono text-[6.5px]`}>PH 4417</p></div>
+        </div>
+        <div className="rounded-sm bg-[#eef3ee] p-1">
+          <p className="text-[4.5px] text-[#4a3a6e]">DRUG NAME, FORM AND STRENGTH</p>
+          <p className={`${cell} text-[6px] font-bold`}>METHADONE DTF 1MG/ML ORAL SOLUTION</p>
+          <div className="mt-0.5 grid grid-cols-5 gap-0.5 text-center">
+            {[['FROM', '15/11/26'], ['TO', '21/11/26'], ['DOSE', '75'], ['DAYS', '7'], ['TOTAL', '525']].map(([k, v]) => <div key={k}><p className="text-[4px] text-[#4a3a6e]">{k}</p><p className={`${cell} text-[6.5px]`} style={HAND}>{v}</p></div>)}
+          </div>
+          <p className="mt-0.5 text-[6.5px]" style={HAND}>five hundred and twenty five</p>
+        </div>
+        <div>
+          <p className="text-[4.5px] font-bold text-[#4a3a6e]">PHARMACY SECTION · DATE DISPENSED / QUANTITY</p>
+          {[['15/11/26', '75 (S)'], ['16/11/26', '75 (S)'], ['16/11/26', '300 (TA)']].map(([d, q], i) => (
+            <div key={i} className="grid grid-cols-[1fr_1fr_0.6fr] gap-0.5"><span className={`${cell} text-[6.5px]`} style={HAND}>{d}</span><span className={`${cell} text-[6.5px]`} style={HAND}>{q}</span><span className={`${cell} text-[6.5px]`} style={HAND}>✓</span></div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OstScanDemo() {
+  const { ref, phase } = usePhases([1700, 450, 1400, 3200, 900, 3600, 900]);
+  const fields = [
+    { k: 'Patient', v: 'Declan Farrell · 12 Abbey Ct, Ennis', ok: 'matched by treatment card PH 4417' },
+    { k: 'Script', v: 'Methadone DTF 1mg/ml · 75 a day × 7 = 525', ok: 'words and figures agree' },
+    { k: 'Dispensed today', v: '75 supervised + 300 take-away = 375 ml' },
+    { k: 'Earlier on this form', v: '15/11: 75 supervised · already in the register' },
+  ];
+  const recorded = phase >= 5;
+  return (
+    <div ref={ref} className="overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border">
+      <div className="grid gap-6 bg-gradient-to-b from-secondary/70 to-background p-5 md:grid-cols-[1fr_minmax(0,15rem)] md:p-8" aria-hidden="true">
+        {/* Register */}
+        <div className="order-2 flex min-w-0 flex-col md:order-1 md:pt-10">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Methadone DTF 1mg/ml oral solution · register (ml)</p>
+          <div className="mt-2 overflow-x-auto rounded-lg bg-white text-[11px] text-slate-800 shadow ring-1 ring-slate-200">
+            <div className="grid min-w-[26rem] grid-cols-[3.2rem_1fr_7rem_2.6rem_3.4rem] bg-slate-100 px-3 py-2 text-[9px] font-bold uppercase tracking-wide text-slate-500"><span>Date</span><span>Supplied to</span><span>Authority</span><span className="text-right">Out</span><span className="text-right">Balance</span></div>
+            {[{ d: '15/11/26', n: 'Declan Farrell', a: 'OST 9000024', q: 75, b: 4580 }].map((r) => (
+              <div key={r.d} className="grid min-w-[26rem] grid-cols-[3.2rem_1fr_7rem_2.6rem_3.4rem] border-t border-slate-100 px-3 py-2"><span>{r.d}</span><span>{r.n}<span className="block text-[9px] text-slate-500">75 supervised</span></span><span className="truncate text-slate-500">{r.a}</span><span className="text-right font-semibold">{r.q}</span><span className="text-right font-bold">{r.b}</span></div>
+            ))}
+            <div className={`grid min-w-[26rem] grid-cols-[3.2rem_1fr_7rem_2.6rem_3.4rem] border-t border-slate-100 px-3 py-2 transition-all duration-700 ease-out ${recorded ? 'max-h-16 translate-x-0 bg-brand/10 opacity-100' : 'max-h-0 -translate-x-6 py-0 opacity-0'}`}>
+              <span>16/11/26</span>
+              <span>Declan Farrell <span className="ml-1 rounded-full bg-violet-100 px-1.5 text-[8px] font-bold text-violet-900">OST</span><span className="block text-[9px] text-slate-500">75 supervised + 300 take-away</span></span>
+              <span className="truncate text-slate-500">OST 9000024</span>
+              <span className="text-right font-semibold">375</span>
+              <span className="text-right font-bold text-brand-dark"><Counter value={recorded ? 4205 : 4580} /></span>
+            </div>
+            <div className="min-w-[26rem] border-t border-dashed border-slate-200 px-3 py-2 text-[10px] text-slate-400">+ Add the next entry here</div>
+          </div>
+          <p className={`mt-3 flex items-center gap-2 text-sm font-semibold text-brand-dark ${fade(recorded)}`}><CheckCircle2 className="h-4 w-4 text-brand" /> 450 of 525 dispensed on this form · 75 left</p>
+          <h3 className="mt-6 text-2xl font-bold">Methadone and buprenorphine forms, instalment by instalment</h3>
+          <p className="mt-1 max-w-lg text-muted-foreground">Photograph the purple OST form. Today’s supervised dose and take-away are read from the dispensing grid and recorded as one supply in the right methadone register. The form is kept, so every later day is checked against the total, and missed days are flagged.</p>
+          <SampleNote className="mt-2" />
+        </div>
+
+        {/* Phone */}
+        <div className="order-1 mx-auto w-[15rem] rounded-[2.2rem] bg-slate-900 p-2 shadow-xl md:order-2">
+          <div className="relative h-[27rem] overflow-hidden rounded-[1.8rem] bg-black">
+            {phase <= 1 && (
+              <>
+                <div className="absolute inset-0 bg-gradient-to-br from-stone-600 to-stone-800" />
+                <div className={`absolute left-1/2 top-[46%] aspect-[1/1.3] h-[56%] transition-transform duration-[1400ms] ease-out ${phase === 0 ? '-translate-x-[46%] -translate-y-[47%] rotate-[4deg] scale-105' : '-translate-x-1/2 -translate-y-1/2 rotate-0'}`}><FakeOstForm /></div>
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center pb-[8%]">
+                  <div className="relative aspect-[1/1.3] h-[60%] rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,.5)]">
+                    {['left-0 top-0 border-l-4 border-t-4 rounded-tl-2xl', 'right-0 top-0 border-r-4 border-t-4 rounded-tr-2xl', 'left-0 bottom-0 border-l-4 border-b-4 rounded-bl-2xl', 'right-0 bottom-0 border-r-4 border-b-4 rounded-br-2xl'].map((c) => <span key={c} className={`absolute h-7 w-7 border-brand ${c}`} />)}
+                    <span className="demo-sweep absolute inset-x-2 h-0.5 bg-brand/80 shadow-[0_0_12px_2px_rgba(84,189,80,.7)]" />
+                  </div>
+                </div>
+                <p className="absolute inset-x-0 top-3 mx-auto w-max rounded-full bg-black/60 px-2.5 py-1 text-[9px] font-medium text-white">Line up the OST form inside the frame</p>
+                <div className="absolute inset-x-0 bottom-0 flex items-center justify-center bg-gradient-to-t from-black/80 to-transparent px-4 pb-4 pt-8">
+                  <span className={`flex h-14 w-14 items-center justify-center rounded-full border-4 border-white bg-white/20 transition-transform duration-150 ${phase === 1 ? 'scale-90' : ''}`}><span className="h-10 w-10 rounded-full bg-white" /></span>
+                </div>
+                {phase === 1 && <div className="demo-flash absolute inset-0 bg-white" />}
+              </>
+            )}
+            {phase === 2 && (
+              <div className="flex h-full flex-col items-center justify-center gap-3 bg-background px-6 text-center">
+                <div className="h-28 w-20 overflow-hidden rounded-md ring-2 ring-brand/40"><div className="origin-top-left scale-[.42]" style={{ width: '238%', height: '238%' }}><FakeOstForm /></div></div>
+                <p className="flex items-center gap-2 text-xs font-semibold text-foreground"><Loader2 className="h-4 w-4 animate-spin text-brand" /> Reading the OST form…</p>
+              </div>
+            )}
+            {phase >= 3 && (
+              <div className="flex h-full flex-col bg-background p-3 text-[10px]">
+                <p className="flex items-center gap-1 text-xs font-bold text-foreground"><Sparkles className="h-3.5 w-3.5 text-brand" /> Check and sign</p>
+                <div className="mt-2 space-y-1.5">
+                  {fields.map((f, i) => (
+                    <div key={f.k} className={`rounded-lg bg-card px-2.5 py-1.5 shadow-sm ring-1 ring-border ${fade(phase >= 3)}`} style={{ transitionDelay: phase === 3 ? `${i * 350}ms` : '0ms' }}>
+                      <p className="text-[8px] uppercase tracking-wide text-muted-foreground">{f.k}</p>
+                      <p className="font-semibold text-foreground">{f.v}</p>
+                      {f.ok && <p className="flex items-center gap-1 text-[8px] font-semibold text-brand"><CheckCircle2 className="h-2.5 w-2.5" /> {f.ok}</p>}
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-auto">
+                  {phase < 5 ? (
+                    <span className={`flex h-9 items-center justify-center rounded-lg bg-brand-dark text-xs font-semibold text-white transition-transform duration-150 ${phase === 4 ? 'scale-95 ring-4 ring-brand/30' : ''}`}>Sign &amp; record 375 ml</span>
+                  ) : (
+                    <span className="flex h-9 items-center justify-center gap-1.5 rounded-lg bg-brand/15 text-xs font-semibold text-brand-dark"><CheckCircle2 className="h-4 w-4 text-brand" /> Recorded on line 3</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* Invoice photographed: a real wholesaler invoice (customer details replaced), CD lines read */
 function InvoiceDemo() {
   const { ref, phase } = usePhases([1300, 1900, 2900, 800, 3200, 700]);
@@ -357,6 +480,7 @@ export function LandingDemos() {
   return (
     <div className="space-y-6">
       <div className="grid gap-6"><RxScanDemo /></div>
+      <OstScanDemo />
       <InvoiceDemo />
       <div className="grid gap-6 md:grid-cols-2">
         <BalanceDemo />

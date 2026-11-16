@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { UserCheck, UserPlus, AlertTriangle } from 'lucide-react';
 
 export interface PatientCandidateView {
-  id: string; first_name: string; surname: string; date_of_birth: string | null; address: string | null; gms_number: string | null;
+  id: string; first_name: string; surname: string; date_of_birth: string | null; address: string | null; gms_number: string | null; treatment_card_no?: string | null;
   level: 'certain' | 'strong' | 'possible'; reasons: string[]; conflicts: string[];
 }
 /** What the pharmacist chose: an existing record (optionally updating it from the script) or a new one. */
@@ -44,7 +44,7 @@ export function PatientChoice({ candidates, pickId, script, value, onChange, com
                 <span className={`badge ${c.level === 'possible' ? 'bg-muted text-muted-foreground' : 'bg-brand/15 text-primary'}`}>{LEVEL[c.level]}</span>
                 {pickId === c.id && <span className="text-xs text-muted-foreground">(suggested)</span>}
               </span>
-              <span className="block text-xs text-muted-foreground">{[c.date_of_birth && `DOB ${fmtDob(c.date_of_birth)}`, c.gms_number && `GMS ${c.gms_number}`, c.address].filter(Boolean).join(' · ') || 'No other details on record'}</span>
+              <span className="block text-xs text-muted-foreground">{[c.date_of_birth && `DOB ${fmtDob(c.date_of_birth)}`, c.treatment_card_no && `Card ${c.treatment_card_no}`, c.gms_number && `GMS ${c.gms_number}`, c.address].filter(Boolean).join(' · ') || 'No other details on record'}</span>
               <span className="mt-1 flex flex-wrap gap-1">
                 {c.reasons.map((r) => <span key={r} className="rounded bg-brand/10 px-1.5 py-0.5 text-[11px] text-primary">✓ {r}</span>)}
                 {c.conflicts.map((r) => <span key={r} className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] text-amber-900 dark:bg-amber-900 dark:text-amber-100">≠ {r}</span>)}

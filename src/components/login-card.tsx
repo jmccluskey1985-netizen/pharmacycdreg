@@ -30,7 +30,7 @@ export function LoginCard() {
     const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
     if (!aal || aal.nextLevel !== 'aal2' || aal.currentLevel === 'aal2') return false;
     const { data } = await supabase.auth.mfa.listFactors();
-    const f = data?.totp?.find((x) => x.status === 'verified');
+    const f = data?.totp?.find((x: { status: string }) => x.status === 'verified');
     if (!f) return false;
     setFactorId(f.id);
     return true;

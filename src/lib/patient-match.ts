@@ -16,6 +16,8 @@ export interface MatchPatient {
   dps_number?: string | null;
   lti_number?: string | null;
   hospital_mrn?: string | null;
+  treatment_card_no?: string | null;
+  pmr_code?: string | null;
   [k: string]: unknown;
 }
 
@@ -30,6 +32,10 @@ export interface PatientProbe {
   dps?: string | null;
   lti?: string | null;
   mrn?: string | null;
+  /** HSE opioid substitution treatment card, e.g. "PH 1234" */
+  card?: string | null;
+  /** The dispensing system's patient code from a bag label, e.g. "W75" */
+  pmr?: string | null;
 }
 
 export type MatchLevel = 'certain' | 'strong' | 'possible';
@@ -199,6 +205,12 @@ export function scorePatient<P extends MatchPatient>(probe: PatientProbe, p: P):
     const x = normCard(a), y = normCard(b);
     if (x && y) { if (x === y) { number = true; reasons.push(`${label} matches`); } else conflicts.push(`Different ${label} number`); }
   }
+  // OST treatment card: issued to one person, so a match with a similar name is the same person
+  let card = false;
+  const ca = normCard(probe.card), cb = normCard(p.treatment_card_no);
+  if (ca && cb) { if (ca === cb) { card = true; number = true; reasons.push('Treatment card matches'); } else conflicts.push('Different treatment card'); }
+  const pa = normCard(probe.pmr), pb = normCard(p.pmr_code);
+  if (pa && pb) { if (pa === pb) { card = true; number = true; reasons.push('Dispensing system code matches'); } else conflicts.push('Different dispensing system code'); }
   const ga = normCard(probe.gms), gb = normCard(p.gms_number);
   if (ga && gb) {
     if (ga === gb) { number = true; reasons.push('GMS matches'); }
@@ -225,7 +237,7 @@ export function scorePatient<P extends MatchPatient>(probe: PatientProbe, p: P):
 
   const clean = conflicts.length === 0;
   let level: MatchLevel | null = null;
-  if (n.exact && (dob || number) && clean) level = 'certain';
+  if ((n.exact && (dob || number) && clean) || (card && (n.exact || n.close || n.nick) && clean)) level = 'certain';
   else if (clean && ((n.exact && (eircode || address)) || (n.closeSur && dob && number) || (n.nick && (dob || number)))) level = 'strong';
   else if (
     n.exact ||

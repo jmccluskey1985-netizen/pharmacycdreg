@@ -8,6 +8,7 @@ import { api, ApiError } from '@/lib/api';
 import { Modal } from '@/components/modal';
 import { PatientForm, type PatientRecord } from '@/components/dashboard/patient-form';
 import { useStaff } from '@/components/dashboard/staff-context';
+import { OstLabelsImport } from '@/components/dashboard/ost-labels-import';
 import { can } from '@/lib/roles';
 
 const fmt = (d: string | null) => (d ? d.split('-').reverse().join('/') : '-');
@@ -24,11 +25,14 @@ export default function PatientsPage() {
   const [importing, setImporting] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [dupes, setDupes] = useState(false);
+  const [ostOnly, setOstOnly] = useState(false);
+  // Getting started links here with ?ost=labels to open the bag-label import
+  const [labelsOpen] = useState(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('ost') === 'labels');
 
   const load = useCallback(async (query: string) => {
-    const d = await api(`/api/patients?q=${encodeURIComponent(query)}`);
-    setList(d.patients); setNeedsMigration(!!d.needs_migration);
-  }, []);
+    const d = await api(ostOnly && !query ? '/api/patients?ost=1' : `/api/patients?q=${encodeURIComponent(query)}`);
+    setList(ostOnly && query ? d.patients.filter((p: any) => p.is_ost) : d.patients); setNeedsMigration(!!d.needs_migration);
+  }, [ostOnly]);
   useEffect(() => { const t = setTimeout(() => load(q), 200); return () => clearTimeout(t); }, [q, load]);
 
   async function importFromRegister() {
@@ -48,8 +52,10 @@ export default function PatientsPage() {
           <h1 className="text-2xl font-bold">Patients</h1>
           <p className="text-sm text-muted-foreground">Search by name, date of birth (dd/mm/yyyy) or GMS number. New patients are added automatically when you record a supply.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {staff && can.manageStaff(staff.role) && <button onClick={importFromRegister} disabled={importing} className="btn-secondary">{importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Import className="h-4 w-4" />} <span className="hidden sm:inline">From register</span></button>}
+          {staff && can.record(staff.role) && <OstLabelsImport autoOpen={labelsOpen} onDone={() => { setOstOnly(true); load(''); }} />}
+          <button onClick={() => setOstOnly((v) => !v)} className={ostOnly ? "btn-primary" : "btn-secondary"} aria-pressed={ostOnly}>OST<span className="hidden sm:inline">&nbsp;patients</span></button>
           <button onClick={() => setDupes(true)} className="btn-secondary"><Users className="h-4 w-4" /> <span className="hidden sm:inline">Possible duplicates</span></button>
           <button onClick={() => setAdding(true)} className="btn-primary"><UserPlus className="h-4 w-4" /> New patient</button>
         </div>
@@ -62,7 +68,7 @@ export default function PatientsPage() {
       <div className="card overflow-x-auto p-0">
         <table className="w-full min-w-[640px] text-sm">
           <thead className="bg-muted/60 text-left text-xs uppercase tracking-wide text-muted-foreground">
-            <tr><th className="px-4 py-2.5">Surname</th><th className="px-4 py-2.5">First name</th><th className="px-4 py-2.5">Date of birth</th><th className="px-4 py-2.5">Address</th><th className="px-4 py-2.5">GMS no.</th><th className="px-4 py-2.5">Usual doctor</th></tr>
+            <tr><th className="px-4 py-2.5">Surname</th><th className="px-4 py-2.5">First name</th><th className="px-4 py-2.5">Date of birth</th><th className="px-4 py-2.5">Address</th><th className="px-4 py-2.5">{ostOnly ? 'Treatment card' : 'GMS no.'}</th><th className="px-4 py-2.5">Usual doctor</th></tr>
           </thead>
           <tbody className="divide-y divide-border">
             {list === null && <tr><td colSpan={6} className="px-4 py-5 text-muted-foreground">Loading…</td></tr>}
@@ -73,7 +79,7 @@ export default function PatientsPage() {
                 <td className="px-4 py-2.5">{p.first_name}</td>
                 <td className="px-4 py-2.5 tabular-nums">{fmt(p.date_of_birth)}</td>
                 <td className="max-w-[16rem] truncate px-4 py-2.5 text-muted-foreground">{p.address || '-'}</td>
-                <td className="px-4 py-2.5 tabular-nums">{p.gms_number || '-'}</td>
+                <td className="px-4 py-2.5 tabular-nums">{ostOnly ? ((p as any).treatment_card_no || '-') : p.gms_number || '-'}{!ostOnly && (p as any).is_ost && <span className="badge ml-1 bg-violet-100 text-violet-900 dark:bg-violet-950 dark:text-violet-200">OST</span>}</td>
                 <td className="px-4 py-2.5 text-muted-foreground">{p.gp_name || '-'}</td>
               </tr>
             ))}

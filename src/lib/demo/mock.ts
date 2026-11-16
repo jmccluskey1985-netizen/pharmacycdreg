@@ -171,6 +171,10 @@ const demoPatients = (): Json[] => {
     if (mk) Object.assign(mk, { date_of_birth: '1948-07-01', gms_number: '1234567B' });
     // A duplicate made by a different spelling of the address, for Possible duplicates
     X.patients.push({ id: uid(), first_name: 'Patrick', surname: 'Hayes', date_of_birth: null, address: '22 Abbey Street, Ennis', phone: null, gms_number: null, ihi_number: null, gp_name: null, gp_address: null, notes: null, is_active: true });
+    // Opioid substitution patients (made up): one from the register, one only on the OST list
+    const gl = X.patients.find((p: Json) => p.first_name === 'Gerard' && p.surname === 'Lynch');
+    if (gl) Object.assign(gl, { is_ost: true, treatment_card_no: 'PH5121', ost_register_id: 'r6', ost_daily_dose: 60, ost_schedule: 'Fri · supervised Fri' });
+    X.patients.push({ id: uid(), first_name: 'Declan', surname: 'Farrell', date_of_birth: null, address: '12 Abbey Court, Ennis', phone: null, gms_number: null, ihi_number: null, gp_name: 'Dr K. Ryan', gp_address: null, notes: null, is_active: true, is_ost: true, treatment_card_no: 'PH4417', ost_register_id: 'r6', ost_daily_dose: 75, ost_schedule: 'Wed, Sat · supervised Wed' });
     for (const p of X.patients) Object.assign(p, patientKeys(p));
   }
   return X.patients.filter((p: Json) => p.is_active !== false);
@@ -538,6 +542,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
   if (path === '/api/patients/import') return res({ added: 0 });
   if (path === '/api/patients') {
     if (needStaff()) return needStaff()!;
+    if (method === 'GET' && url.searchParams.get('ost') === '1') return res({ patients: demoPatients().filter((p) => p.is_ost).sort((a, b) => (a.surname || '').localeCompare(b.surname || '')) });
     if (method === 'GET') return res({ patients: demoPatients().filter((p) => patientMatch(p, url.searchParams.get('q') || '')).sort((a, b) => (a.surname || '').localeCompare(b.surname || '')) });
     const p = { ...body, id: uid(), is_active: true };
     demoPatients(); (S as any).patients.push(p);
@@ -563,7 +568,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     audit('patient.merged', { lines_moved: moved });
     return res({ ok: true, lines_moved: moved });
   }
-  if (path.startsWith('/api/patients/')) {
+  if (path.startsWith('/api/patients/') && path !== '/api/patients/ost-import') {
     if (needStaff()) return needStaff()!;
     const p = demoPatients().find((x) => x.id === path.split('/')[3]);
     if (!p) return fail(404, 'Patient not found');
@@ -587,6 +592,27 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     if (!can.audit(st!.role)) return fail(403, 'Your role does not allow this action');
     const ev = [...S.audit, ...S.entries.map((e, i) => ({ id: 10000 + i, occurred_at: e.recorded_at, action: `cd_entry.${e.entry_type}`, staff_name: S.staff.find((s) => s.id === e.recorded_by_staff_id)?.full_name, details: { seq: e.seq, quantity: e.quantity, reason: e.correction_reason ?? undefined } }))].sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
     return res({ events: url.searchParams.get('before') ? [] : ev });
+  }
+  if (path === '/api/scan/labels' && method === 'POST') {
+    if (needStaff()) return needStaff()!;
+    await new Promise((r) => setTimeout(r, 1200));
+    const regs = regList().filter((r: Json) => /methadone/i.test(r.product.drug_name));
+    const df = demoPatients().find((p) => p.first_name === 'Declan' && p.surname === 'Farrell');
+    return res({ registers: regs.map((r: Json) => ({ id: r.id, label: productTitle(r.product) })), warnings: [], patients: [
+      { first_name: 'Declan', surname: 'Farrell', address: '12 Abbey Court, Ennis', treatment_card_no: 'PH 4417', pmr_code: 'F12', product: null, daily_dose: null, dose_text: null, register_id: regs[0]?.id ?? null, pick_id: df?.id ?? null, candidates: df ? [{ id: df.id, first_name: df.first_name, surname: df.surname, address: df.address, level: 'certain', reasons: ['Name matches', 'Treatment card matches'] }] : [] },
+      { first_name: 'Aisling', surname: 'Moran', address: '3 Harbour View, Kilrush', treatment_card_no: null, pmr_code: 'M40', product: null, daily_dose: null, dose_text: null, register_id: regs[0]?.id ?? null, pick_id: null, candidates: [] },
+    ] });
+  }
+  if (path === '/api/patients/ost-import' && method === 'POST') {
+    if (needStaff()) return needStaff()!;
+    let added = 0, updated = 0;
+    for (const p of body.patients ?? []) {
+      const ex = p.patient_id && demoPatients().find((x) => x.id === p.patient_id);
+      const ost = { is_ost: true, ...(p.treatment_card_no ? { treatment_card_no: String(p.treatment_card_no).replace(/\s+/g, '').toUpperCase() } : {}), ...(p.register_id ? { ost_register_id: p.register_id } : {}), ...(p.pmr_code ? { pmr_code: p.pmr_code } : {}), ...(p.daily_dose ? { ost_daily_dose: p.daily_dose } : {}) };
+      if (ex) { Object.assign(ex, ost); updated++; } else { (S as any).patients.push({ id: uid(), first_name: p.first_name, surname: p.surname, address: p.address ?? null, date_of_birth: null, gms_number: null, is_active: true, ...ost }); added++; }
+    }
+    audit('patients.ost_imported', { added, updated });
+    return res({ added, updated });
   }
   if (path === '/api/scan/register-page' && method === 'POST') {
     if (needStaff()) return needStaff()!;
@@ -638,10 +664,14 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
       const base = { item, qty: { quantity: dec.today.total, label: `Dispensed today: ${dec.today.breakdown}`, flags: dec.flags }, match_state: reg ? 'your_register' : 'no_register', register_id: reg?.id ?? null, register_label: reg ? productTitle(reg.product) : null, current_balance: reg?.balance ?? null, candidates: reg ? [{ id: reg.id, label: productTitle(reg.product) }] : [], draft };
       const missing = dec.earlier.map((e) => ({ ...base, qty: { quantity: e.quantity, label: `Dispensed ${e.date.split('-').reverse().join('/')}, not in the register yet`, flags: ['Recorded as a late entry: say why it wasn’t entered on the day.'] }, draft: { ...draft, transaction_date: e.date, quantity: e.quantity, notes: `OST instalment: ${e.quantity} supervised` } }));
       proposals.splice(0, proposals.length, base as any, ...(missing as any[]));
-      Object.assign(extraction, { patient_name: 'Declan Farrell', patient_address: '12 Abbey Court, Ennis', reference: form.serial_no, items: [item] });
+      Object.assign(extraction, { patient_name: 'DECLAN FARREL', patient_address: '12 Abbey Court, Ennis', reference: form.serial_no, items: [item] });
       ost = { serial_no: form.serial_no, treatment_card_no: form.treatment_card_no, product: 'methadone', drug_written: form.drug_written, daily_dose: 75, days_at_dose: 7, from_date: form.from_date, to_date: form.to_date, total: dec.total, dispensed_so_far: dec.dispensedSoFar, remaining: dec.remaining, schedule: dec.schedule, today: dec.today, earlier: dec.earlier.map((e) => ({ ...e, in_register: false })), flags: dec.flags };
     }
-    return res({ scan_id: 'demo', extraction, proposals, exempt, patient_match: isOst ? null : patient_match, ost, ignored: extraction.items.filter((i: any) => !i.is_controlled_drug).length });
+    if (isOst) {
+      const cands = matchPatients({ full_name: 'DECLAN FARREL', address: '12 Abbey Ct, Ennis', card: 'PH 4417' }, demoPatients());
+      patient_match = { pick_id: preselect(cands).pick?.patient.id ?? null, ambiguous: false, candidates: cands.map((c) => ({ id: c.patient.id, first_name: c.patient.first_name, surname: c.patient.surname, date_of_birth: c.patient.date_of_birth, address: c.patient.address, gms_number: c.patient.gms_number, treatment_card_no: c.patient.treatment_card_no, level: c.level, reasons: c.reasons, conflicts: c.conflicts })) };
+    }
+    return res({ scan_id: 'demo', extraction, proposals, exempt, patient_match, ost, ignored: extraction.items.filter((i: any) => !i.is_controlled_drug).length });
   }
   if (path === '/api/inbox') {
     if (needStaff()) return needStaff()!;

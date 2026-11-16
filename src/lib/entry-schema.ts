@@ -25,7 +25,7 @@ const patientChoice = {
   new_patient: z.boolean().optional(),          // pharmacist chose "New patient"
   interactive: z.boolean().optional(),          // a person is at the screen and can be asked to pick
   update_patient: z.array(z.enum(['address', 'date_of_birth', 'gms_number', 'eircode'])).max(4).optional(), // overwrite these on the record from this script
-  patient_details: z.object({ first_name: z.string().trim().max(80).optional().nullable(), surname: z.string().trim().max(80).optional().nullable(), eircode: card, gms: card, dps: card, lti: card, mrn: card }).partial().optional().nullable(),
+  patient_details: z.object({ first_name: z.string().trim().max(80).optional().nullable(), surname: z.string().trim().max(80).optional().nullable(), eircode: card, gms: card, dps: card, lti: card, mrn: card, card: card, drug_code: card }).partial().optional().nullable(),
 };
 
 // Mandatory statutory fields per entry type (FR5, FR19). The database enforces the

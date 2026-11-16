@@ -6,6 +6,7 @@ export interface Patient {
   id: string; first_name: string; surname: string; date_of_birth: string | null; address: string | null; phone: string | null;
   gms_number: string | null; ihi_number: string | null; gp_name: string | null; gp_address: string | null; notes: string | null;
   dps_number?: string | null; lti_number?: string | null; hospital_mrn?: string | null; eircode?: string | null; name_key?: string | null; merged_into?: string | null;
+  treatment_card_no?: string | null; pmr_code?: string | null; is_ost?: boolean; ost_register_id?: string | null; ost_daily_dose?: number | null; ost_schedule?: string | null;
   [k: string]: unknown;
 }
 export const fullName = (p: Pick<Patient, 'first_name' | 'surname'>) => `${p.first_name} ${p.surname}`.trim();
@@ -26,14 +27,14 @@ export function splitName(name: string): { first_name: string; surname: string }
   return { first_name: toks.slice(0, k).join(' '), surname: toks.slice(k).join(' ') };
 }
 
-const NEW_COLS = ['dps_number', 'lti_number', 'hospital_mrn', 'eircode', 'name_key', 'merged_into'];
+const NEW_COLS = ['dps_number', 'lti_number', 'hospital_mrn', 'eircode', 'name_key', 'merged_into', 'treatment_card_no', 'pmr_code', 'is_ost', 'ost_register_id', 'ost_daily_dose', 'ost_schedule'];
 const isMissingColumn = (msg?: string) => /column|schema cache/i.test(msg ?? '');
 
 /** Insert or update a patient, keeping name_key / eircode current. Works before migration 0016 too. */
 export async function writePatient(db: SupabaseClient, row: Record<string, unknown>, id?: string) {
   const withKeys: Record<string, unknown> = { ...row };
   if ('surname' in row || 'address' in row || 'eircode' in row) Object.assign(withKeys, patientKeys({ surname: row.surname as string, address: row.address as string, eircode: row.eircode as string }));
-  for (const k of ['gms_number', 'dps_number', 'lti_number', 'hospital_mrn']) if (typeof withKeys[k] === 'string') withKeys[k] = normCard(withKeys[k] as string);
+  for (const k of ['gms_number', 'dps_number', 'lti_number', 'hospital_mrn', 'treatment_card_no', 'pmr_code']) if (typeof withKeys[k] === 'string') withKeys[k] = normCard(withKeys[k] as string);
   const run = (r: Record<string, unknown>) => (id ? db.from('patients').update(r).eq('id', id).select('*').single() : db.from('patients').insert(r).select('*').single());
   let res = await run(withKeys);
   if (res.error && isMissingColumn(res.error.message)) {
@@ -53,7 +54,7 @@ export async function candidatePool(db: SupabaseClient, pharmacyId: string, prob
   if (probe.dob) ors.push(`date_of_birth.eq.${probe.dob}`);
   const ec = extractEircode(probe.eircode) ?? extractEircode(probe.address);
   if (ec) ors.push(`eircode.eq.${ec}`);
-  for (const [col, v] of [['gms_number', probe.gms], ['dps_number', probe.dps], ['lti_number', probe.lti], ['hospital_mrn', probe.mrn]] as const) { const c = normCard(v); if (c) ors.push(`${col}.eq.${c}`); }
+  for (const [col, v] of [['gms_number', probe.gms], ['dps_number', probe.dps], ['lti_number', probe.lti], ['hospital_mrn', probe.mrn], ['treatment_card_no', probe.card], ['pmr_code', probe.pmr]] as const) { const c = normCard(v); if (c) ors.push(`${col}.eq.${c}`); }
   if (!ors.length) return [];
   const { data, error } = await db.from('patients').select('*').eq('pharmacy_id', pharmacyId).eq('is_active', true).is('merged_into', null).or(ors.join(',')).limit(200);
   if (!error) return (data ?? []) as Patient[];
@@ -75,7 +76,7 @@ export async function findPatientMatches(db: SupabaseClient, pharmacyId: string,
 
 /** What the pharmacist sees for each candidate (no more than the patients list already shows). */
 export const candidateView = (c: PatientCandidate<Patient>) => ({
-  id: c.patient.id, first_name: c.patient.first_name, surname: c.patient.surname, date_of_birth: c.patient.date_of_birth,
+  id: c.patient.id, first_name: c.patient.first_name, surname: c.patient.surname, date_of_birth: c.patient.date_of_birth, treatment_card_no: c.patient.treatment_card_no ?? null, pmr_code: c.patient.pmr_code ?? null,
   address: c.patient.address, gms_number: c.patient.gms_number, level: c.level, reasons: c.reasons, conflicts: c.conflicts,
 });
 
@@ -83,7 +84,7 @@ export const candidateView = (c: PatientCandidate<Patient>) => ({
 export async function fillPatientGaps(db: SupabaseClient, patient: Patient, probe: PatientProbe & { gp_name?: string | null; gp_address?: string | null }) {
   const want: Record<string, string | null | undefined> = {
     date_of_birth: probe.dob, address: probe.address, gms_number: normCard(probe.gms), dps_number: normCard(probe.dps),
-    lti_number: normCard(probe.lti), hospital_mrn: normCard(probe.mrn), eircode: extractEircode(probe.eircode) ?? extractEircode(probe.address),
+    lti_number: normCard(probe.lti), hospital_mrn: normCard(probe.mrn), eircode: extractEircode(probe.eircode) ?? extractEircode(probe.address), treatment_card_no: normCard(probe.card),
   };
   const fill: Record<string, unknown> = {};
   const differs: { field: string; on_record: unknown; on_script: string }[] = [];
@@ -117,6 +118,7 @@ export async function searchPatients(db: SupabaseClient, pharmacyId: string, q: 
   const t = q.trim();
   const dob = t ? parseDob(t) : null;
   if (dob) query = query.eq('date_of_birth', dob);
+  else if (/^ph\s*\d+$/i.test(t)) query = query.ilike('treatment_card_no', `${t.replace(/\s+/g, '').toUpperCase()}%`);
   else if (/^\d{4,}[a-z]?$/i.test(t)) query = query.ilike('gms_number', `${esc(t)}%`);
   else if (t) {
     // Each word must match the first name, surname, or the normalised surname key
@@ -164,6 +166,7 @@ export async function createPatientFromProbe(db: SupabaseClient, pharmacyId: str
     pharmacy_id: pharmacyId, first_name: split.first_name || split.surname, surname: split.first_name ? split.surname : '',
     address: probe.address ?? null, date_of_birth: probe.dob ?? null, gms_number: probe.gms ?? null, dps_number: probe.dps ?? null,
     lti_number: probe.lti ?? null, hospital_mrn: probe.mrn ?? null, eircode: probe.eircode ?? null,
+    ...(probe.card ? { treatment_card_no: probe.card, is_ost: true } : {}),
     gp_name: gp?.name ?? null, gp_address: gp?.address ?? null,
   });
   return data as Patient | null;
@@ -180,6 +183,12 @@ export const PatientBody = z.object({
   lti_number: z.string().trim().max(20).nullable().optional(),
   hospital_mrn: z.string().trim().max(30).nullable().optional(),
   eircode: z.string().trim().max(10).nullable().optional(),
+  treatment_card_no: z.string().trim().max(20).nullable().optional(),
+  pmr_code: z.string().trim().max(20).nullable().optional(),
+  is_ost: z.boolean().optional(),
+  ost_register_id: z.string().uuid().nullable().optional(),
+  ost_daily_dose: z.coerce.number().positive().max(10000).nullable().optional().catch(null),
+  ost_schedule: z.string().trim().max(200).nullable().optional(),
   ihi_number: z.string().trim().max(20).nullable().optional(),
   gp_name: z.string().trim().max(160).nullable().optional(),
   gp_address: z.string().trim().max(300).nullable().optional(),

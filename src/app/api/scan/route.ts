@@ -131,6 +131,7 @@ export async function POST(req: Request) {
             first_name: extraction.patient_first_name ?? null, surname: extraction.patient_surname ?? null,
             eircode: extraction.patient_eircode ?? null, gms: extraction.gms_number ?? null, dps: extraction.dps_number ?? null,
             lti: extraction.lti_number ?? null, mrn: extraction.hospital_mrn ?? null,
+            card: extraction.ost?.treatment_card_no ?? null, drug_code: extraction.ost?.drug_code ?? null,
           },
           prescriber_name: extraction.prescriber_name,
           prescriber_address: extraction.prescriber_address,
@@ -151,6 +152,18 @@ export async function POST(req: Request) {
       const dec = decideOst(o, today);
       const ref = o.serial_no ? ostRef(o.serial_no) : null;
       const base = proposals[0];
+      // The pharmacy section's DRUG CODE says which product was dispensed: once the pharmacy has
+      // recorded that code against a register, use it (it beats matching the written drug name).
+      const code = o.drug_code?.replace(/\D/g, '') || null;
+      if (code) {
+        const { data: known } = await db.from('ost_drug_codes').select('register_id').eq('pharmacy_id', account.pharmacyId).eq('drug_code', code).maybeSingle().then((x) => x, () => ({ data: null }));
+        const reg = known && regs.find((r) => r.id === known.register_id);
+        if (reg && reg.id !== base.register_id) {
+          if (!base.candidates.some((c: any) => c.id === reg.id)) base.candidates.unshift({ id: reg.id, label: reg.label });
+          base.register_id = reg.id; base.register_label = reg.label; base.current_balance = balances[reg.id] ?? 0; base.match_state = 'your_register';
+          base.qty.flags.unshift(`Drug code ${code} → ${reg.label} (as recorded before).`);
+        } else if (!known) base.qty.flags.unshift(`Drug code ${code} is new here: check the register. It's remembered once you record it.`);
+      }
       base.draft = { ...base.draft, transaction_date: today, quantity: dec.today.total || '', prescription_ref: ref ?? base.draft.prescription_ref, notes: dec.today.breakdown ? `OST instalment: ${dec.today.breakdown}` : 'OST instalment' };
       base.qty = { ...base.qty, quantity: dec.today.total || null, label: dec.today.total ? `Dispensed today: ${dec.today.breakdown ?? dec.today.total}` : 'Nothing dated today on the form', flags: [...dec.flags, ...base.qty.flags.filter((f: string) => !/words and figures|quantity/i.test(f))] };
       (base as any).ost_role = 'today';
@@ -169,7 +182,7 @@ export async function POST(req: Request) {
         proposals.push({ ...base, ost_role: 'earlier', qty: { ...base.qty, quantity: q, label: `Dispensed ${d.split('-').reverse().join('/')}, not in the register yet`, flags: ['Recorded as a late entry: say why it wasn’t entered on the day.'] }, draft: { ...base.draft, transaction_date: d, quantity: q, notes: `OST instalment: ${parts}` } } as any);
       }
       ost = {
-        serial_no: o.serial_no, treatment_card_no: o.treatment_card_no ?? null, product: o.product, drug_written: o.drug_written ?? null,
+        serial_no: o.serial_no, treatment_card_no: o.treatment_card_no ?? null, drug_code: code, product: o.product, drug_written: o.drug_written ?? null,
         daily_dose: o.daily_dose ?? null, days_at_dose: o.days_at_dose ?? null, from_date: o.from_date ?? null, to_date: o.to_date ?? null,
         total: dec.total, dispensed_so_far: dec.dispensedSoFar, remaining: dec.remaining, schedule: dec.schedule,
         today: dec.today, earlier: dec.earlier.map((e) => ({ ...e, in_register: inRegister.has(e.date) })), flags: dec.flags,
@@ -178,7 +191,7 @@ export async function POST(req: Request) {
       if (o.serial_no) {
         try {
           const { data: held } = await db.from('ost_prescriptions').upsert({
-            pharmacy_id: account.pharmacyId, serial_no: o.serial_no.replace(/\s+/g, ''), patient_name: extraction.patient_name, treatment_card_no: o.treatment_card_no ?? null,
+            pharmacy_id: account.pharmacyId, serial_no: o.serial_no.replace(/\s+/g, ''), patient_name: extraction.patient_name, treatment_card_no: o.treatment_card_no ?? null, drug_code: code,
             product: o.product, drug_written: o.drug_written ?? null, register_id: base.register_id, daily_dose: o.daily_dose ?? null, days_at_dose: o.days_at_dose ?? null,
             total_qty: dec.total, date_prescribed: o.date_prescribed ?? null, from_date: o.from_date ?? null, to_date: o.to_date ?? null,
             schedule: { instalment_daily: o.instalment_daily, instalment_double_sat: o.instalment_double_sat, instalment_days: o.instalment_days, supervised: o.supervised, supervised_daily: o.supervised_daily, supervised_days: o.supervised_days, text: dec.schedule },
@@ -198,7 +211,7 @@ export async function POST(req: Request) {
       const m = await findPatientMatches(db, account.pharmacyId, {
         full_name: extraction.patient_name, first_name: extraction.patient_first_name, surname: extraction.patient_surname,
         dob: /^\d{4}-\d{2}-\d{2}$/.test(extraction.patient_dob ?? '') ? extraction.patient_dob : null, address: extraction.patient_address,
-        eircode: extraction.patient_eircode, gms: extraction.gms_number, dps: extraction.dps_number, lti: extraction.lti_number, mrn: extraction.hospital_mrn,
+        eircode: extraction.patient_eircode, gms: extraction.gms_number, dps: extraction.dps_number, lti: extraction.lti_number, mrn: extraction.hospital_mrn, card: extraction.ost?.treatment_card_no,
       }).catch(() => null);
       if (m) patient_match = { candidates: m.candidates.map(candidateView), pick_id: m.pick?.patient.id ?? null, ambiguous: m.ambiguous };
     }

@@ -98,3 +98,7 @@ insert into ost_dispensings(prescription_id, dispensed_on, quantity, mode) selec
 insert into ost_dispensings(prescription_id, dispensed_on, quantity, mode) select id, current_date, 360, 'take_away' from ost_prescriptions where serial_no = '9000001';
 select pg_temp.expect_error($$ insert into ost_prescriptions(pharmacy_id, serial_no) select id, '9000001' from pharmacies limit 1 $$, 'duplicate key');
 select pg_temp.ok((select count(*) = 2 from ost_dispensings), 'OST form held once per serial number; supervised and take-away rows kept');
+
+-- 0023: OST patients and drug codes
+update patients set treatment_card_no = 'PH4417', is_ost = true where id = (select id from patients limit 1);
+select pg_temp.ok((select count(*) = 1 from patients where is_ost and treatment_card_no = 'PH4417') and to_regclass('public.ost_drug_codes') is not null, 'OST patients flagged with treatment card; drug-code table');

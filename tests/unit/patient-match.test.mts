@@ -50,6 +50,15 @@ eq('John vs Jane Smith, same address → possible', top({ full_name: 'Jane Smith
 eq('nobody close → no candidates', matchPatients({ full_name: 'Zebedee Quinlan', dob: '1990-01-01' }, pool).length, 0);
 eq('single certain match is preselected', preselect(matchPatients({ full_name: 'Peter Wilson', dob: '1961-11-30' }, pool)).pick?.patient.id, 'wilson');
 
+// OST treatment card (methadone patients): issued to one person
+const ostPool = [P('ost1', 'Declan', 'Farrell', { treatment_card_no: 'PH 4417', address: '12 Abbey Court, Ennis' }), P('ost2', 'Declan', 'Farrelly', { treatment_card_no: 'PH 5520' })];
+eq('treatment card + one-letter misspelling → certain', top({ full_name: 'Declan Farell', card: 'PH4417' }, ostPool), ['ost1', 'certain']);
+const otherCard = matchPatients({ full_name: 'Declan Farrell', card: 'PH 9999' }, ostPool).find((c) => c.patient.id === 'ost1');
+eq('same name, different treatment card → conflict, not certain', [otherCard?.level, otherCard?.conflicts.includes('Different treatment card')], ['possible', true]);
+
+const pmrPool = [P('w75', 'Michaela', 'Walshe', { pmr_code: 'W75' })];
+eq('dispensing system code from a bag label + similar name → certain', top({ full_name: 'Michaela Walsh', pmr: 'w 75' }, pmrPool), ['w75', 'certain']);
+
 // Record-to-record (Possible duplicates): no full_name, first name and surname given separately
 const recDup = matchPatients({ first_name: 'Mary', surname: "O'Brien", dob: '1950-03-12' }, pool);
 eq('record with split names matches its duplicate', [recDup[0]?.patient.id, recDup[0]?.level], ['obrien', 'certain']);
