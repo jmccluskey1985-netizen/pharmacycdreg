@@ -27,7 +27,7 @@ export default function PrivacyPage() {
         <li>Anonymous, cookie-free page-view counts to improve the website, legitimate interests.</li>
         <li>Waitlist and product updates: consent, which you can withdraw at any time.</li>
       </UL>
-      <P>Register and patient data is health data (Art. 9). Pharmacies process it to meet their obligations under the Misuse of Drugs Regulations and for the provision of health care (Art. 9(2)(h) and (i)). We never use it for any purpose of our own, never sell it and never use it to train AI.</P>
+      <P>Register and patient data is health data (Art. 9). Pharmacies process it to meet their obligations under the Misuse of Drugs Regulations and for the provision of health care (Art. 9(2)(h) and (i)). We never use it for any purpose of our own, never use it for marketing, never sell it and never use it to train AI.</P>
 
       <H2>Who we share it with</H2>
       <P>Only the sub-processors below, each under a data processing agreement:</P>
