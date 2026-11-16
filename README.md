@@ -55,6 +55,7 @@ Electronic Controlled Drug Register for Irish community pharmacies. It is a sist
 
 Mirrors PharmacyConsultation.ie, with prices set in `src/config/pricing.ts`:
 - **€19/month + VAT**, a limited-time launch price shown against €29, and a **one-month free trial**.
+- **Groups:** 25% off each additional pharmacy (€14/month at launch, normally €22), 10+ premises by agreement (`GROUP` in `src/config/pricing.ts`). Charging it needs a Stripe price or coupon for additional premises.
 - **Self sign-up** at `/start`. The pharmacy is created, then The free month starts straight away with **no card needed**, and a countdown offers Subscribe; subscribing early keeps the remaining free days. Irish VAT is handled by Stripe Tax, and the VAT number is captured at checkout.
 - `POST /api/stripe/webhook` keeps `pharmacies.subscription_status`, `trial_ends_at` and `current_period_end` in sync. One free month per pharmacy.
 - **Billing page** for the supervising pharmacist: the Stripe customer portal for card changes, invoices and cancelling.

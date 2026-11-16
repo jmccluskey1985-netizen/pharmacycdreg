@@ -28,7 +28,7 @@ Read this first, then:
 
 ```
 src/app/                    pages (App Router)
-  page.tsx                  marketing home: previews, waitlist, hidden "Pharmacy access"
+  page.tsx                  marketing home: animated demos, trust strip + "Your data, security and AI, answered" Q&A band, phone preview, pricing, waitlist, hidden "Pharmacy access"
   dashboard/                the app (behind sign-in + staff PIN)
     page.tsx                registers: bookshelf / table per CD type, start books
     register/[id]/          one register "book": entries, select rows → repeat, stock check, set aside
@@ -40,7 +40,9 @@ src/app/                    pages (App Router)
 src/lib/
   access.ts                 requireAccount / requireStaff (aal2, roles, read-only when unpaid)
   stripe.ts                 effectiveStatus, canWrite
-  scan-extract.ts           reader (OpenRouter / Anthropic), schemas, explainOpenRouter
+  scan-extract.ts           reader (Vertex AI / OpenRouter / Anthropic), schemas, OST form schema
+  ost.ts, bag-labels.ts     OST instalment rules; bag-label reading for the OST patient list
+  report-reconcile.ts       stock check vs dispensing report: matching, cut-off dates (unit-tested)
   reader-config.ts          fixed MODEL_CHAIN, site-wide key lookup
   secret-box.ts             AES-256-GCM for stored secrets
   quantity.ts, invoice-rules.ts, register-page.ts   reading rules (unit-tested)
@@ -82,8 +84,10 @@ scripts/                    create-pharmacy.mjs, rule tests, GMS list parser
   - Quick-fill for patients, prescribers (incl. the national GMS list), suppliers (Uniphar, United Drug, PCO, IMED, Pluripharm) and witnesses.
   - Usual-doctor and collected-by chips.
 - **OST (methadone / buprenorphine) forms:** today's supervised + take-away rows become one supply; the form and its instalments are held; missed earlier days are offered as late entries (docs/SCANNING.md §2a).
-- **Scanning:** Rx (fewest steps: Scan Rx → check → sign), invoices and CD dockets, paper register pages. There is a duplicate guard on everything.
+- **Scanning:** Rx (fewest steps: Scan Rx → check → sign), invoices and CD dockets, paper register pages. There is a duplicate guard on everything. On a PC (Chrome / Edge) the Scan page can watch the scanner's save folder and read each new scan automatically; drag-and-drop and Ctrl+V paste also work (docs/SCANNING.md §2b).
+- **OST patient list:** methadone / buprenorphine patients onboarded once from photos of bag labels (name, address, dispensing-system code, treatment card); OST forms are then matched by card or code. Drug codes on forms (e.g. 46115) are learned per register.
 - **Destruction:** set aside (quarantine) Sch 2 stock → witnessed destruction; a separate CD Destruction Record Book for patient returns and Sch 3/4 stock.
+- **Stock checks** can be checked against a dispensing-system report (PDF, photo or CSV, e.g. a Drug Search Report): lines missing from the register are highlighted and ticked, quantity differences flagged, and ticked lines added in one signed action, as late entries with a footnote when over a day old (docs/SCANNING.md §2c).
 - **Stock checks** with a required note when the count doesn't match; low-stock level per register. After investigating, a pharmacist can **amend the balance** to the count. This adds a signed STOCK ADJUSTMENT line (`adjustment_in` / `adjustment_out`) with the investigation text; it's refused if the register changed since the count. The investigation can be saved as a note with photos.
 - **Dispensing reminders** (`/dashboard/reminders`): daily, weekly, every 2 or 4 weeks, monthly, or every N days. They can be created from selected supply rows on a register. When one is due, there's a badge and a banner; **Record now** posts every line through `/api/entries` (signed, with the balance and duplicate checks), then moves the reminder to its next date. **Skip this time** moves it on without recording anything.
 - **Notes** (`/dashboard/notes`): categories you can customise, pins, search, links to a register, and clickable URLs. Photos, scans and PDFs are stored in the private Supabase Storage bucket `cd-notes` and only served through `/api/notes/attachments/:id`. Edits are kept in the audit log.
@@ -91,6 +95,7 @@ scripts/                    create-pharmacy.mjs, rule tests, GMS list parser
 - **Inspector access:** the supervising pharmacist creates a time-limited, revocable, read-only link (`/inspect/<token>`; only a hash of the token is stored). It shows registers, destructions and the audit trail with integrity status, printable, and every view is audited.
 - **Late entries:** an entry dated more than a day before today (Irish time) needs a reason, which is written into the line and shown as a "late entry" badge. There's also a paper fallback sheet (`/dashboard/fallback-sheet`) for outages.
 - **Requisition supplies:** the supply form has a "requisition" mode for practitioners or businesses (no patient record is created).
+- **Sign out** at the bottom of the sidebar (and in the phone More menu) ends the pharmacy login on the device, separate from Lock / switch user.
 - **Require two-step sign-in** (Settings → Security). The last authenticator can't be removed while this is on, and a red banner shows if it goes missing.
 - **Full backup:** Settings → Data → Full backup (JSON), supervising pharmacist only, audited. Printing is A4 landscape with page numbers and repeated headings.
 - **Help** (`/dashboard/help`), a **Getting started** checklist on the registers page, public **/security**, **/privacy** and **/terms**, an app manifest (install to home screen), error pages with browser-error reporting, `/api/health`, and cookie-free Vercel Analytics.
@@ -101,6 +106,8 @@ scripts/                    create-pharmacy.mjs, rule tests, GMS list parser
 - **Audit trail, print and CSV export** for inspection.
 - **Training mode:** a temporary copy of the pharmacy's register in the browser, under an orange bar. Nothing is saved, and it is cleared on refresh.
 - **Demo mode:** `NEXT_PUBLIC_DEMO_MODE=1` builds a self-contained sample pharmacy. The home-page previews use it.
+- **Pricing** (`src/config/pricing.ts`): €19/month launch price (normally €29) per premises; **groups: 25% off each additional pharmacy** (`GROUP`: €14 launch / €22, rounded), 10+ premises by agreement; groups joining during the launch keep launch prices. Shown on the pricing card and in the Terms.
+- **Compliance claims:** every statement the site makes about security, data and AI is listed with its evidence in `docs/compliance/CLAIMS_EVIDENCE.md`. Update it when the system changes.
 
 ## 5. Site owner (ADMIN_EMAILS)
 
@@ -133,19 +140,21 @@ Not covered automatically: the real server API routes talking to a real Supabase
 
 - [ ] **Stripe:** create the product and price, webhook and portal (README → Stripe setup); set `STRIPE_*` and `CRON_SECRET`.
 - [ ] **Google sign-in:** finish the Google Cloud client and Supabase provider set-up (docs/OPERATIONS.md §3).
-- [ ] **Migrations:** confirm 0009–0023 have been run in production.
+- [x] **Migrations:** 0001–0023 are in production (0023 applied 16 Nov 2026).
 - [ ] **Document reader:** set up Google Vertex AI (Settings → Document reading) and accept the Google Cloud DPA. File the sub-processor DPAs (`docs/compliance/SUBPROCESSOR_DPAS.md`).
 - [ ] **Company details:** set `NEXT_PUBLIC_COMPANY_NAME`, `NEXT_PUBLIC_COMPANY_ADDRESS` and `NEXT_PUBLIC_CONTACT_EMAIL`. Have a solicitor review /privacy, /terms and `docs/compliance/DPA_TEMPLATE.md`.
-- [ ] **Supabase plan:** Pro (daily backups, 7 days) and ideally Point-in-Time Recovery. Turn on leaked-password protection (Authentication → Policies). Run migration 0018.
+- [ ] **Supabase plan:** Pro (daily backups, 7 days) and ideally Point-in-Time Recovery. Planned soon; the IPU pack already describes Pro daily backups, marked [enable before submission]. Turn on leaked-password protection (Authentication → Policies).
 - [ ] **Vercel env:** set `SECRETS_KEY` (32+ random characters, different from `STAFF_SESSION_SECRET`) so stored API keys and staff sessions use separate keys. Then re-save the reader key in Settings so it's encrypted with the new key.
 - [ ] **Uptime monitor** on `https://pharmacycdreg.ie/api/health` (e.g. UptimeRobot, free).
 - [ ] **Restore drill:** once a year, restore a Full backup into a throwaway Supabase project with `scripts/restore-backup.mjs` and record the result (docs/BACKUP_AND_RESTORE.md).
 - [x] **Code tidy-ups:** scripts are now nonce-based (`src/proxy.ts` + `src/lib/csp.ts`, `'strict-dynamic'`, no `'unsafe-inline'` for scripts; every page renders per request to carry its nonce). The `react-hooks/set-state-in-effect` cases were reviewed and annotated, and the rule is an error for new code.
 - [ ] **Hardening checklist:** `docs/OPERATIONS.md` §6 (uptime monitor, leaked-password protection, backups and restore test).
-- [ ] **Multi-premises groups:** superintendent switching and the **Group overview** page are built. Still to do: group pricing (needs the discount tiers decided, and Stripe).
+- [ ] **Multi-premises groups:** superintendent switching, the **Group overview** page and the group price (25% off each additional pharmacy) are built and shown. Still to do: charge it in Stripe (e.g. a second price for additional premises, or a coupon applied when a pharmacy joins a group that already pays for one).
 - [ ] **Reminders:** consider an email or push notification for due reminders (they're in-app only for now).
 - [ ] **Launch:** set `SIGNUPS_OPEN=1` and remove the `SIGNIN_UNLOCK_CODE` gate when ready.
-- [ ] **IPU evidence pack:** DEC-001 updated to Draft 0.2 (Google Vertex AI EU as the reader; kept outside this public repo because it carries the signatory's name). Before submission, confirm the Google Cloud DPA acceptance date, the prompt-logging exception and the Supabase plan / point-in-time recovery, then sign.
+- [ ] **IPU evidence pack:** Draft 0.3 (16 Nov 2026), kept outside this public repo because it carries the signatory's name: test plan, evidence register (37 items incl. OST, late entries, stock-check reconciliation, inspector links, two-step sign-in, superintendent groups, restore test), DOC-001 (seven roles), DOC-002 (backups, corrected to Paris region), DEC-001, and a checklist. Before submission: fill the [bracketed] blanks, enable Supabase Pro, capture screenshots/videos from a test pharmacy with made-up patients, sign.
+- [ ] **Google Vertex AI prompt logging:** exemption (zero data retention) requested via the Google Cloud Compliance & Data Privacy form on 16 Nov 2026; awaiting reply. When granted, the site can say no copy of a scan is kept anywhere (update CLAIMS_EVIDENCE D4, the home page Q&A and DEC-001).
+- [ ] **Dependencies:** Tailwind 4, TypeScript 7, @types/node 26 and Stripe 23 are major upgrades left for later (Dependabot PRs). Playwright stays at the version matching the test browser.
 - [ ] **Reader evaluation set:** build a set of anonymised Rx and invoice images with expected outputs, to measure accuracy before and after model changes.
 - [ ] **Halo:** import Halo's CONTROLLED drug list to widen the catalogue (some brand and strength variants are missing; users can add them by hand meanwhile).
 - [x] **PSI wording:** checked Nov 2026 against the PSI segregation/destruction advice (via search results). Still worth reading the PSI disposal guidelines directly for the patient-return denaturing steps.
