@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { PublicPage, H2, P, UL } from '@/components/public/public-page';
 import { infoPageJsonLd, jsonLd } from '@/lib/structured-data';
 import { COMPANY } from '@/config/company';
-import { PLAN, formatEuro } from '@/config/pricing';
+import { PLAN, formatEuro, GROUP } from '@/config/pricing';
 
 export const metadata: Metadata = { alternates: { canonical: '/terms' }, title: 'Terms of service: PharmacyCDReg.ie' };
 
@@ -23,6 +23,7 @@ export default function TermsPage() {
       <H2>4. Price, trial and cancellation</H2>
       <UL>
         <li>A free month, no card needed. Then {formatEuro(PLAN.price)} per month + VAT per premises, billed monthly in advance.</li>
+        <li>Groups: each premises after the first in the same group is {GROUP.discountPercent}% off ({formatEuro(GROUP.additionalPrice)} per month + VAT at the launch price). Groups of {GROUP.contactFrom} or more premises are priced by agreement.</li>
         <li>Cancel any time from Billing; the subscription ends at the end of the paid month.</li>
         <li>If you stop paying, the register becomes read-only. You can still view, print and export it. It is never deleted because of non-payment.</li>
       </UL>

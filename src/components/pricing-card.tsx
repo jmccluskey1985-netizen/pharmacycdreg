@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { Check, Sparkles } from 'lucide-react';
-import { PLAN, PLAN_FEATURES, FREE_TRIAL_DAYS, formatEuro } from '@/config/pricing';
+import { Check, Sparkles, Building2 } from 'lucide-react';
+import { PLAN, PLAN_FEATURES, FREE_TRIAL_DAYS, GROUP, formatEuro } from '@/config/pricing';
+import { COMPANY } from '@/config/company';
 
 export function PricingCard({ cta = true }: { cta?: boolean }) {
   return (
@@ -27,6 +28,14 @@ export function PricingCard({ cta = true }: { cta?: boolean }) {
           <li key={f} className="flex items-start gap-2 text-sm"><Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand" /> {f}</li>
         ))}
       </ul>
+      <div className="mt-5 flex gap-2.5 rounded-xl bg-white/10 p-3 text-sm ring-1 ring-white/15">
+        <Building2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand" />
+        <p>
+          <b>Groups: {GROUP.discountPercent}% off each additional pharmacy</b>: {formatEuro(PLAN.launchOffer ? GROUP.additionalPrice : GROUP.additionalOriginalPrice)}/{PLAN.period}
+          {PLAN.launchOffer && <span className="text-white/60"> (normally {formatEuro(GROUP.additionalOriginalPrice)})</span>}.{' '}
+          <span className="text-white/80">{GROUP.contactFrom}+ pharmacies? <a href={`mailto:${COMPANY.email}?subject=Group%20pricing`} className="font-semibold underline">Talk to us</a>.</span>
+        </p>
+      </div>
       {cta && <Link href="/start" className="btn mt-6 w-full bg-brand text-base font-semibold text-white hover:bg-brand/90">Start your free month</Link>}
       <p className="mt-3 text-center text-xs text-white/60">No card needed · 30 days free · subscribe when you’re ready</p>
     </div>
