@@ -50,6 +50,9 @@ function seedEntries() {
   const UD = { supplier_name: 'United Drug', supplier_address: 'Magna Business Park, Citywest, Dublin 24' };
   const UN = { supplier_name: 'Uniphar Wholesale', supplier_address: 'Fourth Avenue, Cookstown, Dublin 24' };
   const BF = (n: string) => ({ supplier_name: 'Balance brought forward', supplier_address: n, notes: 'Opening balance' });
+  // Methadone DTF 1mg/ml (OST)
+  add('r6', 'receipt', 20, 5000, 's1', BF('Paper register vol. 2, page 3'));
+  add('r6', 'supply', 2, 420, 's2', { recipient_name: 'Gerard Lynch', recipient_address: '5 Mill Rd, Ennis', prescriber_name: 'Dr K. Ryan', authority_to_possess: 'Prescription: Dr K. Ryan', prescription_ref: 'OST 9000017', notes: 'OST instalment: 60 supervised + 360 take-away' });
   // Oxycodone 5mg caps
   add('r1', 'receipt', 20, 56, 's1', BF('Paper register vol. 3, page 99'));
   add('r1', 'receipt', 12, 112, 's1', { ...UD, notes: 'Invoice 4471902', source: 'scan' });
@@ -73,9 +76,6 @@ function seedEntries() {
   add('r4', 'supply', 4, 5, 's2', { recipient_name: 'Thomas Burke', recipient_address: 'Ard Na Gréine, Ennis', prescriber_name: 'Dr L. Nolan', authority_to_possess: 'Prescription: Dr L. Nolan', prescription_ref: 'Rx 10255' });
   // Methylphenidate
   add('r5', 'receipt', 20, 60, 's1', BF('Paper register vol. 1, page 12'));
-  // Methadone DTF 1mg/ml (OST)
-  add('r6', 'receipt', 20, 5000, 's1', BF('Paper register vol. 2, page 3'));
-  add('r6', 'supply', 2, 420, 's2', { recipient_name: 'Gerard Lynch', recipient_address: '5 Mill Rd, Ennis', prescriber_name: 'Dr K. Ryan', authority_to_possess: 'Prescription: Dr K. Ryan', prescription_ref: 'OST 9000017', notes: 'OST instalment: 60 supervised + 360 take-away' });
   return out;
 }
 
