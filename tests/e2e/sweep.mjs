@@ -275,6 +275,7 @@ await step('stock check: dispensing report shows missing entries, ticked ones ad
   await see('text=Paddy Hehir', 8000);
   await see('text=/Over 24 hours/');
   await see('text=/quantity differs/');
+  await see('text=/Date partly cut off/');
   if (!(await page.isDisabled('button:has-text("Sign & add 2 missing entries")'))) throw new Error('should need an address first');
   await page.fill('input[placeholder="Patient address (needed for the register)"]', '21 Bridge Street, Ennis');
   await click('button:has-text("Sign & add 2 missing entries")');

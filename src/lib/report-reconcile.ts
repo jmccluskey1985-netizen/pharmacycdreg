@@ -15,6 +15,8 @@ export type ReportKind = 'supply' | 'receipt';
 export interface ReportRow {
   date: string; kind: ReportKind; name: string | null; address: string | null; prescriber: string | null;
   reference: string | null; quantity: number; product: string | null;
+  /** The day was partly cut off on the photo (e.g. "?7/11/2026"): the dates it could be, latest first */
+  date_options?: string[];
 }
 export interface LedgerLine {
   id: string; seq: number; entry_type: string; transaction_date: string; quantity: number | string;
@@ -45,7 +47,22 @@ export function reconcile(rows: ReportRow[], ledger: LedgerLine[]): ReconciledRo
   const used = new Set<string>();
   const sorted = rows.map((row, i) => ({ row, i })).sort((a, b) => a.row.date.localeCompare(b.row.date));
   const out: (ReconciledRow & { i: number })[] = [];
-  for (const { row, i } of sorted) {
+  for (const { row: given, i } of sorted) {
+    // A date with its first digit cut off: use whichever possible date the register agrees with
+    let row = given;
+    if (given.date_options && given.date_options.length > 1) {
+      const tryOne = (d: string) => matchOne({ ...given, date: d }, ledger, used);
+      const best = given.date_options.map((d) => ({ d, r: tryOne(d) })).find((x) => x.r.status === 'in_register') ?? given.date_options.map((d) => ({ d, r: tryOne(d) })).find((x) => x.r.status === 'quantity_differs');
+      if (best) row = { ...given, date: best.d, date_options: [best.d] };
+    }
+    const r = matchOne(row, ledger, used);
+    if (r.lineId) used.add(r.lineId);
+    out.push({ i, row, status: r.status, seq: r.seq, register_quantity: r.register_quantity, why: r.why });
+  }
+  return out.sort((a, b) => a.i - b.i).map(({ i: _i, ...r }) => r);
+}
+
+function matchOne(row: ReportRow, ledger: LedgerLine[], used: Set<string>): Omit<ReconciledRow, 'row'> & { lineId: string | null } {
     const near = ledger.filter((l) => !used.has(l.id) && l.entry_type === row.kind && dayDiff(l.transaction_date, row.date) <= 2);
     const scored = near.map((l) => {
       const name = namesAgree(row.name, row.kind === 'supply' ? l.recipient_name : l.supplier_name);
@@ -58,20 +75,10 @@ export function reconcile(rows: ReportRow[], ledger: LedgerLine[]): ReconciledRo
     const sameQtySameDay = scored.filter((s) => s.qty && s.sameDay);
     const loneQty = !row.name && !row.reference && sameQtySameDay.length === 1 ? sameQtySameDay[0] : null;
     const hit = exact ?? loneQty;
-    if (hit) {
-      used.add(hit.l.id);
-      out.push({ i, row, status: 'in_register', seq: hit.l.seq, register_quantity: Number(hit.l.quantity), why: hit.ref ? 'Reference matches' : hit.name ? 'Name, date and quantity match' : 'Date and quantity match' });
-      continue;
-    }
+    if (hit) return { lineId: hit.l.id, status: 'in_register', seq: hit.l.seq, register_quantity: Number(hit.l.quantity), why: hit.ref ? 'Reference matches' : hit.name ? 'Name, date and quantity match' : 'Date and quantity match' };
     const sameWho = scored.find((s) => (s.name || s.ref) && !s.qty);
-    if (sameWho) {
-      used.add(sameWho.l.id);
-      out.push({ i, row, status: 'quantity_differs', seq: sameWho.l.seq, register_quantity: Number(sameWho.l.quantity), why: `Register line ${sameWho.l.seq} has ${Number(sameWho.l.quantity)}, the report has ${row.quantity}` });
-      continue;
-    }
-    out.push({ i, row, status: 'missing', seq: null, register_quantity: null, why: 'Not found in the register within 2 days of this date' });
-  }
-  return out.sort((a, b) => a.i - b.i).map(({ i: _i, ...r }) => r);
+    if (sameWho) return { lineId: sameWho.l.id, status: 'quantity_differs', seq: sameWho.l.seq, register_quantity: Number(sameWho.l.quantity), why: `Register line ${sameWho.l.seq} has ${Number(sameWho.l.quantity)}, the report has ${row.quantity}` };
+    return { lineId: null, status: 'missing', seq: null, register_quantity: null, why: 'Not found in the register within 2 days of this date' };
 }
 
 /** Stock effect of adding the given rows (receipts in, supplies out). */
@@ -82,7 +89,7 @@ const strN = z.preprocess((v) => (v === '' ? null : v), z.string().nullable()).c
 export const ReportSchema = z.object({
   period_from: strN, period_to: strN,
   rows: z.array(z.object({
-    date: strN, kind: z.enum(['supply', 'receipt', 'other']).catch('other'),
+    date: strN, date_text: strN, date_cut_off: z.boolean().nullable().catch(null), kind: z.enum(['supply', 'receipt', 'other']).catch('other'),
     name: strN, address: strN, prescriber: strN, reference: strN,
     quantity: z.preprocess((v) => (v === '' || v == null ? null : Number(v)), z.number().nullable()).catch(null),
     product: strN, for_this_register: z.boolean().nullable().catch(null),
@@ -101,11 +108,13 @@ export const REPORT_JSON_SCHEMA = {
       type: 'array', description: 'Every transaction line on the report, in order. One item per line.',
       items: {
         type: 'object', additionalProperties: false,
-        required: ['date', 'kind', 'name', 'address', 'prescriber', 'reference', 'quantity', 'product', 'for_this_register'],
+        required: ['date', 'date_text', 'date_cut_off', 'kind', 'name', 'address', 'prescriber', 'reference', 'quantity', 'product', 'for_this_register'],
         properties: {
-          date: { ...sN, description: 'Transaction date as YYYY-MM-DD (Irish dates are day/month/year)' },
+          date: { ...sN, description: 'Transaction date as YYYY-MM-DD (Irish dates are day/month/year). null if any digit is missing or unreadable' },
+          date_text: { ...sN, description: 'The date exactly as visible, with ? for each digit cut off or unreadable, e.g. "?7/11/2026" when the left edge of the page is cut off' },
+          date_cut_off: { type: ['boolean', 'null'], description: 'true if part of the date is cut off, covered, in shadow or unreadable' },
           kind: { type: 'string', enum: ['supply', 'receipt', 'other'], description: 'supply = dispensed to a patient; receipt = received from a supplier/wholesaler; other = anything else (returns, adjustments, totals)' },
-          name: { ...sN, description: 'Patient name (supply) or supplier name (receipt), as printed' },
+          name: { ...sN, description: 'Patient name (supply) or supplier name (receipt), as printed, without markers like *. Reports often print SURNAME first ("Kelly Mary"): keep the order printed' },
           address: { ...sN, description: 'Patient or supplier address if printed' },
           prescriber: { ...sN, description: 'Prescriber / doctor if printed' },
           reference: { ...sN, description: 'Prescription / script / invoice number if printed' },
@@ -118,17 +127,44 @@ export const REPORT_JSON_SCHEMA = {
     warnings: { type: 'array', items: { type: 'string' } },
   },
 };
-export const REPORT_SYSTEM = `You read controlled-drug reports exported or printed from an Irish community pharmacy's dispensing system (e.g. a CD dispensing report, drug history or transaction report), so a pharmacist can check them against the Controlled Drugs Register. Transcribe every transaction line exactly: never invent or merge lines, never guess a name, date or quantity. Ignore totals and page headers. Return JSON only.`;
+export const REPORT_SYSTEM = `You read controlled-drug reports exported or printed from an Irish community pharmacy's dispensing system (e.g. a drug search report, CD dispensing report, drug history or transaction report, typically with columns like Date Dispensed, Patient Name, Script Dispensed As, Qty), so a pharmacist can check them against the Controlled Drugs Register. Transcribe every transaction line exactly: never invent or merge lines, never guess a name, date or quantity. Lines on a report are dispensings (supplies) unless they're clearly goods received.
+Photos are often taken at an angle, with shadows, fingers or glare: follow each row across the page along its slant so date, name, product and quantity come from the SAME row (columns can look shifted up or down by half a row; use the row order: the first date goes with the first name, product and quantity). If the page edge cuts off part of a date (e.g. only "7/11/2026" is visible of "17/11/2026"), do NOT guess the missing digit: set date to null, date_text with "?" for the missing digit(s), and date_cut_off true. Ignore totals, page headers and the pharmacy's name. Return JSON only.`;
 export const reportPrompt = (product: string, unit: string, text?: string) =>
   `The register being checked is: ${product}, counted in ${unit}. List every transaction line on the report and mark whether each is for this product.${text ? `\n\nThe report (exported text):\n${text}` : ''}`;
 
-/** Clean rows from the reader: only this product's supplies and receipts with a date and quantity. */
-export function usableRows(x: ReportExtraction): { rows: ReportRow[]; skipped: number } {
+/**
+ * The dates a partly cut-off date could be, latest first and never in the future:
+ * "?7/11/2026" → 27/11, 17/11, 07/11 (those that exist and aren't after today).
+ */
+export function dateOptions(text: string | null | undefined, today: string): string[] {
+  const m = (text ?? '').replace(/\s+/g, '').match(/([?\d]{0,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+  if (!m) return [];
+  const [, dayTxt, mon, yr] = m;
+  const year = yr.length === 2 ? `20${yr}` : yr;
+  const month = Number(mon);
+  if (month < 1 || month > 12) return [];
+  const known = dayTxt.replace(/\?/g, '');
+  const days = new Date(Date.UTC(Number(year), month, 0)).getUTCDate();
+  const out: string[] = [];
+  for (let d = days; d >= 1; d--) {
+    const dd = String(d).padStart(2, '0');
+    if (known && !dd.endsWith(known) && String(d) !== known) continue;
+    if (!known && dayTxt.length === 0) continue;
+    const iso = `${year}-${String(month).padStart(2, '0')}-${dd}`;
+    if (iso <= today) out.push(iso);
+  }
+  return out;
+}
+
+/** Clean rows from the reader: only this product's supplies and receipts with a date (or possible dates) and quantity. */
+export function usableRows(x: ReportExtraction, today = new Date().toISOString().slice(0, 10)): { rows: ReportRow[]; skipped: number } {
   const rows: ReportRow[] = [];
   let skipped = 0;
   for (const r of x.rows) {
-    if (r.for_this_register === false || r.kind === 'other' || !r.date || !/^\d{4}-\d{2}-\d{2}$/.test(r.date) || !r.quantity || r.quantity <= 0) { skipped++; continue; }
-    rows.push({ date: r.date, kind: r.kind, name: r.name, address: r.address, prescriber: r.prescriber, reference: r.reference, quantity: r.quantity, product: r.product });
+    const opts = r.date_cut_off || !r.date ? dateOptions(r.date_text, today) : [];
+    const date = r.date && /^\d{4}-\d{2}-\d{2}$/.test(r.date) && !r.date_cut_off ? r.date : opts[0] ?? null;
+    if (r.for_this_register === false || r.kind === 'other' || !date || !r.quantity || r.quantity <= 0) { skipped++; continue; }
+    rows.push({ date, kind: r.kind, name: r.name, address: r.address, prescriber: r.prescriber, reference: r.reference, quantity: r.quantity, product: r.product, ...(opts.length > 1 ? { date_options: opts } : {}) });
   }
   return { rows, skipped };
 }

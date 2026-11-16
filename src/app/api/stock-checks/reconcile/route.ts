@@ -6,7 +6,7 @@ import { readDocument, parseJsonWith, ScanError } from '@/lib/scan-extract';
 import { ReportSchema, REPORT_JSON_SCHEMA, REPORT_SYSTEM, reportPrompt, usableRows, reconcile } from '@/lib/report-reconcile';
 import { findPatientMatches } from '@/lib/patients';
 import { productTitle } from '@/lib/product-name';
-import { isLate } from '@/lib/late-entry';
+import { isLate, irishToday } from '@/lib/late-entry';
 import { getReaderConfig } from '@/lib/reader-config';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { can } from '@/lib/roles';
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
       prompt: reportPrompt(`${productTitle(reg.product)} (${reg.product?.drug_name ?? ''} ${reg.product?.strength ?? ''} ${reg.product?.form ?? ''})`, unit, text || undefined),
       parse: parseJsonWith(ReportSchema),
     });
-    const { rows, skipped } = usableRows(result);
+    const { rows, skipped } = usableRows(result, irishToday());
     if (!rows.length) return NextResponse.json({ error: `No ${productTitle(reg.product)} supplies or receipts were found on this report.`, warnings: result.warnings }, { status: 422 });
 
     const from = addDays(rows.reduce((m, r) => (r.date < m ? r.date : m), rows[0].date), -3);
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
       const p: any = m?.pick?.patient ?? null;
       return { ...base, patient: p ? { id: p.id, name: [p.first_name, p.surname].filter(Boolean).join(' '), address: p.address ?? null } : null, draft: {
         entry_type: 'supply', transaction_date: r.row.date, quantity: r.row.quantity,
-        recipient_name: r.row.name ?? '', recipient_address: r.row.address ?? p?.address ?? '', patient_id: p?.id ?? null,
+        recipient_name: p ? [p.first_name, p.surname].filter(Boolean).join(' ') : (r.row.name ?? '').replace(/\*/g, '').replace(/\s+/g, ' ').trim(), recipient_address: r.row.address ?? p?.address ?? '', patient_id: p?.id ?? null,
         prescriber_name: r.row.prescriber, authority_to_possess: r.row.prescriber ? `Prescription: ${r.row.prescriber}` : 'Prescription', prescription_ref: r.row.reference,
       } };
     }));

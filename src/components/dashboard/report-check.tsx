@@ -3,12 +3,12 @@
 import { useState } from 'react';
 import { FileSearch, Loader2, CheckCircle2, AlertTriangle, Plus, Clock, UserCheck } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
-import { irishToday } from '@/lib/late-entry';
+import { irishToday, isLate } from '@/lib/late-entry';
 
 type Kind = 'supply' | 'receipt';
 interface Line {
   i: number; status: 'in_register' | 'missing' | 'quantity_differs'; seq: number | null; register_quantity: number | null; why: string; late: boolean;
-  row: { date: string; kind: Kind; name: string | null; reference: string | null; quantity: number; prescriber: string | null };
+  row: { date: string; kind: Kind; name: string | null; reference: string | null; quantity: number; prescriber: string | null; date_options?: string[] };
   patient?: { id: string; name: string; address: string | null } | null;
   draft?: Record<string, any>;
 }
@@ -41,7 +41,7 @@ export function ReportCheck({ registerId, unit, balance, counted, onAdded }: { r
       Array.from(list).forEach((f) => fd.append('file', f));
       const d = await api('/api/stock-checks/reconcile', { method: 'POST', body: fd });
       setData(d);
-      setSel(Object.fromEntries(d.lines.filter((l: Line) => l.status === 'missing').map((l: Line) => [l.i, true])));
+      setSel(Object.fromEntries(d.lines.filter((l: Line) => l.status === 'missing' && !((l.row.date_options?.length ?? 0) > 1)).map((l: Line) => [l.i, true])));
       setEdit({});
     } catch (e) { setError(e instanceof ApiError ? e.message : 'Could not read the report'); }
     finally { setBusy(false); }
@@ -52,9 +52,12 @@ export function ReportCheck({ registerId, unit, balance, counted, onAdded }: { r
   const found = data?.lines.filter((l) => l.status === 'in_register') ?? [];
   const value = (l: Line, k: string) => edit[l.i]?.[k] ?? l.draft?.[k] ?? '';
   const chosen = missing.filter((l) => sel[l.i] && !results[l.i]?.ok);
-  const needs = (l: Line) => (l.row.kind === 'supply' ? !value(l, 'recipient_name').trim() || value(l, 'recipient_address').trim().length < 3 : !value(l, 'supplier_name').trim() || value(l, 'supplier_address').trim().length < 3);
+  const unsure = (l: Line) => (l.row.date_options?.length ?? 0) > 1;
+  const lateOf = (l: Line) => isLate(String(value(l, 'transaction_date') || l.row.date));
+  const needsDate = (l: Line) => unsure(l) && !edit[l.i]?.transaction_date;
+  const needs = (l: Line) => needsDate(l) || (l.row.kind === 'supply' ? !value(l, 'recipient_name').trim() || value(l, 'recipient_address').trim().length < 3 : !value(l, 'supplier_name').trim() || value(l, 'supplier_address').trim().length < 3);
   const effect = chosen.reduce((n, l) => n + (l.row.kind === 'receipt' ? l.row.quantity : -l.row.quantity), 0);
-  const anyLate = chosen.some((l) => l.late);
+  const anyLate = chosen.some(lateOf);
   const blocked = chosen.some(needs) || (anyLate && reason.trim().length < 5);
 
   async function addAll() {
@@ -68,7 +71,7 @@ export function ReportCheck({ registerId, unit, balance, counted, onAdded }: { r
         const r = await api('/api/entries', { method: 'POST', json: {
           register_id: registerId, ...d, quantity: Number(d.quantity),
           notes: [d.notes, NOTE].filter(Boolean).join(' · '),
-          late_reason: l.late ? reason.trim() : undefined,
+          late_reason: lateOf(l) ? reason.trim() : undefined,
           interactive: false,
         } });
         setResults((x) => ({ ...x, [l.i]: { ok: true, seq: r.seq } }));
@@ -123,19 +126,30 @@ export function ReportCheck({ registerId, unit, balance, counted, onAdded }: { r
                       <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#54BD50]" disabled={!!res?.ok || adding} checked={!!sel[l.i] || !!res?.ok} onChange={(e) => setSel((x) => ({ ...x, [l.i]: e.target.checked }))} aria-label={`Add ${l.row.name ?? 'line'} ${fmt(l.row.date)}`} />
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <b className="tabular-nums">{fmt(l.row.date)}</b>
+                          <b className="tabular-nums">{unsure(l) ? (edit[l.i]?.transaction_date ? fmt(edit[l.i].transaction_date) : `?${fmt(l.row.date).slice(1)}`) : fmt(l.row.date)}</b>
                           <span className={`rounded px-1.5 text-[10px] font-bold uppercase ${sup ? 'bg-slate-100 text-slate-700' : 'bg-sky-100 text-sky-900'}`}>{sup ? 'Supply' : 'Receipt'}</span>
-                          <span className="font-semibold">{l.row.name ?? 'No name on report'}</span>
+                          <span className="font-semibold">{(sup ? value(l, 'recipient_name') : value(l, 'supplier_name')) || l.row.name || 'No name on report'}</span>
                           {l.row.reference && <span className="text-xs text-muted-foreground">{/^[A-Za-z]/.test(l.row.reference) ? l.row.reference : `${sup ? 'Rx' : 'Inv'} ${l.row.reference}`}</span>}
                           <b className={`ml-auto tabular-nums ${sup ? 'text-red-700' : 'text-brand-dark'}`}>{sup ? '−' : '+'}{l.row.quantity} {unit}</b>
                         </span>
                         <span className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
-                          {l.late && <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 font-semibold text-violet-900"><Clock className="h-3 w-3" /> Over 24 hours: late entry with footnote</span>}
+                          {unsure(l) && !edit[l.i]?.transaction_date && <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 font-semibold text-red-800">Date partly cut off on the photo: pick the day</span>}
+                          {lateOf(l) && !needsDate(l) && <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 font-semibold text-violet-900"><Clock className="h-3 w-3" /> Over 24 hours: late entry with footnote</span>}
                           {l.patient && <span className="inline-flex items-center gap-1 rounded-full bg-brand/15 px-2 font-semibold text-brand-dark"><UserCheck className="h-3 w-3" /> {l.patient.name}</span>}
                         </span>
                       </span>
                     </label>
-                    {sel[l.i] && !res?.ok && needs(l) && (
+                    {unsure(l) && !res?.ok && (
+                      <div className="mt-2 flex flex-wrap items-center gap-2 pl-6 text-xs">
+                        <span className="font-semibold">Which day?</span>
+                        {l.row.date_options!.map((d) => (
+                          <button key={d} type="button" onClick={() => { setEdit((x) => ({ ...x, [l.i]: { ...x[l.i], transaction_date: d } })); setSel((x) => ({ ...x, [l.i]: true })); }}
+                            className={`rounded-full px-2.5 py-1 font-semibold ring-1 ${edit[l.i]?.transaction_date === d ? 'bg-brand text-white ring-brand' : 'bg-card ring-border'}`}>{fmt(d)}</button>
+                        ))}
+                        <span className="text-muted-foreground">Check the full report or the Rx.</span>
+                      </div>
+                    )}
+                    {sel[l.i] && !res?.ok && needs(l) && !needsDate(l) && (
                       <div className="mt-2 grid gap-2 pl-6 sm:grid-cols-2">
                         <input className="input py-1.5" placeholder={sup ? 'Patient name' : 'Supplier'} value={value(l, sup ? 'recipient_name' : 'supplier_name')} onChange={(e) => setEdit((x) => ({ ...x, [l.i]: { ...x[l.i], [sup ? 'recipient_name' : 'supplier_name']: e.target.value } }))} />
                         <input className="input py-1.5" placeholder={sup ? 'Patient address (needed for the register)' : 'Supplier address'} value={value(l, sup ? 'recipient_address' : 'supplier_address')} onChange={(e) => setEdit((x) => ({ ...x, [l.i]: { ...x[l.i], [sup ? 'recipient_address' : 'supplier_address']: e.target.value } }))} />
@@ -183,7 +197,7 @@ export function ReportCheck({ registerId, unit, balance, counted, onAdded }: { r
               <button type="button" onClick={addAll} disabled={adding || blocked} className="btn-primary w-full">
                 {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Sign &amp; add {chosen.length} missing entr{chosen.length === 1 ? 'y' : 'ies'}
               </button>
-              {blocked && <p className="text-xs text-destructive">{chosen.some(needs) ? 'Fill in the name and address on the highlighted lines.' : 'Add a footnote for the late entries.'}</p>}
+              {blocked && <p className="text-xs text-destructive">{chosen.some(needsDate) ? 'Pick the day for lines whose date is cut off.' : chosen.some(needs) ? 'Fill in the name and address on the highlighted lines.' : 'Add a footnote for the late entries.'}</p>}
             </div>
           )}
         </>

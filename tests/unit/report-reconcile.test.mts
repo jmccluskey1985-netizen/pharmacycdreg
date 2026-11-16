@@ -1,5 +1,5 @@
 // Stock check vs dispensing report. Made-up patients, suppliers and numbers only.
-import { reconcile, namesAgree, effectOf, usableRows } from '../../src/lib/report-reconcile';
+import { reconcile, namesAgree, effectOf, usableRows, dateOptions } from '../../src/lib/report-reconcile';
 
 let fail = 0;
 const eq = (name: string, got: unknown, want: unknown) => {
@@ -44,6 +44,21 @@ eq('usable rows: other products, totals and undated lines are skipped', usableRo
   { date: null, kind: 'supply', name: 'A B', address: null, prescriber: null, reference: null, quantity: 28, product: null, for_this_register: null },
   { date: '2026-11-05', kind: 'other', name: 'Total', address: null, prescriber: null, reference: null, quantity: 56, product: null, for_this_register: null },
 ] }).skipped, 3);
+
+// Photos with the left edge cut off: "?7/11/2026" could be the 7th, 17th or 27th
+eq('cut-off day: possible dates, latest first, none in the future', dateOptions('?7/11/2026', '2026-11-20'), ['2026-11-17', '2026-11-07']);
+eq('cut-off day before today’s month: all three', dateOptions('?7/10/2026', '2026-11-20'), ['2026-10-27', '2026-10-17', '2026-10-07']);
+eq('cut-off day: a 30-day month has no 31st', dateOptions('?1/11/2026', '2026-12-31'), ['2026-11-21', '2026-11-11', '2026-11-01']);
+eq('whole date visible: just that date', dateOptions('04/11/2026', '2026-11-20'), ['2026-11-04']);
+const cut = usableRows({ period_from: null, period_to: null, warnings: [], rows: [
+  { date: null, date_text: '?4/11/2026', date_cut_off: true, kind: 'supply', name: 'Hehir* Paddy', address: null, prescriber: null, reference: null, quantity: 12, product: 'OXYNORM 5MG HARD CAPS', for_this_register: true },
+] }, '2026-11-20');
+eq('cut-off row is kept with its possible dates', cut.rows[0].date_options, ['2026-11-14', '2026-11-04']);
+const L2 = [L(9, 'supply', '2026-11-04', 12, { recipient_name: 'Paddy Hehir' })];
+const r2 = reconcile(cut.rows, L2);
+eq('cut-off date: the register decides which day it was', [r2[0].status, r2[0].row.date, r2[0].seq], ['in_register', '2026-11-04', 9]);
+eq('surname-first name with a * marker still matches', namesAgree('Hehir* Paddy', 'Paddy Hehir'), true);
+eq('cut-off date not in the register: missing, still offers the dates', reconcile(cut.rows, [])[0].row.date_options, ['2026-11-14', '2026-11-04']);
 
 console.log(fail ? `\n${fail} FAILED` : '\nAll passed');
 if (fail) process.exit(1);

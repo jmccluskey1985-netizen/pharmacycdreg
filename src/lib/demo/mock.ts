@@ -11,7 +11,7 @@ import { productTitle } from '@/lib/product-name';
 import { STOCK_EFFECT } from '@/lib/entry-schema';
 import { advance } from '@/lib/reminders';
 import { isLate } from '@/lib/late-entry';
-import { reconcile, type ReportRow } from '@/lib/report-reconcile';
+import { reconcile, dateOptions, type ReportRow } from '@/lib/report-reconcile';
 import { findDuplicate } from '@/lib/duplicates';
 import { can as rolesCan, type StaffRole } from '@/lib/roles';
 import { matchPatients as matchP, preselect, patientKeys, type MatchPatient } from '@/lib/patient-match';
@@ -606,11 +606,15 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     if (rows.length > 2) rows[rows.length - 1] = { ...rows[rows.length - 1], quantity: rows[rows.length - 1].quantity * 2 };
     rows.push({ date: daysAgo(4), kind: 'supply', name: 'Paddy Hehir', address: null, prescriber: 'Dr K. Ryan', reference: 'Rx 10288', quantity: 14, product: null });
     rows.push({ date: daysAgo(0), kind: 'supply', name: 'Niamh Corcoran', address: '9 Oak Park, Clarecastle, Co. Clare', prescriber: 'Dr A. Walsh', reference: 'Rx 10311', quantity: 14, product: null });
+    // A photo with the left edge cut off: only the last digit of the day shows
+    const cutIso = daysAgo(3); const [cy, cm, cd] = cutIso.split('-');
+    const opts = dateOptions(`?${cd.slice(-1)}/${cm}/${cy}`, today());
+    rows.push({ date: opts[0], kind: 'supply', name: 'Dunne* Aoife', address: '7 Clare Rd, Ennis', prescriber: null, reference: null, quantity: 10, product: null, date_options: opts.length > 1 ? opts : undefined });
     const out = reconcile(rows, recent as any);
     const lines = out.map((r, i) => {
       const b = { i, ...r, late: isLate(r.row.date) };
       if (r.status !== 'missing') return b;
-      return { ...b, patient: null, draft: { entry_type: r.row.kind, transaction_date: r.row.date, quantity: r.row.quantity, recipient_name: r.row.name, recipient_address: r.row.address ?? '', prescriber_name: r.row.prescriber, authority_to_possess: `Prescription: ${r.row.prescriber}`, prescription_ref: r.row.reference } };
+      return { ...b, patient: null, draft: { entry_type: r.row.kind, transaction_date: r.row.date, quantity: r.row.quantity, recipient_name: (r.row.name ?? '').replace(/\*/g, '').trim(), recipient_address: r.row.address ?? '', prescriber_name: r.row.prescriber, authority_to_possess: `Prescription: ${r.row.prescriber}`, prescription_ref: r.row.reference } };
     });
     return res({ lines, skipped: 2, period: { from: daysAgo(30), to: today() }, balance: balance(regId), unit: reg.product.unit, warnings: [] });
   }
