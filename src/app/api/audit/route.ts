@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
-    const { account } = await requireStaff(can.viewAudit);
+    const { account } = await requireStaff('viewAudit');
     const before = new URL(req.url).searchParams.get('before');
     const db = createServiceClient();
     let q = db.from('audit_log').select('*').eq('pharmacy_id', account.pharmacyId).order('id', { ascending: false }).limit(100);

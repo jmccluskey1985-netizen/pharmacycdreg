@@ -13,7 +13,7 @@ import { isOpen } from '@/components/dashboard/setup-from-list';
 import { filterRegisters } from '@/lib/register-filter';
 import { api, ApiError } from '@/lib/api';
 import { can } from '@/lib/roles';
-import { useStaff } from '@/components/dashboard/staff-context';
+import { useStaff, useCan } from '@/components/dashboard/staff-context';
 import { Modal } from '@/components/modal';
 import { canWrite } from '@/lib/stripe';
 
@@ -32,6 +32,7 @@ interface Reg {
 // The bookshelf: one "book" per drug/strength/form, grouped by class (FR4, FR8).
 export default function RegistersPage() {
   const { staff, pharmacy } = useStaff();
+  const canDo = useCan();
   const writable = canWrite(pharmacy?.subscription_status);
   const [regs, setRegs] = useState<Reg[] | null>(null);
   const [open, setOpen] = useState(false);
@@ -60,7 +61,7 @@ export default function RegistersPage() {
   const toggleAll = () => setShowAll((v) => { try { localStorage.setItem('cdreg-all-cds', v ? 'off' : 'on'); } catch {} return !v; });
   const [starting, setStarting] = useState<Ghost | null>(null);
   const [newInitial, setNewInitial] = useState('');
-  const canOpen = writable && !!staff && can.openRegister(staff.role);
+  const canOpen = writable && canDo('openRegister');
   const ghosts: Reg[] = !showAll || !regs || !canOpen ? [] : CD_PRODUCTS.flatMap((p) => p.strengths.filter((st) => !isOpen(regs, p, st)).map((st) => ({
     id: `ghost:${p.key}:${st}`, balance: 0, ghost: { product: p, strength: st },
     product: { drug_name: p.generic, brand: p.brands[0], class_name: p.class, strength: st, form: p.form, unit: p.unit, schedule: 2, schedule_paragraph: p.para, is_stereoisomer_of: null, parent: null },
@@ -87,15 +88,15 @@ export default function RegistersPage() {
         </div>
         <div className="flex min-w-0 flex-wrap gap-2">
           <a href="/api/export" className="btn-secondary" title="Download every register as one file. Keep a recent copy for business continuity"><Download className="h-4 w-4" /> <span className="hidden sm:inline">Export all</span></a>
-          {writable && staff && can.scan(staff.role) && <Link href="/dashboard/scan?type=invoice" className="btn-secondary"><ScanLine className="h-4 w-4" /> Invoice</Link>}
+          {writable && canDo('scan') && <Link href="/dashboard/scan?type=invoice" className="btn-secondary"><ScanLine className="h-4 w-4" /> Invoice</Link>}
           {canOpen && view === 'shelf' && <button onClick={toggleAll} className={`btn-secondary ${showAll ? 'ring-2 ring-brand/40' : ''}`} aria-pressed={showAll} title="Show every common CD, including ones you haven't started">{showAll ? 'All CD types' : 'My books only'}</button>}
           <div className="flex rounded-lg border border-border bg-card p-0.5" role="group" aria-label="View">
             <button onClick={() => pickView('shelf')} className={`rounded-md px-2.5 py-1.5 ${view === 'shelf' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`} title="Shelf view" aria-pressed={view === 'shelf'}><GalleryHorizontal className="h-4 w-4" /></button>
             <button onClick={() => pickView('table')} className={`rounded-md px-2.5 py-1.5 ${view === 'table' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`} title="Table view" aria-pressed={view === 'table'}><Table2 className="h-4 w-4" /></button>
           </div>
-          {writable && staff && can.openRegister(staff.role) && <button onClick={() => setSnap(true)} className="btn-secondary" title="Photograph your paper register to start registers with their balance"><Camera className="h-4 w-4" /> <span className="hidden sm:inline">Photograph paper register</span></button>}
-          {writable && staff && can.openRegister(staff.role) && <button onClick={() => setFromList(true)} className="btn-secondary"><ListChecks className="h-4 w-4" /> <span className="hidden sm:inline">From CD list</span></button>}
-          {writable && staff && can.openRegister(staff.role) && <button onClick={() => setOpen(true)} className="btn-primary"><Plus className="h-4 w-4" /> New<span className="hidden sm:inline"> CD book</span></button>}
+          {canOpen && <button onClick={() => setSnap(true)} className="btn-secondary" title="Photograph your paper register to start registers with their balance"><Camera className="h-4 w-4" /> <span className="hidden sm:inline">Photograph paper register</span></button>}
+          {canOpen && <button onClick={() => setFromList(true)} className="btn-secondary"><ListChecks className="h-4 w-4" /> <span className="hidden sm:inline">From CD list</span></button>}
+          {canOpen && <button onClick={() => setOpen(true)} className="btn-primary"><Plus className="h-4 w-4" /> New<span className="hidden sm:inline"> CD book</span></button>}
         </div>
       </div>
 

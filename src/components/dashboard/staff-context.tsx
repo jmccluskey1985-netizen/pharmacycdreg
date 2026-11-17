@@ -1,13 +1,14 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { permits, type Permission, type PermissionOverrides } from '@/lib/permissions';
 import { api, onLocked } from '@/lib/api';
 import type { StaffRole } from '@/lib/roles';
 
 export interface ActiveStaff { id: string; full_name: string; role: StaffRole; psi_number: string | null }
 export interface Pharmacy {
   id: string; name: string; address: string; psi_premises_number: string | null;
-  subscription_status: string | null; trial_ends_at: string | null; current_period_end: string | null; cancel_at_period_end: boolean; halo_enabled?: boolean; is_site_admin?: boolean; has_subscription?: boolean; lock_minutes?: number; locum_default_days?: number;
+  subscription_status: string | null; trial_ends_at: string | null; current_period_end: string | null; cancel_at_period_end: boolean; halo_enabled?: boolean; is_site_admin?: boolean; has_subscription?: boolean; lock_minutes?: number; locum_default_days?: number; permissions?: PermissionOverrides;
 }
 
 interface Ctx {
@@ -72,4 +73,10 @@ export function useStaff() {
   const c = useContext(StaffContext);
   if (!c) throw new Error('useStaff outside StaffProvider');
   return c;
+}
+
+/** Can the person at the keyboard do this, with this pharmacy's role permissions? (UI only: the server checks again.) */
+export function useCan() {
+  const { staff, pharmacy } = useStaff();
+  return (perm: Permission) => !!staff && permits(staff.role, perm, pharmacy?.permissions);
 }

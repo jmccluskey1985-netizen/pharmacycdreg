@@ -17,7 +17,7 @@ const Probe = z.object({
 /** Existing patients who look like the person on the script, best first (docs/PATIENT_MATCHING.md). */
 export async function POST(req: Request) {
   try {
-    const { account } = await requireStaff(can.scan);
+    const { account } = await requireStaff('scan');
     const parsed = Probe.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) return NextResponse.json({ error: 'Bad request' }, { status: 400 });
     const db = createServiceClient();

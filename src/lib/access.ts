@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { permits, type Permission, type PermissionOverrides } from './permissions';
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceClient } from '@/lib/supabase/server';
 import { STAFF_COOKIE, decodeStaffSession, encodeStaffSession, cookieOptionsFor } from '@/lib/staff-session';
@@ -66,7 +67,14 @@ export async function pharmaciesFor(authUserId: string, homePharmacyId: string):
  * Needs an active trial/subscription. Reading, search, print and export never do -
  * the register must stay available for inspection whatever the billing state.
  */
-export async function requireStaff(allowed?: (r: StaffRole) => boolean, opts: { write?: boolean } = {}): Promise<{ account: Account; staff: Staff }> {
+/** The pharmacy's own role permissions (Settings → Roles & permissions); {} before migration 0024. */
+export async function pharmacyPermissions(pharmacyId: string): Promise<PermissionOverrides> {
+  const { data, error } = await createServiceClient().from('pharmacies').select('permissions').eq('id', pharmacyId).maybeSingle();
+  return !error && data?.permissions && typeof data.permissions === 'object' ? (data.permissions as PermissionOverrides) : {};
+}
+
+/** allowed: a role check, or a named permission the pharmacy can configure (src/lib/permissions.ts). */
+export async function requireStaff(allowed?: ((r: StaffRole) => boolean) | Permission, opts: { write?: boolean } = {}): Promise<{ account: Account; staff: Staff }> {
   const account = await requireAccount();
   const session = decodeStaffSession((await cookies()).get(STAFF_COOKIE)?.value);
   if (!session || session.pharmacyId !== account.pharmacyId || session.authUserId !== account.authUserId) {
@@ -84,8 +92,11 @@ export async function requireStaff(allowed?: (r: StaffRole) => boolean, opts: { 
   if (staff.access_expires_at && new Date(staff.access_expires_at) < new Date()) {
     throw new HttpError(423, 'Your temporary access has expired', 'LOCKED');
   }
-  if (allowed && !allowed(staff.role)) {
+  if (typeof allowed === 'function' && !allowed(staff.role)) {
     throw new HttpError(403, 'Your role does not allow this action', 'FORBIDDEN');
+  }
+  if (typeof allowed === 'string' && !permits(staff.role, allowed, await pharmacyPermissions(account.pharmacyId))) {
+    throw new HttpError(403, 'Your role isn’t allowed to do this here. The supervising pharmacist can change this in Settings → Roles & permissions.', 'FORBIDDEN');
   }
   if (opts.write) {
     const { data: ph } = await db.from('pharmacies').select('subscription_status, trial_ends_at, subscription_id').eq('id', account.pharmacyId).single();

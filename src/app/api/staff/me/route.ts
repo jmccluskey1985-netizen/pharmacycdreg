@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireAccount, requireStaff, errorResponse, HttpError, pharmaciesFor } from '@/lib/access';
+import { requireAccount, requireStaff, errorResponse, HttpError, pharmaciesFor, pharmacyPermissions } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getSettings } from '@/lib/settings';
 import { isSiteAdmin } from '@/lib/admin';
@@ -34,16 +34,18 @@ export async function GET() {
       const payload = session?.access_token?.split('.')[1];
       if (payload) loginSession = String(JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')).session_id ?? '') || null;
     } catch { /* no session id: the bar just shows */ }
-    if (pharmacy) Object.assign(pharmacy, { pharmacies: await pharmaciesFor(account.authUserId, account.homePharmacyId ?? account.pharmacyId).catch(() => []), require_2fa: st.require_2fa, twofa_missing: twofaMissing, has_2fa: has2fa, login_session: loginSession, is_site_admin: owner, halo_enabled: halo, lock_minutes: st.lock_minutes, locum_default_days: st.locum_default_days });
+    if (pharmacy) Object.assign(pharmacy, { pharmacies: await pharmaciesFor(account.authUserId, account.homePharmacyId ?? account.pharmacyId).catch(() => []), require_2fa: st.require_2fa, twofa_missing: twofaMissing, has_2fa: has2fa, login_session: loginSession, is_site_admin: owner, halo_enabled: halo, lock_minutes: st.lock_minutes, locum_default_days: st.locum_default_days, permissions: await pharmacyPermissions(account.pharmacyId) });
     const { count } = await db.from('staff').select('id', { count: 'exact', head: true }).eq('pharmacy_id', account.pharmacyId).eq('is_active', true).not('pin_hash', 'is', null);
     try {
       const { staff } = await requireStaff();
       const { count: inbox } = halo ? await db.from('pmr_inbox').select('id', { count: 'exact', head: true }).eq('pharmacy_id', account.pharmacyId).eq('status', 'pending') : { count: 0 };
+      // Technicians' drafts waiting for a pharmacist to sign (0 before migration 0024)
+      const drafts = await db.from('entry_drafts').select('id', { count: 'exact', head: true }).eq('pharmacy_id', account.pharmacyId).eq('status', 'pending').then((r) => (r.error ? 0 : r.count ?? 0), () => 0);
       // Dispensing reminders due today or overdue (0 before migration 0012).
       const { count: due } = await db.from('dispense_reminders').select('id', { count: 'exact', head: true }).eq('pharmacy_id', account.pharmacyId).eq('active', true).lte('next_due', new Date().toISOString().slice(0, 10));
       // Site owner: new feedback / ideas from pharmacies waiting to be read.
       const { count: fbNew } = owner ? await db.from('feedback').select('id', { count: 'exact', head: true }).eq('status', 'new') : { count: 0 };
-      return NextResponse.json({ pharmacy, staff, locked: false, hasPins: (count ?? 0) > 0, inboxCount: inbox ?? 0, remindersDue: due ?? 0, feedbackNew: fbNew ?? 0 });
+      return NextResponse.json({ pharmacy, staff, locked: false, hasPins: (count ?? 0) > 0, inboxCount: (inbox ?? 0) + drafts, remindersDue: due ?? 0, feedbackNew: fbNew ?? 0 });
     } catch (e) {
       if (e instanceof HttpError && e.status === 423) {
         return NextResponse.json({ pharmacy, staff: null, locked: true, hasPins: (count ?? 0) > 0 });

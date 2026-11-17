@@ -27,7 +27,7 @@ const Body = z.object({ register_id: z.string().uuid(), counted: z.coerce.number
 // the pharmacist investigates and records any correction in the register itself.
 export async function POST(req: Request) {
   try {
-    const { account, staff } = await requireStaff(can.record, { write: true });
+    const { account, staff } = await requireStaff('stockCheck', { write: true });
     const parsed = Body.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) return NextResponse.json({ error: 'Enter the amount counted' }, { status: 400 });
     const b = parsed.data;

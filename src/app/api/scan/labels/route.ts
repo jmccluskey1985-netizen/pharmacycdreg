@@ -20,7 +20,7 @@ const MAX_BYTES = 15 * 1024 * 1024;
  */
 export async function POST(req: Request) {
   try {
-    const { account, staff } = await requireStaff(can.record);
+    const { account, staff } = await requireStaff('scan');
     const limit = await checkRateLimit(`scan:${account.pharmacyId}`, 20, 60_000);
     if (!limit.ok) return NextResponse.json({ error: 'Too many scans: wait a moment' }, { status: 429 });
     const form = await req.formData();

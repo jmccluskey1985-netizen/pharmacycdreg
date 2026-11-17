@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Building2, ShieldCheck, ClipboardCheck, Database, Loader2, Check, Download, Users, BookUser, CreditCard, Plug, ChevronRight, Archive } from 'lucide-react';
+import { UserCog, ScanLine, Building2, ShieldCheck, ClipboardCheck, Database, Loader2, Check, Download, Users, BookUser, CreditCard, Plug, ChevronRight, Archive } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 import { useStaff } from '@/components/dashboard/staff-context';
 import { can } from '@/lib/roles';
 import { TwoStepSettings } from '@/components/dashboard/two-step';
 import { ReaderSettings } from '@/components/dashboard/reader-settings';
+import { PermissionsSettings } from '@/components/dashboard/permissions-settings';
 import { useTheme } from '@/components/dashboard/theme';
 import { BackupButton } from '@/components/dashboard/backup-button';
 import { THEMES } from '@/lib/theme';
@@ -57,6 +58,14 @@ export default function SettingsPage() {
   const [regs, setRegs] = useState<Reg[]>([]);
   const load = useCallback(() => api('/api/settings').then((d) => { setS(d.settings); setRegs(d.registers); }), []);
   useEffect(() => { load(); }, [load]);
+  // Tabs: remembered in the address (?tab=roles), so links and refresh land on the same tab
+  const [tab, setTab] = useState('general');
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('tab') ?? (window.location.hash === '#two-step' ? 'security' : null);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (URL) read after hydration
+    if (t) setTab(t);
+  }, []);
+  const go = (t: string) => { setTab(t); try { window.history.replaceState(null, '', `?tab=${t}`); } catch {} };
   // Arriving from the two-step suggestion bar: scroll to it once the page has loaded
   useEffect(() => { if (s && window.location.hash === '#two-step') document.getElementById('two-step')?.scrollIntoView({ behavior: 'smooth' }); }, [s]);
 
@@ -65,8 +74,18 @@ export default function SettingsPage() {
   if (!s) return <p className="text-muted-foreground">Loading…</p>;
   const onSaved = (x: Settings) => { setS(x); refresh(); };
 
+  const TABS = [
+    { id: 'general', label: 'General', icon: Building2 },
+    { id: 'security', label: 'Security', icon: ShieldCheck },
+    { id: 'roles', label: 'Roles & permissions', icon: UserCog },
+    { id: 'stock', label: 'Stock checks', icon: ClipboardCheck },
+    { id: 'data', label: 'Data & backups', icon: Database },
+    ...(pharmacy?.is_site_admin ? [{ id: 'reader', label: 'Document reading', icon: ScanLine }] : []),
+  ];
+  const current = TABS.some((t) => t.id === tab) ? tab : 'general';
+
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
+    <div className="mx-auto max-w-4xl space-y-5">
       <div>
         <h1 className="text-2xl font-bold">Settings</h1>
         <p className="text-sm text-muted-foreground">Changes are recorded in the audit trail.</p>
@@ -77,27 +96,44 @@ export default function SettingsPage() {
         </p>
       )}
 
-      <Display />
-      <PharmacyDetails s={s} onSaved={onSaved} />
-      <Security s={s} onSaved={onSaved} />
-      {pharmacy?.is_site_admin && <ReaderSettings />}
-      <StockChecks s={s} regs={regs} onSaved={(x) => { onSaved(x); load(); }} />
-      <Data regs={regs} reload={load} />
-
-      <section className="card divide-y divide-border p-0">
-        {[
-          { href: '/dashboard/team', icon: Users, label: 'Team & PINs', text: 'Staff, locums and their roles' },
-          { href: '/dashboard/contacts', icon: BookUser, label: 'Doctors & suppliers', text: 'Quick-fill lists, GMS GPs' },
-          { href: '/dashboard/billing', icon: CreditCard, label: 'Billing', text: 'Plan and payment' },
-          ...(s.halo_enabled ? [{ href: '/dashboard/integrations', icon: Plug, label: 'Halo connection', text: 'Dispensing link and keys' }] : []),
-        ].map((l) => (
-          <Link key={l.href} href={l.href} className="flex items-center gap-3 px-5 py-4 hover:bg-muted/50">
-            <l.icon className="h-5 w-5 text-muted-foreground" />
-            <span className="flex-1"><span className="block font-medium">{l.label}</span><span className="block text-sm text-muted-foreground">{l.text}</span></span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </Link>
+      <div role="tablist" aria-label="Settings" className="-mx-1 flex gap-1 overflow-x-auto border-b border-border px-1">
+        {TABS.map((t) => (
+          <button key={t.id} role="tab" aria-selected={current === t.id} onClick={() => go(t.id)}
+            className={`flex flex-shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition ${current === t.id ? 'border-brand text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
+            <t.icon className="h-4 w-4" /> {t.label}
+          </button>
         ))}
-      </section>
+      </div>
+
+      <div role="tabpanel" className="space-y-5">
+        {current === 'general' && (<>
+          <PharmacyDetails s={s} onSaved={onSaved} />
+          <Display />
+          <section className="card divide-y divide-border p-0">
+            {[
+              { href: '/dashboard/team', icon: Users, label: 'Team & PINs', text: 'Staff, locums and their roles' },
+              { href: '/dashboard/contacts', icon: BookUser, label: 'Doctors & suppliers', text: 'Quick-fill lists, GMS GPs' },
+              { href: '/dashboard/billing', icon: CreditCard, label: 'Billing', text: 'Plan and payment' },
+              ...(s.halo_enabled ? [{ href: '/dashboard/integrations', icon: Plug, label: 'Halo connection', text: 'Dispensing link and keys' }] : []),
+            ].map((l) => (
+              <Link key={l.href} href={l.href} className="flex items-center gap-3 px-5 py-4 hover:bg-muted/50">
+                <l.icon className="h-5 w-5 text-muted-foreground" />
+                <span className="flex-1"><span className="block font-medium">{l.label}</span><span className="block text-sm text-muted-foreground">{l.text}</span></span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </Link>
+            ))}
+          </section>
+        </>)}
+        {current === 'security' && <Security s={s} onSaved={onSaved} />}
+        {current === 'roles' && (
+          <Section icon={UserCog} title="Roles & permissions" text="Choose what each role may do in this pharmacy. Add people and set their role in Team & PINs.">
+            <PermissionsSettings />
+          </Section>
+        )}
+        {current === 'stock' && <StockChecks s={s} regs={regs} onSaved={(x) => { onSaved(x); load(); }} />}
+        {current === 'data' && <Data regs={regs} reload={load} />}
+        {current === 'reader' && pharmacy?.is_site_admin && <ReaderSettings />}
+      </div>
     </div>
   );
 }

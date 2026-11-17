@@ -186,9 +186,9 @@ await step('team: add a staff member with a PIN', async () => {
 });
 
 await step('settings: change the screen lock and save', async () => {
-  await page.goto(B + '/dashboard/settings'); await page.waitForTimeout(1000);
+  await page.goto(B + '/dashboard/settings?tab=security'); await page.waitForTimeout(1000);
   await page.locator('select').first().selectOption('10').catch(async () => { await page.locator('select').nth(1).selectOption('10'); });
-  await page.locator('button:has-text("Save")').nth(1).click(); await page.waitForTimeout(800);
+  await page.locator('button:has-text("Save")').first().click(); await page.waitForTimeout(800);
   if (await page.isVisible('text=/Could not save/i')) throw new Error('save failed');
 });
 
@@ -312,7 +312,7 @@ await step('two-step suggestion bar: shown, hidden with X until next sign-in', a
 });
 
 await step('full backup downloads, password protected', async () => {
-  await page.goto(B + '/dashboard/settings'); await page.waitForTimeout(800);
+  await page.goto(B + '/dashboard/settings?tab=data'); await page.waitForTimeout(800);
   await click('button:has-text("Full backup")');
   await page.fill('#bk-pw', 'sweep-test-password'); await page.fill('#bk-pw2', 'sweep-test-password');
   const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 15000 }), page.click('button:has-text("Download protected backup")')]);
@@ -334,12 +334,50 @@ await step('lock and switch user', async () => {
   await see('text=Ciarán Walsh');
 });
 
-await step('technician can draft but not sign register entries', async () => {
-  const t = await signedInPage({ width: 1366, height: 900 }, '4567');
-  await t.goto(B + '/dashboard/register/r1'); await t.waitForSelector('text=CLASS OF DRUG'); await t.waitForTimeout(800);
-  if (await t.locator('button[aria-label^="Correct line"]').count()) throw new Error('technician sees correction buttons');
-  if (await t.locator('button:has-text("New entry")').count() > 1) throw new Error('technician sees the register New entry button');
-  await t.context().close();
+// Switch who's at the keyboard (same screen, same pharmacy), as staff do with Lock / switch user
+const switchTo = async (pin) => {
+  await page.goto(B + '/dashboard'); await page.waitForTimeout(800);
+  await click('aside button:has-text("Lock / switch user")'); await see('text=/Enter your PIN/i');
+  for (const d of pin) await page.getByRole('button', { name: d, exact: true }).first().click();
+  await page.getByRole('button', { name: 'OK', exact: true }).click().catch(() => {});
+  await page.waitForTimeout(1200);
+};
+
+await step('technician drafts an entry (no balance change); a pharmacist signs it in To confirm', async () => {
+  await switchTo('4567');
+  await page.goto(B + '/dashboard/register/r1'); await see('text=CLASS OF DRUG'); await page.waitForTimeout(800);
+  if (await page.locator('button[aria-label^="Correct line"]').count()) throw new Error('technician sees correction buttons');
+  const before = await balanceOf();
+  await click('button:has-text("Draft entry")'); await see('text=Date of transaction');
+  await click('button:has-text("Obtained")');
+  await page.fill('input[type=number]', '28');
+  await page.locator('input[placeholder*="United"]').fill('Uniphar');
+  await field('Address').fill('Belgard Rd, Dublin 24');
+  await field('Invoice / docket no.').fill('Invoice 99777');
+  await click('button:has-text("Save for a pharmacist to sign")'); await page.waitForTimeout(1200);
+  await page.goto(B + '/dashboard/register/r1'); await see('text=CLASS OF DRUG'); await page.waitForTimeout(800);
+  if ((await balanceOf()) !== before) throw new Error('a draft changed the balance');
+  await switchTo('1234');
+  await page.goto(B + '/dashboard/inbox'); await page.waitForTimeout(1200);
+  await see('text=Drafted by the team');
+  await page.locator('div.card:has-text("Draft") >> button:has-text("Check & sign")').first().click();
+  await click('button:has-text("Sign into register")'); await page.waitForTimeout(1200);
+  await page.goto(B + '/dashboard/register/r1'); await see('text=CLASS OF DRUG'); await page.waitForTimeout(800);
+  if ((await balanceOf()) !== before + 28) throw new Error('signed draft not in the balance');
+});
+
+await step('settings: tabs, and Roles & permissions can switch off drafting for technicians', async () => {
+  await page.goto(B + '/dashboard/settings?tab=roles'); await page.waitForTimeout(1000);
+  await see('text=/Signing register entries is always for pharmacists/');
+  const box = page.getByRole('checkbox', { name: 'Draft register entries: Technician' });
+  if (!(await box.isChecked())) throw new Error('technicians should draft by default');
+  await box.uncheck(); await click('button:has-text("Save permissions")'); await see('text=/Saved\./');
+  await switchTo('4567');
+  await page.goto(B + '/dashboard/register/r1'); await see('text=CLASS OF DRUG'); await page.waitForTimeout(800);
+  if (await page.locator('button:has-text("Draft entry")').count()) throw new Error('drafting still offered after switching it off');
+  await switchTo('1234');
+  await page.goto(B + '/dashboard/settings?tab=roles'); await page.waitForTimeout(1000);
+  await page.getByRole('checkbox', { name: 'Draft register entries: Technician' }).check(); await click('button:has-text("Save permissions")');
 });
 
 await step('no page errors during the workflows', async () => { if (page.errors.length) throw new Error(page.errors.slice(0, 3).join(' | ')); });

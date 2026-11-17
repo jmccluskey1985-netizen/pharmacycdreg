@@ -11,7 +11,7 @@ import { api, ApiError } from '@/lib/api';
 interface Check { id: string; counted: number; register_balance: number; notes: string | null; checked_by_name: string; checked_at: string }
 
 /** Count the stock and record it against the register balance. Differences are recorded, never auto-fixed. */
-export function StockCheckButton({ registerId, unit, balance, canRecord, onChanged }: { registerId: string; unit: string; balance: number; canRecord: boolean; onChanged?: () => void }) {
+export function StockCheckButton({ registerId, unit, balance, canRecord, canAmend = canRecord, onChanged }: { registerId: string; unit: string; balance: number; canRecord: boolean; canAmend?: boolean; onChanged?: () => void }) {
   const [open, setOpen] = useState(false);
   const [checks, setChecks] = useState<Check[] | null>(null);
   const [counted, setCounted] = useState('');
@@ -34,7 +34,7 @@ export function StockCheckButton({ registerId, unit, balance, canRecord, onChang
     try {
       const d = await api('/api/stock-checks', { method: 'POST', json: { register_id: registerId, counted: n, notes: notes || null } });
       setDone(d.diff === 0 ? `Recorded: ${n} ${unit}: matches the register.` : `Recorded with a difference of ${d.diff > 0 ? '+' : ''}${d.diff} ${unit}. Investigate first (recount, check recent entries, invoices and Rxs). If it still doesn’t match, you can amend the balance below.`);
-      if (d.diff !== 0 && canRecord) setAmending(d.check);
+      if (d.diff !== 0 && canAmend) setAmending(d.check);
       setCounted(''); setNotes('');
       setChecks(null);
       api(`/api/stock-checks?register_id=${registerId}`).then((x) => setChecks(x.checks));
@@ -62,7 +62,7 @@ export function StockCheckButton({ registerId, unit, balance, canRecord, onChang
               <button className="btn-primary w-full" disabled={busy || n == null}>{busy && <Loader2 className="h-4 w-4 animate-spin" />} Sign & record check</button>
             </form>
           )}
-          {canRecord && <ReportCheck registerId={registerId} unit={unit} balance={balance} counted={n} onAdded={() => onChanged?.()} />}
+          {canRecord && <ReportCheck registerId={registerId} unit={unit} balance={balance} counted={n} draft={!canAmend} onAdded={() => onChanged?.()} />}
           {amending && <AmendBalance check={amending} unit={unit} onDone={() => { setAmending(null); setDone(null); onChanged?.(); api(`/api/stock-checks?register_id=${registerId}`).then((x) => setChecks(x.checks)); }} onCancel={() => setAmending(null)} />}
           <div>
             <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">Previous checks</p>
@@ -74,7 +74,7 @@ export function StockCheckButton({ registerId, unit, balance, canRecord, onChang
                     <li key={c.id} className="px-3 py-2">
                       <span className="flex justify-between gap-2"><span>{new Date(c.checked_at).toLocaleString('en-IE', { dateStyle: 'short', timeStyle: 'short' })} · {c.checked_by_name}</span><b className={d === 0 ? 'text-brand' : 'text-amber-700'}>{d === 0 ? 'Correct' : `${d > 0 ? '+' : ''}${d}`}</b></span>
                       <span className="block text-xs text-muted-foreground">Counted {c.counted}, register {c.register_balance}{c.notes ? `, ${c.notes}` : ''}</span>
-                      {d !== 0 && canRecord && c === checks[0] && Number(c.register_balance) === balance && !amending && <button type="button" onClick={() => setAmending(c)} className="mt-1 flex items-center gap-1 text-xs font-semibold text-primary underline"><Scale className="h-3 w-3" /> Amend balance to {c.counted}</button>}
+                      {d !== 0 && canAmend && c === checks[0] && Number(c.register_balance) === balance && !amending && <button type="button" onClick={() => setAmending(c)} className="mt-1 flex items-center gap-1 text-xs font-semibold text-primary underline"><Scale className="h-3 w-3" /> Amend balance to {c.counted}</button>}
                     </li>
                   );
                 })}

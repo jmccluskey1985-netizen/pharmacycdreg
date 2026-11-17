@@ -19,7 +19,7 @@ const MAX_BYTES = 15 * 1024 * 1024;
 // forward + date. Nothing is written here; the pharmacist confirms in the Open register form.
 export async function POST(req: Request) {
   try {
-    const { account, staff } = await requireStaff(can.openRegister, { write: true });
+    const { account, staff } = await requireStaff('openRegister', { write: true });
     const limit = await checkRateLimit(`scan:${account.pharmacyId}`, 20, 60_000);
     if (!limit.ok) return NextResponse.json({ error: 'Too many scans: wait a moment' }, { status: 429 });
 

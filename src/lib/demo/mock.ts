@@ -14,6 +14,7 @@ import { isLate } from '@/lib/late-entry';
 import { reconcile, dateOptions, type ReportRow } from '@/lib/report-reconcile';
 import { findDuplicate } from '@/lib/duplicates';
 import { can as rolesCan, type StaffRole } from '@/lib/roles';
+import { permits, cleanOverrides } from '@/lib/permissions';
 import { matchPatients as matchP, preselect, patientKeys, type MatchPatient } from '@/lib/patient-match';
 const matchPatients = (probe: Parameters<typeof matchP>[0], pool: Json[], limit?: number) => matchP(probe, pool as unknown as (MatchPatient & Json)[], limit);
 import { genericKey, sameStrength, registerExemption } from '@/lib/cd-catalogue';
@@ -80,6 +81,7 @@ function seedEntries() {
   return out;
 }
 
+const DRAFTS = (): Json[] => ((S as any).drafts ||= []);
 function seed() {
   return {
     pharmacy: { id: 'demo', name: 'Quayside Pharmacy (demo)', address: '1 Quay St, Ennis, Co. Clare', psi_premises_number: '1234', subscription_status: 'trialing', trial_ends_at: new Date(Date.now() + 21 * 864e5).toISOString(), current_period_end: new Date(Date.now() + 21 * 864e5).toISOString(), cancel_at_period_end: false, halo_enabled: true },
@@ -234,7 +236,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
   const needStaff = () => (st ? null : fail(423, 'Enter your PIN to continue', 'LOCKED'));
 
   if (path === '/api/staff/me') {
-    return res({ pharmacy: { ...S.pharmacy, has_2fa: false, login_session: ((S as any).loginSession ||= uid()) }, staff: st && { id: st.id, full_name: st.full_name, role: st.role, psi_number: st.psi_number }, locked: !st, hasPins: true, inboxCount: S.inbox.filter((i) => i.status === 'pending').length, remindersDue: st ? REM().filter((r) => r.active && r.next_due <= today()).length : 0, feedbackNew: 0 });
+    return res({ pharmacy: { ...S.pharmacy, has_2fa: false, login_session: ((S as any).loginSession ||= uid()), permissions: (S as any).permissions ?? {} }, staff: st && { id: st.id, full_name: st.full_name, role: st.role, psi_number: st.psi_number }, locked: !st, hasPins: true, inboxCount: S.inbox.filter((i) => i.status === 'pending').length + DRAFTS().filter((d) => d.status === 'pending').length, remindersDue: st ? REM().filter((r) => r.active && r.next_due <= today()).length : 0, feedbackNew: 0 });
   }
   if (path === '/api/staff/unlock' && method === 'POST') {
     const s = S.staff.find((x) => x.is_active && x.pin === String(body.pin));
@@ -281,6 +283,33 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     }
     audit('register.viewed');
     return res({ register: { id: r.id, product: productOf(r.id) }, ledger: ledger(r.id), entries: S.entries.filter((e) => e.register_id === r.id).sort((a, b) => a.seq - b.seq), staff: S.staff });
+  }
+  if (path === '/api/entries/drafts') {
+    if (needStaff()) return needStaff()!;
+    const perms = (S as any).permissions ?? {};
+    if (method === 'GET') {
+      if (!rolesCan.record((st!.role as StaffRole)) && !permits((st!.role as StaffRole), 'draftEntries', perms)) return res({ drafts: [] });
+      return res({ drafts: DRAFTS().filter((d) => d.status === 'pending').map((d) => { const r = regList().find((x: Json) => x.id === d.register_id); return { ...d, label: r ? productTitle(r.product) : 'Register', unit: r?.product.unit ?? 'units', mine: d.drafted_by_staff_id === st!.id }; }) });
+    }
+    if (!permits((st!.role as StaffRole), 'draftEntries', perms)) return fail(403, 'Your role isn’t allowed to do this here.');
+    const { register_id, ...payload } = body;
+    const d = { id: uid(), register_id, payload, drafted_by_staff_id: st!.id, drafted_by_name: st!.full_name, drafted_at: new Date().toISOString(), status: 'pending' };
+    DRAFTS().push(d);
+    return res({ draft_id: d.id, drafted: true });
+  }
+  if (path.startsWith('/api/entries/drafts/') && path.endsWith('/reject') && method === 'POST') {
+    if (needStaff()) return needStaff()!;
+    const d = DRAFTS().find((x) => x.id === path.split('/')[4]);
+    if (!d || d.status !== 'pending') return fail(409, 'This draft was already dealt with');
+    if (d.drafted_by_staff_id !== st!.id && !rolesCan.record((st!.role as StaffRole))) return fail(403, 'Only a pharmacist can turn down someone else’s draft');
+    d.status = 'rejected';
+    return res({ ok: true });
+  }
+  if (path === '/api/settings/permissions') {
+    if (needStaff()) return needStaff()!;
+    if (!rolesCan.manageStaff((st!.role as StaffRole))) return fail(403, 'Your role does not allow this action');
+    if (method === 'PUT') (S as any).permissions = cleanOverrides(body.permissions);
+    return res({ permissions: (S as any).permissions ?? {} });
   }
   if (path === '/api/entries' && method === 'POST') {
     if (needStaff()) return needStaff()!;
@@ -336,9 +365,10 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     const seq = S.entries.filter((x) => x.register_id === e.register_id).length + 1;
     const row = { ...e, id: uid(), seq, quantity: String(e.quantity), recorded_at: new Date().toISOString(), recorded_by_staff_id: st!.id, source: e.inbox_id ? 'pmr' : e.scan_id ? 'scan' : 'manual' };
     if (e.entry_type !== 'correction') { delete row.corrects_entry_id; delete row.correction_reason; }
-    delete row.inbox_id;
+    delete row.inbox_id; delete row.draft_id;
     S.entries.push(row);
     if (e.inbox_id) { const ib = S.inbox.find((i) => i.id === e.inbox_id); if (ib) ib.status = 'posted'; }
+    if (e.draft_id) { const dr = DRAFTS().find((d) => d.id === e.draft_id); if (dr) Object.assign(dr, { status: 'signed', entry_id: row.id }); }
     audit(`cd_entry.${e.entry_type}`, { seq, quantity: e.quantity });
     return res({ id: row.id, seq, balance: next, patient_id: row.patient_id ?? null, patient_differs: [] });
   }

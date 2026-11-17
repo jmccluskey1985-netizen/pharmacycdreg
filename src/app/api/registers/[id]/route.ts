@@ -32,7 +32,7 @@ export async function GET(_req: Request, props: { params: Promise<{ id: string }
 export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
-    const { account, staff } = await requireStaff(can.openRegister);
+    const { account, staff } = await requireStaff('openRegister');
     const db = createServiceClient();
     const { data: reg } = await db.from('cd_registers').select('id, product_id').eq('id', params.id).eq('pharmacy_id', account.pharmacyId).maybeSingle();
     if (!reg) return NextResponse.json({ error: 'Register not found' }, { status: 404 });

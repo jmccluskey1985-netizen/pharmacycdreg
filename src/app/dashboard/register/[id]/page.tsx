@@ -8,7 +8,7 @@ import { api } from '@/lib/api';
 import { can } from '@/lib/roles';
 import { canWrite } from '@/lib/stripe';
 import { Modal } from '@/components/modal';
-import { useStaff } from '@/components/dashboard/staff-context';
+import { useStaff, useCan } from '@/components/dashboard/staff-context';
 import { EntryForm, type EntryType } from '@/components/dashboard/entry-form';
 import { StockCheckButton } from '@/components/dashboard/stock-check';
 import { QuarantinePanel } from '@/components/dashboard/quarantine';
@@ -66,6 +66,7 @@ function authorityCell(r: Raw) {
 export default function RegisterBook(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
   const { staff, pharmacy, refresh } = useStaff();
+  const canDo = useCan();
   const [data, setData] = useState<{ register: any; ledger: Ledger[]; entries: Raw[]; staff: Person[] } | null>(null);
   const [opened, setOpened] = useState(false);
   const [page, setPage] = useState(0);
@@ -162,6 +163,9 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
   if (!data) return <p className="text-muted-foreground">Opening register…</p>;
   const p = data.register.product;
   const mayRecord = staff && can.record(staff.role) && canWrite(pharmacy?.subscription_status);
+  // Technicians (if allowed in Settings) draft lines for a pharmacist to sign
+  const mayDraft = !!staff && !can.record(staff.role) && canDo('draftEntries') && canWrite(pharmacy?.subscription_status);
+  const mayCheck = !!staff && canDo('stockCheck') && canWrite(pharmacy?.subscription_status);
   const selectable = (l: Line) => !!mayRecord && !l.struck && l.raw.entry_type === 'supply';
   const pickable = lines.filter(selectable);
   const choose = (l: Line, e: React.MouseEvent) => {
@@ -183,7 +187,7 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
         <div className="flex flex-wrap gap-2">
           <a href={`/api/registers/${params.id}/export`} className="btn-secondary"><Download className="h-4 w-4" /> <span className="hidden sm:inline">Export</span> CSV</a>
           <button onClick={() => window.print()} className="btn-secondary"><Printer className="h-4 w-4" /> Print</button>
-          {data.entries.length === 0 && staff && can.openRegister(staff.role) && (
+          {data.entries.length === 0 && staff && canDo('openRegister') && (
             <button onClick={async () => {
               if (!confirm('Remove this unused CD book? It has no entries.')) return;
               try { await api(`/api/registers/${params.id}`, { method: 'DELETE' }); window.location.href = '/dashboard'; }
@@ -198,10 +202,10 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
               catch (e: any) { alert(e?.message ?? 'Could not close it'); }
             }} className="btn-ghost"><Archive className="h-4 w-4" /> Close book</button>
           )}
-          <StockCheckButton registerId={params.id} unit={p.unit} balance={Number(balance)} canRecord={!!mayRecord} onChanged={load} />
+          <StockCheckButton registerId={params.id} unit={p.unit} balance={Number(balance)} canRecord={mayCheck} canAmend={!!mayRecord} onChanged={load} />
           <Link href={`/dashboard/notes?register_id=${params.id}`} className="btn-secondary"><StickyNote className="h-4 w-4" /> Notes</Link>
           <QuarantinePanel registerId={params.id} unit={p.unit} balance={Number(balance)} canRecord={!!mayRecord} onChanged={load} />
-          {mayRecord && <button onClick={() => setAdding(true)} className="btn-primary"><Plus className="h-4 w-4" /> New entry</button>}
+          {(mayRecord || mayDraft) && <button onClick={() => setAdding(true)} className="btn-primary"><Plus className="h-4 w-4" /> {mayRecord ? 'New entry' : 'Draft entry'}</button>}
         </div>
       </div>
 
@@ -278,9 +282,9 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
                         })}
                         {/* Ruled empty lines so the page looks like the book */}
                         {Array.from({ length: Math.max(0, LINES_PER_PAGE - pageLines.length) }).map((_, i) => (
-                          <tr key={`empty-${i}`} aria-hidden={!mayRecord}
-                            onClick={mayRecord ? () => { setAddType(undefined); setAdding(true); } : undefined}
-                            className={mayRecord ? 'group cursor-pointer hover:bg-brand/5' : undefined}
+                          <tr key={`empty-${i}`} aria-hidden={!(mayRecord || mayDraft)}
+                            onClick={mayRecord || mayDraft ? () => { setAddType(undefined); setAdding(true); } : undefined}
+                            className={mayRecord || mayDraft ? 'group cursor-pointer hover:bg-brand/5' : undefined}
                             title={mayRecord ? 'Add the next entry' : undefined}>
                             <td />
                             <td>{mayRecord && <span className={`no-print text-sm font-semibold text-primary ${i === 0 ? 'opacity-70' : 'opacity-0'} group-hover:opacity-100`}>+ {i === 0 ? 'Add the next entry here' : 'Add entry'}</span>}</td>

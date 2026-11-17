@@ -52,7 +52,7 @@ src/lib/
   demo/                     demo mode + training mode (in-browser mock of the API)
 src/data/cd-products.ts     CD catalogue: one product per brand, strengths, schedule paragraph
 src/components/dashboard/   shell (sidebar / icon rail), entry form, new-entry chooser, shelf, …
-supabase/migrations/        0001–0023 (see docs/OPERATIONS.md)
+supabase/migrations/        0001–0024 (see docs/OPERATIONS.md)
 scripts/                    create-pharmacy.mjs, rule tests, GMS list parser
 ```
 
@@ -95,6 +95,9 @@ scripts/                    create-pharmacy.mjs, rule tests, GMS list parser
 - **Inspector access:** the supervising pharmacist creates a time-limited, revocable, read-only link (`/inspect/<token>`; only a hash of the token is stored). It shows registers, destructions and the audit trail with integrity status, printable, and every view is audited.
 - **Late entries:** an entry dated more than a day before today (Irish time) needs a reason, which is written into the line and shown as a "late entry" badge. There's also a paper fallback sheet (`/dashboard/fallback-sheet`) for outages.
 - **Requisition supplies:** the supply form has a "requisition" mode for practitioners or businesses (no patient record is created).
+- **Roles & permissions** (Settings → Roles & permissions, `src/lib/permissions.ts`): the superintendent / supervising pharmacist chooses per role what may be done (draft entries, scan, open books, stock checks, patients & contacts, reminders, audit trail). Leads always have everything; signing entries is pharmacist-only; read-only can only view. Routes check named permissions with `requireStaff('<permission>')`; the UI uses `useCan()`.
+- **Technician drafts:** someone who may not sign (e.g. a technician) saves entries as drafts (`entry_drafts`, `/api/entries/drafts`), with no effect on any balance. A pharmacist signs them from **To confirm** (posted through `/api/entries` with `draft_id`, so the balance, duplicate and late-entry rules apply) or turns them down with a reason; the line notes who drafted it.
+- **Settings** is split into tabs: General, Security, Roles & permissions, Stock checks, Data & backups (and Document reading for the site owner). `?tab=` links straight to one.
 - **Sign out** at the bottom of the sidebar (and in the phone More menu) ends the pharmacy login on the device, separate from Lock / switch user.
 - **Require two-step sign-in** (Settings → Security). The last authenticator can't be removed while this is on, and a red banner shows if it goes missing.
 - **Full backup:** Settings → Data → Full backup (JSON), supervising pharmacist only, audited. Printing is A4 landscape with page numbers and repeated headings.
@@ -140,7 +143,7 @@ Not covered automatically: the real server API routes talking to a real Supabase
 
 - [ ] **Stripe:** create the product and price, webhook and portal (README → Stripe setup); set `STRIPE_*` and `CRON_SECRET`.
 - [ ] **Google sign-in:** finish the Google Cloud client and Supabase provider set-up (docs/OPERATIONS.md §3).
-- [x] **Migrations:** 0001–0023 are in production (0023 applied 16 Nov 2026).
+- [x] **Migrations:** 0001–0024 are in production (0024 applied 17 Nov 2026).
 - [ ] **Document reader:** set up Google Vertex AI (Settings → Document reading) and accept the Google Cloud DPA. File the sub-processor DPAs (`docs/compliance/SUBPROCESSOR_DPAS.md`).
 - [ ] **Company details:** set `NEXT_PUBLIC_COMPANY_NAME`, `NEXT_PUBLIC_COMPANY_ADDRESS` and `NEXT_PUBLIC_CONTACT_EMAIL`. Have a solicitor review /privacy, /terms and `docs/compliance/DPA_TEMPLATE.md`.
 - [ ] **Supabase plan:** Pro (daily backups, 7 days) and ideally Point-in-Time Recovery. Planned soon; the IPU pack already describes Pro daily backups, marked [enable before submission]. Turn on leaked-password protection (Authentication → Policies).

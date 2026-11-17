@@ -31,7 +31,7 @@ export async function GET() {
 // Add/edit one contact, or bulk add: { contacts: [...] } (e.g. a pasted list of GMS doctors).
 export async function POST(req: Request) {
   try {
-    const { account, staff } = await requireStaff(can.record);
+    const { account, staff } = await requireStaff('patients');
     const body = await req.json().catch(() => ({}));
     const db = createServiceClient();
     const list = Array.isArray(body.contacts) ? body.contacts : [body];

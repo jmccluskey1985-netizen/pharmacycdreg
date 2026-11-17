@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 /** Reminders with each line's register label, unit and current balance. */
 export async function GET() {
   try {
-    const { account } = await requireStaff(can.record);
+    const { account } = await requireStaff('reminders');
     const db = createServiceClient();
     const { data, error } = await db.from('dispense_reminders').select('*').eq('pharmacy_id', account.pharmacyId).order('active', { ascending: false }).order('next_due');
     if (error) return NextResponse.json({ reminders: [], needs_migration: missing0012(error.message) });
@@ -37,7 +37,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { account, staff } = await requireStaff(can.record, { write: true });
+    const { account, staff } = await requireStaff('reminders', { write: true });
     const parsed = ReminderBody.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Check the reminder details' }, { status: 400 });
     const b = parsed.data;

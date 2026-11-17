@@ -22,7 +22,7 @@ const NOTE = 'Added at stock check from the dispensing report';
  * register (highlighted), tick the ones to add and add them in one go. Lines older than a day are
  * late entries and carry the footnote. Quantity differences are shown to investigate, never added.
  */
-export function ReportCheck({ registerId, unit, balance, counted, onAdded }: { registerId: string; unit: string; balance: number; counted: number | null; onAdded: () => void }) {
+export function ReportCheck({ registerId, unit, balance, counted, draft = false, onAdded }: { registerId: string; unit: string; balance: number; counted: number | null; draft?: boolean; onAdded: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<{ lines: Line[]; skipped: number; warnings: string[] } | null>(null);
@@ -68,13 +68,13 @@ export function ReportCheck({ registerId, unit, balance, counted, onAdded }: { r
     for (const l of order) {
       const d = { ...l.draft, ...edit[l.i] };
       try {
-        const r = await api('/api/entries', { method: 'POST', json: {
+        const r = await api(draft ? '/api/entries/drafts' : '/api/entries', { method: 'POST', json: {
           register_id: registerId, ...d, quantity: Number(d.quantity),
           notes: [d.notes, NOTE].filter(Boolean).join(' · '),
           late_reason: lateOf(l) ? reason.trim() : undefined,
-          interactive: false,
+          ...(draft ? {} : { interactive: false }),
         } });
-        setResults((x) => ({ ...x, [l.i]: { ok: true, seq: r.seq } }));
+        setResults((x) => ({ ...x, [l.i]: { ok: true, seq: r.seq ?? 0 } }));
         added++;
       } catch (e) {
         const msg = e instanceof ApiError ? (e.code === 'DUPLICATE' || e.code === 'POSSIBLE_DUPLICATE' ? `Looks like it’s already in the register (${e.message}). Not added.` : e.message) : 'Could not add';
@@ -155,7 +155,7 @@ export function ReportCheck({ registerId, unit, balance, counted, onAdded }: { r
                         <input className="input py-1.5" placeholder={sup ? 'Patient address (needed for the register)' : 'Supplier address'} value={value(l, sup ? 'recipient_address' : 'supplier_address')} onChange={(e) => setEdit((x) => ({ ...x, [l.i]: { ...x[l.i], [sup ? 'recipient_address' : 'supplier_address']: e.target.value } }))} />
                       </div>
                     )}
-                    {res && <p className={`mt-1.5 pl-6 text-xs font-semibold ${res.ok ? 'text-brand-dark' : 'text-destructive'}`}>{res.ok ? <>✓ Added: register line {res.seq}</> : res.error}</p>}
+                    {res && <p className={`mt-1.5 pl-6 text-xs font-semibold ${res.ok ? 'text-brand-dark' : 'text-destructive'}`}>{res.ok ? (draft ? <>✓ Saved as a draft for a pharmacist to sign</> : <>✓ Added: register line {res.seq}</>) : res.error}</p>}
                   </div>
                 );
               })}
@@ -195,7 +195,7 @@ export function ReportCheck({ registerId, unit, balance, counted, onAdded }: { r
                 {counted != null && <> · counted <b>{counted}</b> {balance + effect === counted ? <span className="font-semibold text-brand">✓ matches</span> : <span className="font-semibold text-amber-700">(register would still be {Math.abs(balance + effect - counted)} {balance + effect > counted ? 'more' : 'fewer'} than counted)</span>}</>}
               </p>
               <button type="button" onClick={addAll} disabled={adding || blocked} className="btn-primary w-full">
-                {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Sign &amp; add {chosen.length} missing entr{chosen.length === 1 ? 'y' : 'ies'}
+                {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} {draft ? 'Save' : 'Sign & add'} {chosen.length} missing entr{chosen.length === 1 ? 'y' : 'ies'}{draft ? ' for a pharmacist to sign' : ''}
               </button>
               {blocked && <p className="text-xs text-destructive">{chosen.some(needsDate) ? 'Pick the day for lines whose date is cut off.' : chosen.some(needs) ? 'Fill in the name and address on the highlighted lines.' : 'Add a footnote for the late entries.'}</p>}
             </div>

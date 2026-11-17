@@ -7,7 +7,7 @@ import { Search, UserPlus, UserRound, Download, Printer, Pencil, ArrowLeft, Load
 import { api, ApiError } from '@/lib/api';
 import { Modal } from '@/components/modal';
 import { PatientForm, type PatientRecord } from '@/components/dashboard/patient-form';
-import { useStaff } from '@/components/dashboard/staff-context';
+import { useStaff, useCan } from '@/components/dashboard/staff-context';
 import { OstLabelsImport } from '@/components/dashboard/ost-labels-import';
 import { can } from '@/lib/roles';
 
@@ -17,6 +17,7 @@ const TYPES: Record<string, string> = { supply: 'Supplied', patient_return: 'Pat
 /** Patients: same record layout and search as PharmacyConsultation.ie, with each patient's CD supplies. */
 export default function PatientsPage() {
   const { staff } = useStaff();
+  const canDo = useCan();
   const [q, setQ] = useState('');
   const [list, setList] = useState<PatientRecord[] | null>(null);
   const [needsMigration, setNeedsMigration] = useState(false);
@@ -54,7 +55,7 @@ export default function PatientsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           {staff && can.manageStaff(staff.role) && <button onClick={importFromRegister} disabled={importing} className="btn-secondary">{importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Import className="h-4 w-4" />} <span className="hidden sm:inline">From register</span></button>}
-          {staff && can.record(staff.role) && <OstLabelsImport autoOpen={labelsOpen} onDone={() => { setOstOnly(true); load(''); }} />}
+          {canDo('patients') && <OstLabelsImport autoOpen={labelsOpen} onDone={() => { setOstOnly(true); load(''); }} />}
           <button onClick={() => setOstOnly((v) => !v)} className={ostOnly ? "btn-primary" : "btn-secondary"} aria-pressed={ostOnly}>OST<span className="hidden sm:inline">&nbsp;patients</span></button>
           <button onClick={() => setDupes(true)} className="btn-secondary"><Users className="h-4 w-4" /> <span className="hidden sm:inline">Possible duplicates</span></button>
           <button onClick={() => setAdding(true)} className="btn-primary"><UserPlus className="h-4 w-4" /> New patient</button>

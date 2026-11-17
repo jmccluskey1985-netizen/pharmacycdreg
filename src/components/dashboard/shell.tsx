@@ -10,7 +10,7 @@ import { TrainingBar, TrainingButton, useTraining } from './training';
 import { BillingBanner } from './billing-banner';
 import { Logo, LogoMark } from '@/components/logo';
 import { ROLE_LABELS, can } from '@/lib/roles';
-import { useStaff } from './staff-context';
+import { useStaff, useCan } from './staff-context';
 import { PinPad } from './pin-pad';
 import { PharmacySwitcher } from './pharmacy-switcher';
 import { FirstRun } from './first-run';
@@ -27,15 +27,15 @@ async function signOut() {
 const NAV = [
   { href: '/dashboard', label: 'Registers', icon: BookOpen, show: () => true },
   { href: '/dashboard/group', label: 'Group overview', icon: Building2, show: can.manageStaff, group: true },
-  { href: '/dashboard/scan?type=prescription', label: 'Scan Rx', icon: ScanLine, show: can.scan, primary: true },
-  { href: '/dashboard/inbox', label: 'To confirm', icon: Inbox, show: can.record, badge: 'inbox', halo: true },
+  { href: '/dashboard/scan?type=prescription', label: 'Scan Rx', icon: ScanLine, perm: 'scan', show: can.scan, primary: true },
+  { href: '/dashboard/inbox', label: 'To confirm', icon: Inbox, show: can.record, drafts: true, badge: 'inbox' },
   { href: '/dashboard/search', label: 'Search', icon: Search, show: () => true },
-  { href: '/dashboard/patients', label: 'Patients', icon: UserRound, show: can.record },
-  { href: '/dashboard/reminders', label: 'Reminders', icon: BellRing, show: can.record, badge: 'reminders' },
+  { href: '/dashboard/patients', label: 'Patients', icon: UserRound, perm: 'patients', show: can.record },
+  { href: '/dashboard/reminders', label: 'Reminders', icon: BellRing, perm: 'reminders', show: can.record, badge: 'reminders' },
   { href: '/dashboard/destructions', label: 'Destructions', icon: Flame, show: () => true },
   { href: '/dashboard/notes', label: 'Notes', icon: StickyNote, show: () => true },
-  { href: '/dashboard/audit', label: 'Audit trail', icon: History, show: can.viewAudit },
-  { href: '/dashboard/contacts', label: 'Doctors & suppliers', icon: BookUser, show: can.record },
+  { href: '/dashboard/audit', label: 'Audit trail', icon: History, perm: 'viewAudit', show: can.viewAudit },
+  { href: '/dashboard/contacts', label: 'Doctors & suppliers', icon: BookUser, perm: 'patients', show: can.record },
   { href: '/dashboard/team', label: 'Team', icon: Users, show: can.manageStaff },
   { href: '/dashboard/integrations', label: 'Halo connection', icon: Plug, show: can.manageStaff, halo: true },
   { href: '/dashboard/billing', label: 'Billing', icon: CreditCard, show: can.manageStaff },
@@ -47,6 +47,7 @@ const NAV = [
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const { loading, staff, locked, hasPins, pharmacy, lock, inboxCount, remindersDue, feedbackNew, refresh } = useStaff();
+  const canDo = useCan();
   const badgeOf = (n: any) => (n.badge === 'inbox' ? inboxCount : n.badge === 'reminders' ? remindersDue : n.badge === 'feedback' ? feedbackNew : 0);
   const training = useTraining();
   const path = usePathname();
@@ -60,7 +61,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
   if (!hasPins) return <FirstRun />;
   if (locked || !staff) return <PinPad />;
 
-  const items = NAV.filter((n) => n.show(staff.role) && (!(n as any).halo || pharmacy?.halo_enabled) && (!(n as any).admin || pharmacy?.is_site_admin) && (!(n as any).group || ((pharmacy as any)?.pharmacies?.length ?? 0) > 1));
+  // Named permissions follow this pharmacy's Settings → Roles & permissions; "To confirm" also shows for people who draft
+  const allowed = (n: any) => (n.perm ? canDo(n.perm) : n.show(staff.role)) || (n.drafts && canDo('draftEntries'));
+  const items = NAV.filter((n) => allowed(n) && (!(n as any).halo || pharmacy?.halo_enabled) && (!(n as any).admin || pharmacy?.is_site_admin) && (!(n as any).group || ((pharmacy as any)?.pharmacies?.length ?? 0) > 1));
   const active = (href: string) => { const h = href.split('?')[0]; return h === '/dashboard' ? path === h || path.startsWith('/dashboard/register') : path.startsWith(h); };
 
   return (
@@ -120,8 +123,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <main key={training ? 'training' : 'live'} className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:py-6">
         {/* Top-left: show sidebar + New entry */}
         {!path.startsWith('/dashboard/scan') && !path.startsWith('/dashboard/register/') && <div className="no-print mb-4 flex flex-wrap items-center gap-2">
-          {can.scan(staff.role) && <Link href="/dashboard/scan?type=prescription" className="btn-brand"><ScanLine className="h-4 w-4" /> Scan Rx</Link>}
-          {can.record(staff.role) && <NewEntryButton />}
+          {canDo('scan') && <Link href="/dashboard/scan?type=prescription" className="btn-brand"><ScanLine className="h-4 w-4" /> Scan Rx</Link>}
+          {(can.record(staff.role) || canDo('draftEntries')) && <NewEntryButton />}
         </div>}
         <BillingBanner />
         {(pharmacy as any)?.twofa_missing && can.manageStaff(staff.role) && (
@@ -130,7 +133,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </Link>
         )}
         {!(pharmacy as any)?.twofa_missing && (pharmacy as any)?.has_2fa === false && can.manageStaff(staff.role) && <TwoStepSuggestion session={(pharmacy as any)?.login_session ?? null} />}
-        {remindersDue > 0 && can.record(staff.role) && !path.startsWith('/dashboard/reminders') && (
+        {remindersDue > 0 && canDo('reminders') && !path.startsWith('/dashboard/reminders') && (
           <Link href="/dashboard/reminders" className="no-print mb-4 flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
             <BellRing className="h-5 w-5 flex-shrink-0" /> <span className="flex-1"><b>{remindersDue} dispensing reminder{remindersDue === 1 ? '' : 's'} due</b>. Record {remindersDue === 1 ? 'it' : 'them'} in the registers in one click</span><span className="font-semibold underline">Open</span>
           </Link>

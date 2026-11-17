@@ -19,7 +19,7 @@ const Body = z.object({
 /** Add or update the pharmacy's OST patients (from reviewed bag labels). Existing details aren't overwritten with blanks. */
 export async function POST(req: Request) {
   try {
-    const { account, staff } = await requireStaff(can.record, { write: true });
+    const { account, staff } = await requireStaff('patients', { write: true });
     const parsed = Body.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) return NextResponse.json({ error: 'Check the patients' }, { status: 400 });
     const db = createServiceClient();

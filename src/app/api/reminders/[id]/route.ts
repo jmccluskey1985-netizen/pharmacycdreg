@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
-    const { account, staff } = await requireStaff(can.record, { write: true });
+    const { account, staff } = await requireStaff('reminders', { write: true });
     const parsed = ReminderBody.partial().safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Check the reminder details' }, { status: 400 });
     const b = parsed.data;
@@ -32,7 +32,7 @@ export async function PATCH(req: Request, props: { params: Promise<{ id: string 
 export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
-    const { account, staff } = await requireStaff(can.record, { write: true });
+    const { account, staff } = await requireStaff('reminders', { write: true });
     const db = createServiceClient();
     const { data } = await db.from('dispense_reminders').delete().eq('id', params.id).eq('pharmacy_id', account.pharmacyId).select('title').maybeSingle();
     if (!data) return NextResponse.json({ error: 'Reminder not found' }, { status: 404 });

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ScanLine, Camera, CheckCircle2, FileText, ImagePlus, Loader2, Plus, RotateCcw, Sun, Maximize, Hand, Sparkles, X, AlertTriangle, Receipt, ClipboardList } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 import { can } from '@/lib/roles';
-import { useStaff } from '@/components/dashboard/staff-context';
+import { useStaff, useCan } from '@/components/dashboard/staff-context';
 import { EntryForm } from '@/components/dashboard/entry-form';
 import { PatientChoice, type PatientPick } from '@/components/dashboard/patient-choice';
 import { productFor } from '@/data/cd-products';
@@ -38,6 +38,7 @@ async function compress(blob: Blob, name: string): Promise<File> {
 
 export default function ScanPage() {
   const { staff } = useStaff();
+  const canDo = useCan();
   // Prescriptions are the everyday scan, so they're the default; the last choice is remembered.
   const [docType, setDocTypeState] = useState<'invoice' | 'prescription'>('prescription');
   const setDocType = (t: 'invoice' | 'prescription') => { setDocTypeState(t); try { localStorage.setItem('cdreg-scan-type', t); } catch {} };
@@ -166,7 +167,7 @@ export default function ScanPage() {
     setStage('capture');
   }
 
-  if (staff && !can.scan(staff.role)) return <p>Your role can&apos;t scan documents.</p>;
+  if (staff && !canDo('scan')) return <p>Your role can&apos;t scan documents here. The supervising pharmacist can change this in Settings → Roles &amp; permissions.</p>;
 
   /* ───────── Reading ───────── */
   if (stage === 'reading') {
@@ -224,7 +225,7 @@ export default function ScanPage() {
 
         <div className="space-y-4">
           {result.proposals.map((p: any, i: number) => (
-            <ProposalCard key={i} p={p} patientPick={patientPick} canOpenBook={!!staff && can.openRegister(staff.role)} autoOpen={result.proposals.length === 1 && !!p.register_id} done={!!result.done[i]} onDone={(saved?: { patient_id?: string | null }) => { if (saved?.patient_id) setPatientPick({ patient_id: saved.patient_id }); setResult((cur: any) => ({ ...cur, done: { ...cur.done, [i]: true } })); }} canRecord={!!staff && can.record(staff.role)} />
+            <ProposalCard key={i} p={p} patientPick={patientPick} canOpenBook={canDo('openRegister')} autoOpen={result.proposals.length === 1 && !!p.register_id} done={!!result.done[i]} onDone={(saved?: { patient_id?: string | null }) => { if (saved?.patient_id) setPatientPick({ patient_id: saved.patient_id }); setResult((cur: any) => ({ ...cur, done: { ...cur.done, [i]: true } })); }} canRecord={!!staff && (can.record(staff.role) || canDo('draftEntries'))} />
           ))}
         </div>
 

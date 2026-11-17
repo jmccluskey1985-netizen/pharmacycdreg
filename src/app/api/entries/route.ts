@@ -43,7 +43,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { inbox_id, allow_duplicate, duplicate_reason, late_reason, ...fields } = e as typeof e & { inbox_id?: string | null };
+    const { inbox_id, draft_id, allow_duplicate, duplicate_reason, late_reason, ...fields } = e as typeof e & { inbox_id?: string | null; draft_id?: string | null };
     // Late entry (older than yesterday): needs a reason, which is written into the line itself.
     if (e.entry_type !== 'correction' && isLate(e.transaction_date)) {
       if (!late_reason || late_reason.trim().length < 5) {
@@ -60,6 +60,14 @@ export async function POST(req: Request) {
     }
     if (dup && allow_duplicate && (!duplicate_reason || duplicate_reason.length < 5)) {
       return NextResponse.json({ error: 'Say why this isn’t a duplicate', code: dup.level === 'block' ? 'DUPLICATE' : 'POSSIBLE_DUPLICATE' }, { status: 400 });
+    }
+    let draft: { drafted_by_name: string | null } | null = null;
+    if (draft_id) {
+      const { data: dr } = await db.from('entry_drafts').select('status, register_id, drafted_by_name').eq('id', draft_id).eq('pharmacy_id', account.pharmacyId).maybeSingle();
+      if (!dr || dr.status !== 'pending') return NextResponse.json({ error: 'This draft was already dealt with' }, { status: 409 });
+      if (dr.register_id !== reg.id) return NextResponse.json({ error: 'The draft is for a different register' }, { status: 400 });
+      draft = dr;
+      (fields as any).notes = [(fields as any).notes, `Drafted by ${dr.drafted_by_name ?? 'a team member'}`].filter(Boolean).join(' · ');
     }
     if (inbox_id) {
       const { data: ib } = await db.from('pmr_inbox').select('status').eq('id', inbox_id).eq('pharmacy_id', account.pharmacyId).maybeSingle();
@@ -110,6 +118,9 @@ export async function POST(req: Request) {
     }
     if (dup && allow_duplicate) {
       await audit(account.pharmacyId, 'entry.duplicate_override', staff, account.authUserId, { seq: data.seq, similar_to_seq: dup.seq, level: dup.level, reason: duplicate_reason }, { table: 'cd_entries', id: data.id });
+    }
+    if (draft_id && draft) {
+      await db.from('entry_drafts').update({ status: 'signed', entry_id: data.id, resolved_by_staff_id: staff.id, resolved_at: new Date().toISOString() }).eq('id', draft_id);
     }
     if (inbox_id) {
       await db.from('pmr_inbox').update({ status: 'posted', entry_id: data.id, register_id: reg.id, resolved_by_staff_id: staff.id, resolved_at: new Date().toISOString() }).eq('id', inbox_id);

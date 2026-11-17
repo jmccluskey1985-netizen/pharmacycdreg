@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 /** Pairs of this pharmacy's patients that score certain/strong against each other. */
 export async function GET() {
   try {
-    const { account } = await requireStaff(can.record);
+    const { account } = await requireStaff('patients');
     const db = createServiceClient();
     const { data, error } = await db.from('patients').select('*').eq('pharmacy_id', account.pharmacyId).eq('is_active', true).limit(5000);
     if (error) return NextResponse.json({ pairs: [] });

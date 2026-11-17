@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
-    const { account } = await requireStaff(can.record);
+    const { account } = await requireStaff('patients');
     const db = createServiceClient();
     const { data } = await db.from('patients').select('*').eq('id', params.id).eq('pharmacy_id', account.pharmacyId).maybeSingle();
     if (!data) return NextResponse.json({ error: 'Patient not found' }, { status: 404 });
@@ -23,7 +23,7 @@ export async function GET(_req: Request, props: { params: Promise<{ id: string }
 export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
-    const { account, staff } = await requireStaff(can.record);
+    const { account, staff } = await requireStaff('patients');
     const body = await req.json().catch(() => ({}));
     const db = createServiceClient();
     if (body.archive === true) {

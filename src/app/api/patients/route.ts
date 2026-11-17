@@ -11,7 +11,7 @@ const NEEDS_MIGRATION = 'Patient records need a one-off database update first (r
 
 export async function GET(req: Request) {
   try {
-    const { account } = await requireStaff(can.record);
+    const { account } = await requireStaff('patients');
     const sp = new URL(req.url).searchParams;
     const q = sp.get('q') || '';
     const db = createServiceClient();
@@ -30,7 +30,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { account, staff } = await requireStaff(can.record);
+    const { account, staff } = await requireStaff('patients');
     const parsed = PatientBody.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) return NextResponse.json({ error: 'First name is required; check the date of birth' }, { status: 400 });
     const db = createServiceClient();

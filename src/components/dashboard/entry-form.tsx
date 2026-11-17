@@ -8,6 +8,8 @@ import { QuickFillInput, type Suggestion } from './quickfill-input';
 import { PatientForm, type PatientRecord } from './patient-form';
 import { Modal } from '@/components/modal';
 import { PatientChoice, pickFields, type PatientPick, type PatientCandidateView } from './patient-choice';
+import { useStaff, useCan } from './staff-context';
+import { can } from '@/lib/roles';
 
 export type EntryType = 'receipt' | 'supply' | 'destruction' | 'patient_return' | 'patient_return_destruction' | 'adjustment_in' | 'adjustment_out' | 'correction';
 
@@ -82,7 +84,11 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
     ...initial,
   });
   const [reason, setReason] = useState('');
-  const [lateReason, setLateReason] = useState('');
+  const [lateReason, setLateReason] = useState(String((initial as any)?.late_reason ?? ''));
+  // Someone who may not sign (e.g. a technician) saves a draft for a pharmacist to check and sign
+  const { staff } = useStaff();
+  const canDo = useCan();
+  const drafting = !correcting && !!staff && !can.record(staff.role) && canDo('draftEntries');
   const [requisition, setRequisition] = useState(false);
   const late = !correcting && isLate(d.transaction_date);
   const [newPatient, setNewPatient] = useState<string | null>(null);
@@ -141,7 +147,8 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
         body.correction_reason = reason;
       }
       for (const k of Object.keys(body)) if (body[k] === '') body[k] = null;
-      const res = await api('/api/entries', { method: 'POST', json: body });
+      if (drafting) { delete body.interactive; }
+      const res = await api(drafting ? '/api/entries/drafts' : '/api/entries', { method: 'POST', json: body });
       setDup(null); setOverriding(false); setDupReason('');
       onSaved(res);
     } catch (err) {
@@ -166,7 +173,7 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
     <form onSubmit={submit} className="space-y-4">
       {!correcting && !lockType && (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {TYPES.map((t) => (
+          {TYPES.filter((t) => !drafting || ['receipt', 'supply', 'patient_return'].includes(t.value)).map((t) => (
             <button
               type="button"
               key={t.value}
@@ -300,10 +307,11 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
         </div>
       )}
 
+      {drafting && <p className="rounded-lg bg-sky-50 p-2.5 text-sm text-sky-900 dark:bg-sky-950 dark:text-sky-100">This is saved as a <b>draft</b>: it goes to <b>To confirm</b> for a pharmacist to check and sign. It doesn’t change the balance until then.</p>}
       {/* Kept on screen while scrolling, so Sign & record never needs a scroll to reach */}
       <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-10 -mx-1 flex gap-3 rounded-xl bg-card/95 px-1 py-2 backdrop-blur lg:bottom-0">
         {onCancel && <button type="button" onClick={onCancel} className="btn-secondary flex-1">Cancel</button>}
-        <button className="btn-primary flex-1" disabled={busy || (!!choice && !pick)}>{busy && <Loader2 className="h-4 w-4 animate-spin" />} {submitLabel ?? (correcting ? 'Record correction' : 'Sign & record entry')}</button>
+        <button className="btn-primary flex-1" disabled={busy || (!!choice && !pick)}>{busy && <Loader2 className="h-4 w-4 animate-spin" />} {drafting ? 'Save for a pharmacist to sign' : submitLabel ?? (correcting ? 'Record correction' : 'Sign & record entry')}</button>
       </div>
     </form>
       <Modal open={newPatient !== null} onClose={() => setNewPatient(null)} title="New patient">
