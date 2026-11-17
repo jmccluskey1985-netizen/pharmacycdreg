@@ -3,6 +3,7 @@
 An electronic Controlled Drug Register for Irish community pharmacy. It is a sister product to PharmacyConsultation.ie, and is built to the IPU eCDR conformance specification.
 
 Read this first, then:
+- [AGENTS.md](AGENTS.md): short rules and commands for AI coding assistants (ChatGPT / Codex, Claude).
 - [README.md](README.md): feature overview, IPU conformance map, Stripe set-up.
 - [docs/OPERATIONS.md](docs/OPERATIONS.md): environment variables, migrations, Google sign-in, billing states, deployment.
 - [docs/SCANNING.md](docs/SCANNING.md): document reader, invoice and Rx rules, duplicate guard.
