@@ -63,10 +63,14 @@ Mirrors PharmacyConsultation.ie, with prices set in `src/config/pricing.ts`:
 - **The register is never locked.** Without an active trial or subscription it is **read-only**: view, search, print and export still work, but there are no new entries, registers or scans. This is enforced server-side in `requireStaff(…, { write: true })`.
 
 ### Stripe setup (same account as PharmacyConsultation.ie)
-1. Create a product called "PharmacyCDReg" with a **€19/month recurring price** and tax behaviour set to exclusive. Put its price ID in `STRIPE_PRICE_ID`.
-2. Add a webhook endpoint at `https://pharmacycdreg.ie/api/stripe/webhook` for these events: `checkout.session.completed` and `customer.subscription.created`, `.updated` and `.deleted`. Put the signing secret in `STRIPE_WEBHOOK_SECRET`.
-3. Customer portal: allow cancelling and card updates, and set the return URL to `/dashboard/billing`.
-4. To end the launch offer, create a €29 price, point `STRIPE_PRICE_ID` at it, and set `PLAN.price = 29` with `launchOffer: false`. Existing customers keep €19.
+The app uses Stripe Checkout (subscription mode), the customer portal and a webhook. Stripe SDK 23, API version `2026-10-28.endive`. Build and test in a Stripe **sandbox** first, then repeat in live mode.
+1. Create a product "PharmacyCDReg" with a **€19/month recurring price**, tax behaviour **exclusive**. Its price ID goes in `STRIPE_PRICE_ID`.
+2. **Tax:** Settings → Tax, add the Irish VAT registration. Checkout uses `automatic_tax`, which collects **nothing** (and shows no error) until a registration is active.
+3. **Webhook** at `https://pharmacycdreg.ie/api/stripe/webhook`, API version `2026-10-28.endive`, events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`, `charge.dispute.created`, `charge.refunded`, `radar.early_fraud_warning.created`. Signing secret → `STRIPE_WEBHOOK_SECRET`. Failed payments email the pharmacy (and the owner); disputes, refunds and fraud warnings email the owner; all are in the audit trail.
+4. **Customer portal:** allow card updates, invoices and cancelling; return URL `/dashboard/billing`.
+5. **API key:** use a **restricted key** (`rk_…`) with write access to Checkout Sessions, Customers, Subscriptions and Customer portal sessions, read access to Invoices and Prices; put it in `STRIPE_SECRET_KEY` as a Vercel *sensitive* variable. Never commit keys.
+6. To end the launch offer, create a €29 price, point `STRIPE_PRICE_ID` at it, and set `PLAN.price = 29` with `launchOffer: false`. Existing customers keep €19.
+7. **Groups (to build):** a €14 price for each additional pharmacy; **10+ premises** billed by Stripe Invoicing (`collection_method: 'send_invoice'`).
 
 ## Setup
 

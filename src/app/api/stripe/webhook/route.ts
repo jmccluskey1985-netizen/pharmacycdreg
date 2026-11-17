@@ -19,13 +19,34 @@ async function updateBySubscription(sub: any) {
   };
   // trial_ends_at is kept once set so a pharmacy only ever gets one free month.
   if (!patch.trial_ends_at) delete (patch as any).trial_ends_at;
-  const q = pharmacyId ? db.from('pharmacies').update(patch).eq('id', pharmacyId) : db.from('pharmacies').update(patch).eq('subscription_id', sub.id);
+  // Resolve via Stripe's object graph first (subscription, then customer); metadata only as a fallback
+  const known = await pharmacyFor({ subscription: sub.id, customer: patch.stripe_customer_id ?? null, metadataPharmacyId: pharmacyId ?? null });
+  const target = known?.id ?? pharmacyId;
+  if (!target) return;
+  const q = db.from('pharmacies').update(patch).eq('id', target);
   const { error } = await q;
   if (error) throw error;
-  if (pharmacyId) {
-    await db.from('audit_log').insert({ pharmacy_id: pharmacyId, action: 'billing.status', details: { status: patch.subscription_status, trial_ends_at: patch.trial_ends_at, cancel_at_period_end: patch.cancel_at_period_end } });
+  {
+    await db.from('audit_log').insert({ pharmacy_id: target, action: 'billing.status', details: { status: patch.subscription_status, trial_ends_at: patch.trial_ends_at, cancel_at_period_end: patch.cancel_at_period_end } });
   }
 }
+
+/**
+ * Which pharmacy a Stripe object belongs to, through Stripe's object graph: the subscription id,
+ * else the customer id we stored, else (only as a fallback) the pharmacy_id metadata.
+ */
+async function pharmacyFor(ref: { subscription?: string | null; customer?: string | null; metadataPharmacyId?: string | null }) {
+  const db = createServiceClient();
+  const cols = 'id, name, billing_email';
+  if (ref.subscription) { const { data } = await db.from('pharmacies').select(cols).eq('subscription_id', ref.subscription).maybeSingle(); if (data) return data; }
+  if (ref.customer) { const { data } = await db.from('pharmacies').select(cols).eq('stripe_customer_id', ref.customer).maybeSingle(); if (data) return data; }
+  if (ref.metadataPharmacyId) { const { data } = await db.from('pharmacies').select(cols).eq('id', ref.metadataPharmacyId).maybeSingle(); if (data) return data; }
+  return null;
+}
+const idOf = (x: unknown) => (typeof x === 'string' ? x : (x as any)?.id ?? null);
+/** Subscription id on an invoice, in old and new API shapes. */
+const invoiceSubscription = (inv: any) => idOf(inv?.subscription) ?? idOf(inv?.parent?.subscription_details?.subscription) ?? idOf(inv?.lines?.data?.[0]?.parent?.subscription_item_details?.subscription) ?? null;
+const euro = (cents: number | null | undefined, cur = 'eur') => (typeof cents === 'number' ? `${cur.toUpperCase() === 'EUR' ? '€' : `${cur.toUpperCase()} `}${(cents / 100).toFixed(2)}` : '-');
 
 export async function POST(req: Request) {
   const sig = req.headers.get('stripe-signature');
@@ -62,6 +83,38 @@ export async function POST(req: Request) {
       case 'customer.subscription.deleted':
         await updateBySubscription(event.data.object);
         break;
+      // Payments on each invoice: a record in the audit trail, and a heads-up when a card is declined
+      case 'invoice.paid': {
+        const inv = event.data.object as any;
+        const ph = await pharmacyFor({ subscription: invoiceSubscription(inv), customer: idOf(inv.customer) });
+        if (ph) await createServiceClient().from('audit_log').insert({ pharmacy_id: ph.id, action: 'billing.invoice_paid', details: { invoice: inv.number ?? inv.id, amount: euro(inv.amount_paid, inv.currency) } });
+        break;
+      }
+      case 'invoice.payment_failed': {
+        const inv = event.data.object as any;
+        const ph = await pharmacyFor({ subscription: invoiceSubscription(inv), customer: idOf(inv.customer) });
+        if (ph) {
+          await createServiceClient().from('audit_log').insert({ pharmacy_id: ph.id, action: 'billing.payment_failed', details: { invoice: inv.number ?? inv.id, amount: euro(inv.amount_due, inv.currency), attempt: inv.attempt_count ?? null } });
+          const to = inv.customer_email || ph.billing_email;
+          const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://pharmacycdreg.ie';
+          if (to) await sendEmail({ to, subject: 'PharmacyCDReg: your payment didn’t go through', html: `<p>We couldn’t take the payment of <b>${euro(inv.amount_due, inv.currency)}</b> for ${ph.name}. Stripe will try again automatically over the next few days.</p><p>Please check or update the card in <a href="${site}/dashboard/billing">Billing</a>. Your register stays fully readable and exportable whatever happens.</p>` });
+        }
+        await sendEmail({ to: adminEmail(), subject: `Payment failed: ${ph?.name ?? idOf(inv.customer)}`, html: `<p>Invoice ${inv.number ?? inv.id} for ${euro(inv.amount_due, inv.currency)} failed (attempt ${inv.attempt_count ?? '?'}).</p>` });
+        break;
+      }
+      // Money at risk: tell the site owner straight away (handle in the Stripe Dashboard)
+      case 'charge.dispute.created':
+      case 'charge.refunded':
+      case 'radar.early_fraud_warning.created': {
+        const o = event.data.object as any;
+        const charge = event.type === 'charge.refunded' ? o : null;
+        const customer = idOf(charge?.customer) ?? null;
+        const ph = customer ? await pharmacyFor({ customer }) : null;
+        const what = { 'charge.dispute.created': 'A payment was disputed', 'charge.refunded': 'A payment was refunded', 'radar.early_fraud_warning.created': 'Stripe flagged a payment as possible fraud' }[event.type];
+        if (ph) await createServiceClient().from('audit_log').insert({ pharmacy_id: ph.id, action: `billing.${event.type.replace(/\./g, '_')}`, details: { stripe_object: o.id, amount: euro(o.amount ?? o.amount_refunded, o.currency) } });
+        await sendEmail({ to: adminEmail(), subject: `Stripe: ${what}${ph ? `: ${ph.name}` : ''}`, html: `<p>${what}. Stripe object <code>${o.id}</code>${typeof o.amount === 'number' ? `, ${euro(o.amount, o.currency)}` : ''}.</p><p>Review it in the Stripe Dashboard.</p>` });
+        break;
+      }
       default:
         break;
     }
