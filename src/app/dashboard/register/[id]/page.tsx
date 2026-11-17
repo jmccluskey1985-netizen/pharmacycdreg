@@ -194,6 +194,18 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
               catch (e: any) { alert(e?.message ?? 'Could not remove it'); }
             }} className="btn-ghost text-destructive"><Trash2 className="h-4 w-4" /> Remove book</button>
           )}
+          {data.entries.length === 1 && data.entries[0].entry_type === 'receipt' && !data.register?.closed_at && mayRecord && staff && can.manageStaff(staff.role) && (
+            <button onClick={async () => {
+              const reason = prompt('Close this book as opened in error?\n\nIts only line (the balance brought forward) is corrected to 0, struck through but still visible, signed by you; then the book is closed and leaves the shelf. It stays in the audit trail and exports.\n\nReason:', 'Book opened in error: duplicate of another register');
+              if (!reason || reason.trim().length < 5) return;
+              try {
+                const first = data.entries[0];
+                await api('/api/entries', { method: 'POST', json: { register_id: params.id, entry_type: 'correction', corrects_entry_id: first.id, correction_reason: reason.trim(), quantity: 0, transaction_date: first.transaction_date } });
+                await api(`/api/registers/${params.id}/close`, { method: 'POST', json: { reason: reason.trim() } });
+                window.location.href = '/dashboard';
+              } catch (e: any) { alert(e?.message ?? 'Could not close it'); }
+            }} className="btn-ghost text-destructive"><Archive className="h-4 w-4" /> Close book opened in error</button>
+          )}
           {data.entries.length > 0 && Number(balance) === 0 && !data.register?.closed_at && staff && can.manageStaff(staff.role) && (
             <button onClick={async () => {
               const reason = prompt('Close this book? It stays readable, printable and in exports for inspection, but takes no new entries.\n\nReason (e.g. "Opened in error: duplicate of the Methadone Rowex book" or "Product no longer stocked"):');

@@ -380,6 +380,24 @@ await step('settings: tabs, and Roles & permissions can switch off drafting for 
   await page.getByRole('checkbox', { name: 'Draft register entries: Technician' }).check(); await click('button:has-text("Save permissions")');
 });
 
+await step('a book opened in error is closed in one click (line corrected to 0, book leaves the shelf)', async () => {
+  await page.goto(B + '/dashboard'); await page.waitForTimeout(1000);
+  await page.locator('input[placeholder^="Find a register"]').fill('Zzdemo opened in error');
+  await click('button:has-text("as a new CD book")'); await page.waitForTimeout(600);
+  await field('Drug (generic name)').fill('Zzdemo opened in error');
+  await page.locator('#form-pick').selectOption('tablet');
+  await field('Strength').fill('5mg');
+  await field('Balance brought forward').fill('10');
+  await click('button:has-text("Open register")'); await page.waitForTimeout(1200);
+  await page.goto(B + '/dashboard'); await page.waitForTimeout(1000);
+  const book = page.locator('a[href^="/dashboard/register/"]:has-text("Zzdemo")').first();
+  await book.click(); await see('text=CLASS OF DRUG'); await page.waitForTimeout(800);
+  page.once('dialog', (d) => d.accept('Book opened in error: duplicate of another register'));
+  await click('button:has-text("Close book opened in error")'); await page.waitForTimeout(1500);
+  await page.goto(B + '/dashboard'); await page.waitForTimeout(1000);
+  if (await page.locator('a[href^="/dashboard/register/"]:has-text("Zzdemo")').count()) throw new Error('book still on the shelf');
+});
+
 await step('no page errors during the workflows', async () => { if (page.errors.length) throw new Error(page.errors.slice(0, 3).join(' | ')); });
 
 await step('sign out from the sidebar returns to the home page', async () => {

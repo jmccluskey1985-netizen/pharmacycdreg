@@ -305,6 +305,18 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     d.status = 'rejected';
     return res({ ok: true });
   }
+  if (path.startsWith('/api/registers/') && path.endsWith('/close') && method === 'POST') {
+    if (needStaff()) return needStaff()!;
+    if (!rolesCan.manageStaff(st!.role as StaffRole)) return fail(403, 'Your role does not allow this action');
+    const id = path.split('/')[3];
+    const r = S.registers.find((x) => x.id === id);
+    if (!r) return fail(404, 'Register not found');
+    if (r.closed_at) return fail(409, 'Already closed');
+    if (balance(id) !== 0) return fail(409, `Balance is ${balance(id)}. A register can only be closed at nil.`);
+    if (!body?.reason || String(body.reason).trim().length < 5) return fail(400, 'Say why the book is being closed');
+    (r as any).closed_at = new Date().toISOString();
+    return res({ ok: true });
+  }
   if (path === '/api/settings/permissions') {
     if (needStaff()) return needStaff()!;
     if (!rolesCan.manageStaff((st!.role as StaffRole))) return fail(403, 'Your role does not allow this action');
