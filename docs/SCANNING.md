@@ -79,6 +79,12 @@ A web page can't drive a scanner directly, so on a PC the Scan page watches the 
 
 Stock check → *Check against a dispensing report*: a CD report from the dispensing system (PDF, photo, or CSV/text export, sent as text) is read for this register's product only (`src/lib/report-reconcile.ts`). Each line is matched to a register line of the same kind within ±2 days, same quantity, and agreeing name or reference (`reconcile`, unit-tested). Results: *in the register*, *missing* (ticked by default, with a ready draft: patient record address where matched, supplier address from contacts), or *quantity differs* (shown only; fixed by a correction). Ticked lines are posted one by one through `/api/entries` (receipts first, then by date), so the duplicate guard and the late-entry rule apply: lines older than a day carry `Late entry: <footnote>`. Photos of printed reports (e.g. a *Drug Search Report*: Date Dispensed, Patient Name surname-first, Script Dispensed As, Qty) are read row by row along the slant, shadows and fingers ignored. If the page edge cuts off part of a date, the reader reports it with `?` for the missing digit; `dateOptions` lists the possible days (never in the future) and the register decides which one matches. If none does, the line is shown missing but not ticked, and the pharmacist picks the day. The report isn't stored; an audit event records the counts.
 
+## 2d. Reader and robustness notes
+
+- Reader: Google Vertex AI (Gemini 3.8 Flash, EU). If Vertex is configured but its key fails, scanning stops with a message; it never falls back to OpenRouter with patient data.
+- OST forms: dates ("17/11/26"), S / TA, product names and summed quantities are normalised; each grid row is checked on its own; an OST form that comes back without its grid is read once more with a focused OST-only request.
+- Brand matching: a docket's brand matches a book whose brand contains it ("Rowex" → "Methadone Rowex", "DTF" → "Methadone DTF"); different brands never mix. Methadone Rowex is in the catalogue.
+
 ## 3. Invoices / CD dockets (Uniphar, United Drug, PCO, IMED, Pluripharm)
 
 The rules are in `src/lib/invoice-rules.ts`:

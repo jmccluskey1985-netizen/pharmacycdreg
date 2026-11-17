@@ -21,8 +21,8 @@ Read this first, then:
 | App | Next.js 16 App Router (React 19), TypeScript, Tailwind, lucide icons, zod 4 |
 | Data / auth | Supabase: Postgres (EU), Auth (password, Google OAuth, TOTP MFA). RLS on with **no client policies**; every read and write goes through server routes using the service key after `requireAccount` / `requireStaff`. |
 | Hosting | Vercel (`main` auto-deploys). Domain `pharmacycdreg.ie`. Daily cron for trial reminders. |
-| Billing | Stripe Checkout, Customer Portal and webhook (€19/month launch price, free month without a card) |
-| Document reading | Google Vertex AI (Gemini) in the EU, under the Google Cloud DPA. OpenRouter is still available as an alternative |
+| Billing | Stripe Checkout, Customer Portal and webhook, Stripe SDK 23 / API `2026-10-28.endive` (€19/month launch price, free month without a card; groups 25% off each additional pharmacy) |
+| Document reading | Google Vertex AI (Gemini 3.8 Flash, EU multi-region), live since 17 Nov 2026, under the Google Cloud DPA. When Vertex is the chosen reader the app never falls back to another provider (a broken key stops scanning with a clear message) |
 
 ## 2. Code map
 
@@ -98,6 +98,8 @@ scripts/                    create-pharmacy.mjs, rule tests, GMS list parser
 - **Roles & permissions** (Settings → Roles & permissions, `src/lib/permissions.ts`): the superintendent / supervising pharmacist chooses per role what may be done (draft entries, scan, open books, stock checks, patients & contacts, reminders, audit trail). Leads always have everything; signing entries is pharmacist-only; read-only can only view. Routes check named permissions with `requireStaff('<permission>')`; the UI uses `useCan()`.
 - **Technician drafts:** someone who may not sign (e.g. a technician) saves entries as drafts (`entry_drafts`, `/api/entries/drafts`), with no effect on any balance. A pharmacist signs them from **To confirm** (posted through `/api/entries` with `draft_id`, so the balance, duplicate and late-entry rules apply) or turns them down with a reason; the line notes who drafted it.
 - **Settings** is split into tabs: General, Security, Roles & permissions, Stock checks, Data & backups (and Document reading for the site owner). `?tab=` links straight to one.
+- **Patients and doctors in entries:** on a methadone / buprenorphine book the patient box lists the OST patients on click; the doctor box lists doctors used before (saved automatically to Doctors & suppliers on every supply). Typing a new patient or doctor always works. Automatic patient creation (imports, Halo) reuses a certain match or the same name at the same address, and never adds a copy of someone already there.
+- **Registers:** Form is a dropdown with "Other (type it)"; book covers clamp long names; **Close book** (balance 0) and **Close book opened in error** (only line is the opening balance: corrected to 0 and closed in one signed step). Scanned brands match a book whose brand contains them ("Rowex" → "Methadone Rowex").
 - **Sign out** at the bottom of the sidebar (and in the phone More menu) ends the pharmacy login on the device, separate from Lock / switch user.
 - **Require two-step sign-in** (Settings → Security). The last authenticator can't be removed while this is on, and a red banner shows if it goes missing.
 - **Full backup:** Settings → Data → Full backup (JSON), supervising pharmacist only, audited. Printing is A4 landscape with page numbers and repeated headings.
@@ -141,12 +143,12 @@ Not covered automatically: the real server API routes talking to a real Supabase
 
 ## 7. Outstanding / to do
 
-- [ ] **Stripe:** create the product and price, webhook and portal (README → Stripe setup); set `STRIPE_*` and `CRON_SECRET`.
+- [ ] **Stripe (in progress, sandbox):** sandbox "PharmacyCDReg sandbox" created; product `prod_VeB2jgC4MZIwsl`, price `price_1Ucsg07ixwbCz8zgnRBrDP42` (€19/month, tax exclusive). Next: customer portal, webhook (9 events, README → Stripe setup), restricted key; then set `STRIPE_SECRET_KEY` (rk_test_…), `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET`, `CRON_SECRET` in Vercel (Sensitive) and redeploy; test with 4242 4242 4242 4242; Irish VAT registration in Stripe Tax before live (automatic_tax collects nothing without it); repeat in live mode. Group pricing (€14 additional-premises price) and Stripe Invoicing for 10+ groups to build after.
 - [ ] **Google sign-in:** finish the Google Cloud client and Supabase provider set-up (docs/OPERATIONS.md §3).
-- [x] **Migrations:** 0001–0024 are in production (0024 applied 17 Nov 2026).
-- [ ] **Document reader:** set up Google Vertex AI (Settings → Document reading) and accept the Google Cloud DPA. File the sub-processor DPAs (`docs/compliance/SUBPROCESSOR_DPAS.md`).
+- [x] **Migrations:** 0001–0024 are in production (0024 applied 17 Nov 2026). 0005 (`contacts`) had never been applied in production: found and applied 17 Nov 2026, backfilled from register history. Every table now verified present.
+- [x] **Document reader:** Google Vertex AI live (service account with the *Vertex AI User* role, now shown as "Agent Platform User"; key uploaded in Settings → Document reading → EU multi-region; Test passes). The old OpenRouter key is still saved but unused while Vertex is set. File the sub-processor DPAs (`docs/compliance/SUBPROCESSOR_DPAS.md`).
 - [x] **Company details:** name "PharmacyCDReg.ie" and email support@pharmacycdreg.ie set in `src/config/company.ts` (address still "Ireland"; set `NEXT_PUBLIC_COMPANY_ADDRESS` or edit it once there is a registered address). Have a solicitor review /privacy, /terms and `docs/compliance/DPA_TEMPLATE.md`.
-- [ ] **Supabase plan:** Pro (daily backups, 7 days) and ideally Point-in-Time Recovery. Planned soon; the IPU pack already describes Pro daily backups, marked [enable before submission]. Turn on leaked-password protection (Authentication → Policies).
+- [ ] **Supabase plan:** Pro (daily backups, 7 days) and ideally Point-in-Time Recovery. Planned soon; the IPU pack already describes Pro daily backups, marked [enable before submission]. Leaked-password protection is on.
 - [ ] **Vercel env:** set `SECRETS_KEY` (32+ random characters, different from `STAFF_SESSION_SECRET`) so stored API keys and staff sessions use separate keys. Then re-save the reader key in Settings so it's encrypted with the new key.
 - [ ] **Uptime monitor** on `https://pharmacycdreg.ie/api/health` (e.g. UptimeRobot, free).
 - [ ] **Restore drill:** once a year, restore a Full backup into a throwaway Supabase project with `scripts/restore-backup.mjs` and record the result (docs/BACKUP_AND_RESTORE.md).
@@ -155,9 +157,11 @@ Not covered automatically: the real server API routes talking to a real Supabase
 - [ ] **Multi-premises groups:** superintendent switching, the **Group overview** page and the group price (25% off each additional pharmacy) are built and shown. Still to do: charge it in Stripe (e.g. a second price for additional premises, or a coupon applied when a pharmacy joins a group that already pays for one).
 - [ ] **Reminders:** consider an email or push notification for due reminders (they're in-app only for now).
 - [ ] **Launch:** set `SIGNUPS_OPEN=1` and remove the `SIGNIN_UNLOCK_CODE` gate when ready.
+- [ ] **Email:** support@pharmacycdreg.ie set up. New sign-ups get a welcome email (`src/lib/welcome-email.ts`); customer emails carry `Reply-To: support@pharmacycdreg.ie`. Set `ADMIN_NOTIFY_EMAIL` to the support address if notifications should go there; `EMAIL_FROM` must be a real mailbox the Google service account can send as.
+- [ ] **Before launch: clear the test data.** The live pharmacy has been used for testing (including one real OST form). Wipe test registers, lines, drafts, scans and patients so real registers start with a clean audit trail. Hard deletes of test data are done at the owner's request while testing, each with an audit note; after launch use corrections / Close book opened in error instead.
 - [ ] **IPU evidence pack:** Draft 0.3 (16 Nov 2026), kept outside this public repo because it carries the signatory's name: test plan, evidence register (37 items incl. OST, late entries, stock-check reconciliation, inspector links, two-step sign-in, superintendent groups, restore test), DOC-001 (seven roles), DOC-002 (backups, corrected to Paris region), DEC-001, and a checklist. Before submission: fill the [bracketed] blanks, enable Supabase Pro, capture screenshots/videos from a test pharmacy with made-up patients, sign.
 - [ ] **Google Vertex AI prompt logging:** exemption (zero data retention) requested via the Google Cloud Compliance & Data Privacy form on 16 Nov 2026; awaiting reply. When granted, the site can say no copy of a scan is kept anywhere (update CLAIMS_EVIDENCE D4, the home page Q&A and DEC-001).
-- [ ] **Dependencies:** Tailwind 4, TypeScript 7, @types/node 26 and Stripe 23 are major upgrades left for later (Dependabot PRs). Playwright stays at the version matching the test browser.
+- [ ] **Dependencies:** Stripe 23 done. Tailwind 4, TypeScript 7 and @types/node 26 are major upgrades left for later (Dependabot PRs). Playwright stays at the version matching the test browser.
 - [ ] **Reader evaluation set:** build a set of anonymised Rx and invoice images with expected outputs, to measure accuracy before and after model changes.
 - [ ] **Halo:** import Halo's CONTROLLED drug list to widen the catalogue (some brand and strength variants are missing; users can add them by hand meanwhile).
 - [x] **PSI wording:** checked Nov 2026 against the PSI segregation/destruction advice (via search results). Still worth reading the PSI disposal guidelines directly for the patient-return denaturing steps.
