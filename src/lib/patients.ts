@@ -154,8 +154,10 @@ export async function resolvePatientNonInteractive(db: SupabaseClient, pharmacyI
   const { error: tableErr } = await db.from('patients').select('id', { head: true, count: 'exact' }).eq('pharmacy_id', pharmacyId);
   if (tableErr) return null; // table not created yet
   const { candidates } = await findPatientMatches(db, pharmacyId, probe);
-  const certain = candidates.filter((c) => c.level === 'certain');
-  if (certain.length === 1) { await fillPatientGaps(db, certain[0].patient, probe); return { id: certain[0].patient.id, created: false, possibleDuplicateOf: null }; }
+  // No one at the screen to ask: reuse a certain match, or the same name at the same address with
+  // nothing conflicting ("strong"). If duplicates already exist, reuse one of them (never add another).
+  const reuse = candidates.find((c) => c.level === 'certain') ?? candidates.find((c) => c.level === 'strong');
+  if (reuse) { await fillPatientGaps(db, reuse.patient, probe); return { id: reuse.patient.id, created: false, possibleDuplicateOf: null }; }
   const created = await createPatientFromProbe(db, pharmacyId, probe, gp);
   return created ? { id: created.id, created: true, possibleDuplicateOf: candidates[0]?.patient.id ?? null } : null;
 }
