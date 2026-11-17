@@ -52,7 +52,7 @@ export function TrainingButton({ pharmacy, onStarted, className, compact }: { ph
   if (DEMO || on) return null;
   return (
     <>
-      <button onClick={() => setOpen(true)} className={className ?? 'btn-ghost w-full text-sm'} title="Practise on a copy of your register"><GraduationCap className="h-4 w-4" /> {compact ? '' : 'Training mode'}</button>
+      <button onClick={() => setOpen(true)} className={className ?? 'btn-ghost w-full text-sm'} title="Training mode: practise on a copy of your register" aria-label="Training mode"><GraduationCap className="h-4 w-4" /> {compact ? '' : 'Training mode'}</button>
       <Modal open={open} onClose={() => setOpen(false)} title="Training mode">
         <div className="space-y-3 text-sm">
           <p>Practise on a <b>copy of your own registers</b>. Scanning, entries, corrections, stock checks, new CD books.</p>

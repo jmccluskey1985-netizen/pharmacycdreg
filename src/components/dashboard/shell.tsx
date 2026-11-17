@@ -106,9 +106,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
             : <p className="text-xs text-muted-foreground">{pharmacy?.name}</p>}
           <p className="mt-2 text-sm font-semibold">{staff.full_name}</p>
           <p className="text-xs text-muted-foreground">{ROLE_LABELS[staff.role]}{staff.psi_number ? ` · PSI ${staff.psi_number}` : ''}</p>
-          <button onClick={lock} className="btn-secondary mt-3 w-full text-sm"><Lock className="h-4 w-4" /> Lock / switch user</button>
-          <TrainingButton pharmacy={pharmacy} onStarted={refresh} className="btn-ghost mt-1 w-full text-sm" />
-          <button onClick={signOut} className="btn-ghost mt-1 w-full text-sm text-muted-foreground hover:text-destructive"><LogOut className="h-4 w-4" /> Sign out</button>
+          {/* Compact row: icons with their name on hover, so the menu above has more room */}
+          <div className="mt-3 flex items-center gap-1.5">
+            <button onClick={lock} className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-secondary text-sm font-semibold text-secondary-foreground hover:bg-secondary/80" title="Lock / switch user" aria-label="Lock / switch user"><Lock className="h-4 w-4" /> Lock</button>
+            <TrainingButton pharmacy={pharmacy} onStarted={refresh} compact className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground" />
+            <button onClick={signOut} className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-destructive" title="Sign out" aria-label="Sign out"><LogOut className="h-4 w-4" /></button>
+          </div>
         </div>}
       </aside>
 

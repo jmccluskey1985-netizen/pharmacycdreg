@@ -328,7 +328,7 @@ await step('CSV export of a register downloads', async () => {
 });
 
 await step('lock and switch user', async () => {
-  await click('button:has-text("Lock / switch user")'); await see('text=/Enter your PIN/i');
+  await click('aside button[aria-label="Lock / switch user"]'); await see('text=/Enter your PIN/i');
   for (const d of '2345') await page.getByRole('button', { name: d, exact: true }).first().click();
   await page.getByRole('button', { name: 'OK', exact: true }).click().catch(() => {});
   await see('text=Ciarán Walsh');
@@ -337,7 +337,7 @@ await step('lock and switch user', async () => {
 // Switch who's at the keyboard (same screen, same pharmacy), as staff do with Lock / switch user
 const switchTo = async (pin) => {
   await page.goto(B + '/dashboard'); await page.waitForTimeout(800);
-  await click('aside button:has-text("Lock / switch user")'); await see('text=/Enter your PIN/i');
+  await click('aside button[aria-label="Lock / switch user"]'); await see('text=/Enter your PIN/i');
   for (const d of pin) await page.getByRole('button', { name: d, exact: true }).first().click();
   await page.getByRole('button', { name: 'OK', exact: true }).click().catch(() => {});
   await page.waitForTimeout(1200);
@@ -415,7 +415,7 @@ await step('no page errors during the workflows', async () => { if (page.errors.
 await step('sign out from the sidebar returns to the home page', async () => {
   const t = await signedInPage({ width: 1366, height: 900 });
   t.once('dialog', (d) => d.accept());
-  await t.click('aside button:has-text("Sign out")');
+  await t.click('aside button[aria-label="Sign out"]');
   await t.waitForURL((u) => u.pathname === '/', { timeout: 8000 });
   await t.context().close();
 });
