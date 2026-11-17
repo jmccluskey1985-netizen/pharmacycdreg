@@ -145,7 +145,7 @@ Not covered automatically: the real server API routes talking to a real Supabase
 - [ ] **Google sign-in:** finish the Google Cloud client and Supabase provider set-up (docs/OPERATIONS.md §3).
 - [x] **Migrations:** 0001–0024 are in production (0024 applied 17 Nov 2026).
 - [ ] **Document reader:** set up Google Vertex AI (Settings → Document reading) and accept the Google Cloud DPA. File the sub-processor DPAs (`docs/compliance/SUBPROCESSOR_DPAS.md`).
-- [ ] **Company details:** set `NEXT_PUBLIC_COMPANY_NAME`, `NEXT_PUBLIC_COMPANY_ADDRESS` and `NEXT_PUBLIC_CONTACT_EMAIL`. Have a solicitor review /privacy, /terms and `docs/compliance/DPA_TEMPLATE.md`.
+- [x] **Company details:** name "PharmacyCDReg.ie" and email support@pharmacycdreg.ie set in `src/config/company.ts` (address still "Ireland"; set `NEXT_PUBLIC_COMPANY_ADDRESS` or edit it once there is a registered address). Have a solicitor review /privacy, /terms and `docs/compliance/DPA_TEMPLATE.md`.
 - [ ] **Supabase plan:** Pro (daily backups, 7 days) and ideally Point-in-Time Recovery. Planned soon; the IPU pack already describes Pro daily backups, marked [enable before submission]. Turn on leaked-password protection (Authentication → Policies).
 - [ ] **Vercel env:** set `SECRETS_KEY` (32+ random characters, different from `STAFF_SESSION_SECRET`) so stored API keys and staff sessions use separate keys. Then re-save the reader key in Settings so it's encrypted with the new key.
 - [ ] **Uptime monitor** on `https://pharmacycdreg.ie/api/health` (e.g. UptimeRobot, free).

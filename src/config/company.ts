@@ -1,13 +1,13 @@
 /**
  * Who runs PharmacyCDReg.ie: shown on the privacy, terms and security pages.
- * Set these in Vercel (they're public, not secrets). Until then the placeholders show.
+ * Public details, not secrets. Vercel env vars (NEXT_PUBLIC_COMPANY_NAME etc.) override these if set.
  */
 export const COMPANY = {
-  legalName: process.env.NEXT_PUBLIC_COMPANY_NAME || 'PharmacyCDReg.ie (operator name to be confirmed)',
+  legalName: process.env.NEXT_PUBLIC_COMPANY_NAME || 'PharmacyCDReg.ie',
   address: process.env.NEXT_PUBLIC_COMPANY_ADDRESS || 'Ireland',
   email: process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'support@pharmacycdreg.ie',
-  updated: '13 November 2026',
-  updatedIso: '2026-11-13',
+  updated: '17 November 2026',
+  updatedIso: '2026-11-17',
 };
 
 /** Companies that process data on our behalf (GDPR Art. 28 sub-processors). */
