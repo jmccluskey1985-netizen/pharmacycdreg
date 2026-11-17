@@ -22,6 +22,7 @@ Read this first, then:
 | App | Next.js 16 App Router (React 19), TypeScript, Tailwind, lucide icons, zod 4 |
 | Data / auth | Supabase: Postgres (EU), Auth (password, Google OAuth, TOTP MFA). RLS on with **no client policies**; every read and write goes through server routes using the service key after `requireAccount` / `requireStaff`. |
 | Hosting | Vercel (`main` auto-deploys). Domain `pharmacycdreg.ie`. Daily cron for trial reminders. |
+| Hosting | Vercel project **`pharmacycdreg-mlyv`** in team `jmccluskey1985-2581s-projects` (serves pharmacycdreg.ie; the duplicate `pharmacycdreg` project was deleted 18 Nov 2026). Env vars are set there |
 | Billing | Stripe Checkout, Customer Portal and webhook, Stripe SDK 23 / API `2026-10-28.endive` (€19/month launch price, free month without a card; groups 25% off each additional pharmacy) |
 | Document reading | Google Vertex AI (Gemini 3.8 Flash, EU multi-region), live since 17 Nov 2026, under the Google Cloud DPA. When Vertex is the chosen reader the app never falls back to another provider (a broken key stops scanning with a clear message) |
 
