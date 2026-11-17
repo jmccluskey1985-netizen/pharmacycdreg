@@ -18,9 +18,9 @@
 | `SIGNUPS_OPEN` | at launch | `1` opens self sign-up at `/start` |
 | `OPENROUTER_API_KEY` | optional | Fallback reader key (normally set in Settings instead) |
 | `ANTHROPIC_API_KEY` | optional | Legacy reader fallback |
-| `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET` | for billing | See README → Stripe setup |
+| `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET` | for billing | See README → Stripe setup. Use a restricted key (`rk_…`). Set on Vercel project `pharmacycdreg-mlyv` (team jmccluskey1985-2581s-projects), marked Sensitive |
 | `CRON_SECRET` | for billing | Protects `/api/cron/trial-reminders` (`vercel.json`, daily 09:17 UTC) |
-| `EMAIL_FROM`, `EMAIL_FROM_NAME`, `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | for email | Waitlist and trial-reminder email (`src/lib/email.ts`) |
+| `EMAIL_FROM`, `EMAIL_FROM_NAME`, `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | for email | All email (`src/lib/email.ts`): welcome, trial reminders, payment notices, daily digest, owner notices. Without them every email is silently skipped. The service account needs the Gmail API and Workspace domain-wide delegation for `https://www.googleapis.com/auth/gmail.send`; `EMAIL_FROM` must be a real mailbox user. Paste the key with its BEGIN/END lines (literal `\n` is converted) |
 | `ADMIN_NOTIFY_EMAIL` | optional | Who receives sign-up, waitlist, payment and feedback notifications (e.g. support@pharmacycdreg.ie). Every customer email has `Reply-To: support@pharmacycdreg.ie` (`COMPANY.email`); new sign-ups get a welcome email (`src/lib/welcome-email.ts`). `EMAIL_FROM` must be a real Google Workspace mailbox the service account can send as (domain-wide delegation impersonates it), not an alias. |
 | `NEXT_PUBLIC_COMPANY_NAME`, `NEXT_PUBLIC_COMPANY_ADDRESS`, `NEXT_PUBLIC_CONTACT_EMAIL` | before launch | Shown on /privacy, /terms and /security (public, not secrets) |
 | `NEXT_PUBLIC_DEMO_MODE` | never in production | `1` builds the click-through demo (in-browser fake data) |
