@@ -109,10 +109,13 @@ function ShelfRow({ cls, types, onStart, onRemove }: { cls: string; types: TypeG
                       className="absolute right-2 top-2 z-10 rounded-full bg-white/15 p-1 text-white/80 hover:bg-white/30 hover:text-white"><X className="h-3.5 w-3.5" /></span>
                   )}
                   <span className="absolute inset-y-0 left-2 w-px bg-white/20" aria-hidden />
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-white/55">{t.brand}</p>
-                  <p className="mt-1 text-2xl font-bold leading-none tabular-nums">{r.product.strength}</p>
-                  <p className="mt-1 line-clamp-2 text-xs text-white/75">{r.product.form}</p>
-                  {r.product.parent && <p className="mt-1 text-[10px] text-white/70">Stereoisomer of {r.product.parent.drug_name}</p>}
+                  {/* Long names (e.g. "Methadone hydrochloride Rowex") are clamped and shrink, never overlap */}
+                  <div className="min-h-0 overflow-hidden" title={`${t.brand} ${r.product.strength} ${r.product.form}${r.product.parent ? ` · stereoisomer of ${r.product.parent.drug_name}` : ''}`}>
+                    <p className={`line-clamp-2 break-words pr-4 font-semibold uppercase leading-tight text-white/60 ${t.brand.length > 16 ? 'text-[9px] tracking-wide' : 'text-[10px] tracking-widest'}`}>{t.brand}</p>
+                    <p className={`mt-1 font-bold leading-none tabular-nums ${r.product.strength.length > 7 ? 'text-xl' : 'text-2xl'}`}>{r.product.strength}</p>
+                    <p className="mt-1 truncate text-xs capitalize text-white/75">{r.product.form}</p>
+                    {r.product.parent && <p className="mt-0.5 truncate text-[10px] text-white/60">Stereoisomer of {r.product.parent.drug_name}</p>}
+                  </div>
                   <div className="mt-auto">
                     {(r.low_stock || r.check_due || !!r.quarantined) && (
                       <div className="mb-1.5 flex flex-wrap gap-1">

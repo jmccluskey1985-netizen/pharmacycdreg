@@ -3,7 +3,7 @@
 import { productTitle, genericLine, brandOf } from '@/lib/product-name';
 import { useCallback, useEffect, useMemo, useState, use } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ChevronLeft, ChevronRight, Download, Plus, Printer, PencilLine, Trash2, Repeat, X, BellRing, StickyNote } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Download, Plus, Printer, PencilLine, Trash2, Repeat, X, BellRing, StickyNote, Archive } from 'lucide-react';
 import { api } from '@/lib/api';
 import { can } from '@/lib/roles';
 import { canWrite } from '@/lib/stripe';
@@ -189,6 +189,14 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
               try { await api(`/api/registers/${params.id}`, { method: 'DELETE' }); window.location.href = '/dashboard'; }
               catch (e: any) { alert(e?.message ?? 'Could not remove it'); }
             }} className="btn-ghost text-destructive"><Trash2 className="h-4 w-4" /> Remove book</button>
+          )}
+          {data.entries.length > 0 && Number(balance) === 0 && !data.register?.closed_at && staff && can.manageStaff(staff.role) && (
+            <button onClick={async () => {
+              const reason = prompt('Close this book? It stays readable, printable and in exports for inspection, but takes no new entries.\n\nReason (e.g. "Opened in error: duplicate of the Methadone Rowex book" or "Product no longer stocked"):');
+              if (!reason || reason.trim().length < 5) return;
+              try { await api(`/api/registers/${params.id}/close`, { method: 'POST', json: { reason: reason.trim() } }); window.location.href = '/dashboard'; }
+              catch (e: any) { alert(e?.message ?? 'Could not close it'); }
+            }} className="btn-ghost"><Archive className="h-4 w-4" /> Close book</button>
           )}
           <StockCheckButton registerId={params.id} unit={p.unit} balance={Number(balance)} canRecord={!!mayRecord} onChanged={load} />
           <Link href={`/dashboard/notes?register_id=${params.id}`} className="btn-secondary"><StickyNote className="h-4 w-4" /> Notes</Link>

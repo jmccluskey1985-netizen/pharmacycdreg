@@ -271,7 +271,7 @@ function NewRegisterForm({ onDone, registers, initialText = '' }: { onDone: () =
           )}
         </>
       )}
-      <div><label className="label">Form</label><input className="input" required value={f.form} onChange={set('form')} placeholder="e.g. capsule" /></div>
+      <FormPicker value={f.form} onChange={(form, unit) => setF((x) => ({ ...x, form, ...(unit ? { unit } : {}) }))} />
       <div><label className="label">Strength</label><input className="input" required value={f.strength} onChange={set('strength')} placeholder="e.g. 5mg" /></div>
       <div><label className="label">Counted in</label><select className="input" value={f.unit} onChange={set('unit')}>{['tablets', 'capsules', 'ml', 'patches', 'ampoules', 'vials', 'units'].map((u) => <option key={u}>{u}</option>)}</select></div>
       <div><label className="label">Balance brought forward</label><input className="input" type="number" min="0" step="any" inputMode="decimal" value={f.opening_balance} onChange={set('opening_balance')} placeholder="From paper register" /></div>
@@ -372,5 +372,37 @@ function StartFromList({ g, onDone }: { g: Ghost; onDone: () => void }) {
       {error && <p className="text-sm text-destructive">{error}</p>}
       <button className="btn-primary w-full" disabled={busy}>{busy && <Loader2 className="h-4 w-4 animate-spin" />} Start CD book</button>
     </form>
+  );
+}
+
+/** Common dosage forms, each with what it's counted in; "Other" lets you type any form. */
+const FORMS: [string, string][] = [
+  ['tablet', 'tablets'], ['prolonged-release tablet', 'tablets'], ['sublingual tablet', 'tablets'], ['orodispersible tablet', 'tablets'],
+  ['capsule', 'capsules'], ['prolonged-release capsule', 'capsules'],
+  ['modified-release capsule', 'capsules'],
+  ['oral solution', 'ml'], ['concentrated oral solution', 'ml'], ['oral liquid', 'ml'],
+  ['transdermal patch', 'patches'], ['buccal film', 'units'], ['injection', 'ampoules'], ['powder for injection', 'ampoules'], ['suppository', 'units'], ['nasal spray', 'units'], ['granules', 'units'],
+];
+function FormPicker({ value, onChange }: { value: string; onChange: (form: string, unit?: string) => void }) {
+  const known = FORMS.find(([f]) => f === value.trim().toLowerCase());
+  const [picked, setPicked] = useState(false);
+  // "Other" when chosen, or when the form came from elsewhere (a scan, the catalogue) and isn't in the list
+  const other = picked || (!!value.trim() && !known);
+  return (
+    <div>
+      <label className="label" htmlFor="form-pick">Form</label>
+      <select id="form-pick" className="input" required={!other} value={other ? '__other' : known ? known[0] : ''}
+        onChange={(e) => {
+          if (e.target.value === '__other') { setPicked(true); onChange(''); return; }
+          setPicked(false);
+          const k = FORMS.find(([f]) => f === e.target.value);
+          onChange(e.target.value, k?.[1]);
+        }}>
+        <option value="">Choose…</option>
+        {FORMS.map(([f]) => <option key={f} value={f}>{f[0].toUpperCase() + f.slice(1)}</option>)}
+        <option value="__other">Other (type it)…</option>
+      </select>
+      {other && <input className="input mt-2" required autoFocus value={value} onChange={(e) => onChange(e.target.value)} placeholder="Type the form, e.g. oral drops" aria-label="Other form" />}
+    </div>
   );
 }

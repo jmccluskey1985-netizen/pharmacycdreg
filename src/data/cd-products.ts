@@ -54,7 +54,7 @@ const FAMILIES: Family[] = [
   f('hyd-cap', 'Hydromorphone', 'Hydromorphone hydrochloride', ['Palladone'], 'capsule', 'capsules', ['1.3mg', '2.6mg']),
   f('hyd-pr', 'Hydromorphone', 'Hydromorphone hydrochloride', ['Palladone SR'], 'prolonged-release capsule', 'capsules', ['2mg', '4mg', '8mg', '16mg', '24mg']),
   // Methadone
-  f('met-liq', 'Methadone', 'Methadone hydrochloride', ['Methadone DTF', 'Physeptone', 'Martindale'], 'oral solution', 'ml', ['1mg/ml']),
+  f('met-liq', 'Methadone', 'Methadone hydrochloride', ['Methadone Rowex', 'Methadone DTF', 'Physeptone', 'Martindale'], 'oral solution', 'ml', ['1mg/ml']),
   f('met-tab', 'Methadone', 'Methadone hydrochloride', ['Physeptone'], 'tablet', 'tablets', ['5mg']),
   // Pethidine / diamorphine
   f('pet-inj', 'Pethidine', 'Pethidine hydrochloride', [], 'injection', 'ampoules', ['50mg/ml']),
@@ -83,7 +83,7 @@ export const CD_PRODUCTS: CdProduct[] = FAMILIES.flatMap((fam) =>
 const BRAND_ALIASES: Record<string, string> = {
   oxynorm: 'OxyNorm', 'oxynorm liquid': 'OxyNorm', 'oxynorm concentrate': 'OxyNorm', 'shortec liquid': 'Shortec', 'shortec concentrate': 'Shortec',
   mst: 'MST Continus', targinact: 'Targin', concerta: 'Concerta XL', 'oramorph concentrated': 'Oramorph', 'oramorph concentrate': 'Oramorph',
-  'durogesic dtrans': 'Durogesic', 'physeptone tablets': 'Physeptone', 'methadone martindale': 'Martindale', 'methadone dtf': 'Methadone DTF', 'dtf': 'Methadone DTF',
+  'durogesic dtrans': 'Durogesic', 'physeptone tablets': 'Physeptone', 'methadone martindale': 'Martindale', 'methadone dtf': 'Methadone DTF', 'dtf': 'Methadone DTF', 'methadone rowex': 'Methadone Rowex', 'methadone hydrochloride rowex': 'Methadone Rowex', 'rowex methadone': 'Methadone Rowex',
 };
 /** "MST" → "MST Continus", "oxynorm" → "OxyNorm"; unknown brands are kept as written. */
 export function normBrand(b: string | null | undefined): string | null {
