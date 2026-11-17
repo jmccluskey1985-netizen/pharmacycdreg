@@ -11,7 +11,11 @@ const enc = (v: string) => (/^[\x20-\x7e]*$/.test(v) ? v : `=?UTF-8?B?${Buffer.f
 
 export const adminEmail = () => process.env.ADMIN_NOTIFY_EMAIL || process.env.EMAIL_FROM || '';
 
-/** replyTo defaults to the support address, so customer replies land in the support inbox. */
+/**
+ * EMAIL_FROM is the address people see (it may be a Gmail "Send mail as" alias, e.g. welcome@).
+ * EMAIL_MAILBOX is the real Workspace user the service account sends as; leave it unset when
+ * EMAIL_FROM is itself a real user.
+ * replyTo defaults to the support address, so customer replies land in the support inbox. */
 export async function sendEmail({ to, subject, html, replyTo }: { to: string; subject: string; html: string; replyTo?: string | null }) {
   const from = process.env.EMAIL_FROM;
   const fromName = process.env.EMAIL_FROM_NAME || 'PharmacyCDReg.ie';
@@ -22,7 +26,7 @@ export async function sendEmail({ to, subject, html, replyTo }: { to: string; su
     return { sent: false };
   }
   try {
-    const auth = new JWT({ email: clientEmail, key, scopes: ['https://www.googleapis.com/auth/gmail.send'], subject: from });
+    const auth = new JWT({ email: clientEmail, key, scopes: ['https://www.googleapis.com/auth/gmail.send'], subject: process.env.EMAIL_MAILBOX || from });
     const raw = [
       `From: "${enc(fromName)}" <${from}>`,
       `To: ${to}`,
