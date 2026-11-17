@@ -46,6 +46,9 @@ eq('brand matching ignores case', m('oxynorm', '10mg'), ['your_register', 'oxy10
 eq('no brand read: pharmacist picks the book', m(null, '10mg')[0], 'pick_register');
 eq('OxyNorm is capsules in the catalogue', productFor('oxycodone', 'capsule', 'OxyNorm')?.form?.toLowerCase().includes('caps'), true);
 eq('brand aliases normalise', normBrand('oxy norm'), 'OxyNorm');
+const mregs = [{ id: 'row', label: 'row', drug_name: 'Methadone hydrochloride', class_name: 'Methadone', strength: '1mg/ml', form: 'oral solution', unit: 'ml', brand: 'Methadone Rowex' }];
+eq('a docket\'s "Rowex" goes in the "Methadone Rowex" book', (matchRegister(mregs as any, 'Methadone', '1mg/ml', 'oral solution', 'Rowex') as any).match?.id, 'row');
+eq('…but Methadone DTF never goes in the Rowex book', (matchRegister(mregs as any, 'Methadone', '1mg/ml', 'oral solution', 'Methadone DTF') as any).state, 'no_register');
 
 // ── Quantities ──
 const base = { quantity: 0, quantity_unit: 'capsules', packs: null, pack_size: null, quantity_figures: null, quantity_words: null, duration_text: null, is_credit: false, confidence: 'high' as const };

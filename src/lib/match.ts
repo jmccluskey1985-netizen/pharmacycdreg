@@ -22,6 +22,19 @@ export async function liveRegisters(pharmacyId: string): Promise<RegisterOption[
 export type MatchState = 'your_register' | 'pick_register' | 'no_register' ;
 
 /**
+ * Same brand? Exact, or one name inside the other once spacing is ignored: a docket's "Rowex"
+ * is the "Methadone Rowex" book, "DTF" the "Methadone DTF" one. Different brands (OxyNorm vs
+ * Shortec) never match.
+ */
+export function sameBrand(a: string | null, b: string | null): boolean {
+  if (!a || !b) return false;
+  const sa = a.toLowerCase().replace(/[^a-z0-9]/g, ''), sb = b.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (sa === sb) return true;
+  const [short, long] = sa.length <= sb.length ? [sa, sb] : [sb, sa];
+  return short.length >= 3 && long.includes(short);
+}
+
+/**
  * Halo-style resolve(): your own registers first (YOUR LIST). Name compared as a
  * generic (brand → generic, salts dropped), strength compared numerically with units
  * normalised. A unique match wins; several → the pharmacist picks; none → open a
@@ -43,7 +56,7 @@ export function matchRegister(regs: RegisterOption[], drugName: string, strength
   const b = normBrand(brand)?.toLowerCase();
   if (b && exact.length) {
     const regBrand = (r: RegisterOption) => normBrand(brandOf(r))?.toLowerCase() ?? null;
-    const same = exact.filter((r) => regBrand(r) === b);
+    const same = exact.filter((r) => sameBrand(regBrand(r), b));
     const unbranded = exact.filter((r) => regBrand(r) === null);
     if (same.length) exact = same;
     else if (unbranded.length) exact = unbranded;
