@@ -341,6 +341,8 @@ export async function extractFromDocument(files: DocFile[], hint: 'invoice' | 'p
 
 /** Read a document with any prompt + JSON schema, using the configured reader. */
 export async function readDocument<T>(files: DocFile[], cfg: ReadConfig<T>): Promise<{ result: T; model: string }> {
+  // null = a reader is configured but unusable (e.g. a broken Vertex key): stop, never switch provider
+  if (cfg.reader === null) throw new ScanError('Document reading isn’t available right now: the site owner should check Settings → Document reading. Please enter it by hand.');
   if (cfg.reader?.provider === 'vertex') return extractViaVertex(files, cfg, cfg.reader);
   if (cfg.reader?.provider === 'openrouter' || process.env.OPENROUTER_API_KEY) return extractViaOpenRouter(files, cfg);
   if (process.env.ANTHROPIC_API_KEY) return extractViaAnthropic(files, cfg);

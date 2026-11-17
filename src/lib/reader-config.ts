@@ -28,8 +28,11 @@ export async function getReaderConfig(db: SupabaseClient): Promise<ReaderConfig 
       try {
         const { parseServiceAccount } = await import('./vertex');
         return { provider: 'vertex', credentials: parseServiceAccount(raw), location: data.vertex_location || 'eu', models: VERTEX_MODELS, source: 'settings' };
-      } catch { /* fall through to OpenRouter / environment */ }
+      } catch { /* handled below */ }
     }
+    // Vertex is the chosen reader: never fall back to another provider with patient data.
+    // A broken key stops scanning with a clear message instead (getReaderConfig → null).
+    return null;
   }
   if (!error && data?.openrouter_key_enc) {
     const apiKey = open(data.openrouter_key_enc);
