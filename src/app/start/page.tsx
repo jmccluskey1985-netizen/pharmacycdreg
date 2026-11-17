@@ -27,7 +27,9 @@ export default function StartPage() {
 
       const supabase = getSupabaseClient();
       await supabase.auth.signOut().catch(() => {});
-      const { error: signInErr } = await supabase.auth.signInWithPassword({ email: f.email, password: f.password });
+      // Same normalisation as the server (googlemail → gmail, trim, lower), so the new login signs straight in
+      const email = f.email.toLowerCase().trim().replace(/@googlemail\.com$/, '@gmail.com');
+      const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password: f.password });
       if (signInErr) throw new Error('Account created: please sign in on the home page to continue.');
 
       // No card: straight into the register; the countdown and Subscribe button are in the dashboard.
