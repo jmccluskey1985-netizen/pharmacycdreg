@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireStaff, errorResponse, audit } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase/server';
-import { extractFromDocument, ScanError } from '@/lib/scan-extract';
+import { extractFromDocument, readOstForm, ostIsEmpty, ScanError } from '@/lib/scan-extract';
 import { balancesFor } from '@/lib/registers';
 import { liveRegisters, matchRegister } from '@/lib/match';
 import { decideQuantity } from '@/lib/quantity';
@@ -43,6 +43,13 @@ export async function POST(req: Request) {
     const db = createServiceClient();
     const { extraction, model } = await extractFromDocument(docs, hint, await getReaderConfig(db));
     if (extraction.document_type === 'other') extraction.document_type = hint; // the pharmacist said what it is
+    // OST form recognised but its grid came back empty, or a methadone / buprenorphine script with no
+    // OST block at all: read just the form once more with a smaller, focused request.
+    const looksOst = extraction.ost != null || extraction.items.some((it) => /methadone|buprenorph|physeptone|suboxone|subutex|espranor/i.test(`${it.drug_name} ${it.brand ?? ''}`));
+    if (extraction.document_type !== 'invoice' && looksOst && ostIsEmpty(extraction.ost)) {
+      const again = await readOstForm(docs, await getReaderConfig(db)).catch(() => null);
+      if (again && !ostIsEmpty(again)) extraction.ost = again;
+    }
     // The form the brand really comes in (a script saying "OxyNorm tablet" means OxyNorm capsules).
     for (const item of extraction.items) {
       const fix = canonicalForm(item.brand, item.form);

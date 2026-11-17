@@ -41,25 +41,72 @@ const ItemSchema = z.object({
   handwritten_qty: strN.optional(),
 });
 
-const DAY = z.enum(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']);
+const DAY_NAMES: Record<string, string> = { mon: 'mon', monday: 'mon', tue: 'tue', tues: 'tue', tuesday: 'tue', wed: 'wed', wednesday: 'wed', thu: 'thu', thur: 'thu', thurs: 'thu', thursday: 'thu', fri: 'fri', friday: 'fri', sat: 'sat', saturday: 'sat', sun: 'sun', sunday: 'sun' };
+const DAY = z.preprocess((v) => (typeof v === 'string' ? DAY_NAMES[v.trim().toLowerCase().replace(/\.$/, '')] ?? v : v), z.enum(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']));
+const days = z.preprocess((v) => (Array.isArray(v) ? v.filter((d) => DAY.safeParse(d).success).map((d) => DAY.parse(d)) : []), z.array(z.enum(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']))).catch([]);
+
+/** Any reasonable way a model writes a date ("17/11/26", "17-11-2026", "17 11 26", ISO) → YYYY-MM-DD (Irish day/month order). */
+export function toIsoDate(v: unknown): string | null {
+  if (v == null || v === '') return null;
+  const t = String(v).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(t)) return t.slice(0, 10);
+  const m = t.match(/^(\d{1,2})\s*[./\-\s]\s*(\d{1,2})\s*[./\-\s]\s*(\d{2}|\d{4})$/);
+  if (!m) return t; // left as written; the OST rules flag a date they can't read
+  const [, d, mo, y] = m;
+  const year = y.length === 2 ? `20${y}` : y;
+  return `${year}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
+}
+const dateN = z.preprocess((v) => toIsoDate(v), z.string().nullable()).catch(null);
+const boolN = z.preprocess((v) => (typeof v === 'string' ? (/^(true|yes|y|ticked|✓)$/i.test(v.trim()) ? true : /^(false|no|n)$/i.test(v.trim()) ? false : null) : v), z.boolean().nullable()).catch(null);
+/** "100", "100 (S)", "600 TA", "90 + 270 TA" → 100, 100, 600, 360 */
+export function ostQuantity(v: unknown): number | null {
+  if (v == null || v === '') return null;
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+  const nums = String(v).match(/\d+(?:\.\d+)?/g);
+  if (!nums) return null;
+  return /\+/.test(String(v)) ? nums.reduce((a, n) => a + Number(n), 0) : Number(nums[0]);
+}
+const ostMode = (v: unknown) => {
+  if (v == null) return null;
+  const t = String(v).toLowerCase().replace(/[^a-z]/g, '');
+  if (!t) return null;
+  if (t === 's' || t.startsWith('sup')) return 'supervised';
+  if (t === 'ta' || t.startsWith('take') || t === 'takeaway' || t === 'takehome') return 'take_away';
+  return null;
+};
+const ostProduct = (v: unknown) => {
+  const t = String(v ?? '').toLowerCase();
+  if (!t) return null;
+  if (/nalox|suboxone/.test(t)) return 'buprenorphine_naloxone';
+  if (/bupren|subutex|espranor/.test(t)) return 'buprenorphine';
+  if (/methadone|physeptone|dtf|pinadone/.test(t)) return 'methadone';
+  return null;
+};
+
 /** HSE Opioid Substitution Treatment prescription form (GMS010-8082): the script and its dispensing grid. */
 export const OstSchema = z.object({
   serial_no: strN, pharmacy_sequence_no: strN.optional(), treatment_card_no: strN.optional(), drug_code: strN.optional(),
-  date_prescribed: strN.optional(), from_date: strN.optional(), to_date: strN.optional(),
-  product: z.enum(['methadone', 'buprenorphine', 'buprenorphine_naloxone']).nullable().catch(null),
+  date_prescribed: dateN.optional(), from_date: dateN.optional(), to_date: dateN.optional(),
+  product: z.preprocess(ostProduct, z.enum(['methadone', 'buprenorphine', 'buprenorphine_naloxone']).nullable()).catch(null),
   drug_written: strN.optional(),
   daily_dose: numN.optional(), dose_unit: strN.optional(), days_at_dose: numN.optional(),
   total_figures: strN.optional(), total_words: strN.optional(),
-  instalment_daily: z.boolean().nullable().optional().catch(null),
-  instalment_double_sat: z.boolean().nullable().optional().catch(null),
-  instalment_days: z.array(DAY).catch([]),
-  supervised: z.boolean().nullable().optional().catch(null),
-  supervised_daily: z.boolean().nullable().optional().catch(null),
-  supervised_days: z.array(DAY).catch([]),
-  dispensings: z.array(z.object({
-    date: strN, quantity: numN, quantity_text: strN.optional(),
-    mode: z.enum(['supervised', 'take_away']).nullable().catch(null),
-    initialled: z.boolean().nullable().optional().catch(null),
+  instalment_daily: boolN.optional(),
+  instalment_double_sat: boolN.optional(),
+  instalment_days: days,
+  supervised: boolN.optional(),
+  supervised_daily: boolN.optional(),
+  supervised_days: days,
+  // Each row checked on its own: one odd row never wipes the others
+  dispensings: z.preprocess((v) => (Array.isArray(v) ? v : []), z.array(z.unknown())).transform((rows) => rows.map((r: any) => {
+    const qText = r?.quantity_text ?? (typeof r?.quantity === 'string' ? r.quantity : null);
+    return {
+      date: toIsoDate(r?.date ?? r?.date_dispensed ?? null),
+      quantity: ostQuantity(r?.quantity ?? r?.qty ?? qText),
+      quantity_text: qText == null ? null : String(qText),
+      mode: (ostMode(r?.mode) ?? ostMode(String(qText ?? '').match(/\(?\s*(t\s*\/?\s*a|s)\s*\)?\s*$/i)?.[1] ?? null)) as 'supervised' | 'take_away' | null,
+      initialled: typeof r?.initialled === 'boolean' ? r.initialled : null,
+    };
   })).catch([]),
 });
 export type OstExtraction = z.infer<typeof OstSchema>;
@@ -270,6 +317,23 @@ function parseResult(raw: string | null | undefined): Extraction {
  * Which reader to use. OpenRouter (same account and privacy settings as Halo) when
  * OPENROUTER_API_KEY is set; otherwise Claude directly via ANTHROPIC_API_KEY.
  */
+/** True when an OST block came back with nothing usable (some models ignore nested schemas). */
+export const ostIsEmpty = (o: OstExtraction | null | undefined) => !o || (!o.serial_no && !o.dispensings.length && !o.from_date && !o.daily_dose && !o.total_figures);
+
+const OST_ONLY_SYSTEM = `You read the HSE "Opioid Substitution Treatment Prescription Form" (purple form, GMS010-8082) used in Irish community pharmacies for methadone and buprenorphine. Read exactly what is written: never guess. Dates are day/month/year; return them as YYYY-MM-DD. In the PHARMACY SECTION grid, each filled row has DATE DISPENSED (boxes DD MM YY), QUANTITY (e.g. "100 (S)" supervised, "600 (TA)" take-away) and PHARMACIST'S INITIALS: return one item per filled row, top to bottom. Return JSON only.`;
+
+/** Second, focused read of just the OST form, used when the general read left the OST block empty. */
+export async function readOstForm(files: DocFile[], reader?: ReaderConfig | null): Promise<OstExtraction | null> {
+  const ostSchema = { ...(JSON_SCHEMA.properties.ost as Record<string, unknown>), type: 'object' };
+  const schema = { type: 'object', additionalProperties: false, required: ['ost'], properties: { ost: ostSchema } };
+  const { result } = await readDocument(files, {
+    system: OST_ONLY_SYSTEM, schema, name: 'ost_form', reader,
+    prompt: 'Read this OST prescription form into the "ost" object: serial number, treatment card, drug, from/to dates, dose, days, totals, the ticked instalment and supervision boxes, the drug code, and every filled row of the pharmacy dispensing grid.',
+    parse: parseJsonWith(z.object({ ost: OstSchema.nullable().catch(null) })),
+  });
+  return result.ost;
+}
+
 export async function extractFromDocument(files: DocFile[], hint: 'invoice' | 'prescription' = 'invoice', reader?: ReaderConfig | null): Promise<{ extraction: Extraction; model: string }> {
   const { result, model } = await readDocument(files, { system: SYSTEM, schema: JSON_SCHEMA, name: 'cd_extraction', prompt: userText(files.length, hint), parse: parseResult, reader });
   return { extraction: result, model };

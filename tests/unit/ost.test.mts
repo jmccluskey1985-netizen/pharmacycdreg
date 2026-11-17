@@ -1,5 +1,6 @@
 // OST (methadone / buprenorphine) instalment forms. Made-up patients and numbers only.
 import { decideOst, scheduleText, ostRef, isOstRef } from '../../src/lib/ost';
+import { OstSchema, toIsoDate, ostQuantity, ostIsEmpty } from '../../src/lib/scan-extract';
 
 let fail = 0;
 const eq = (name: string, got: unknown, want: unknown) => {
@@ -45,6 +46,20 @@ eq('an unreadable row is flagged, never guessed', [h.today.total, h.flags.some((
 eq('schedule: days ticked', scheduleText({ ...base, instalment_days: ['wed', 'sat'] }), 'Collect: Wed, Sat · supervised Fri');
 eq('schedule: daily, double on Saturday, not supervised', scheduleText({ ...base, instalment_double_sat: true, supervised: false, supervised_days: [] }), 'Collect: Daily, double on Sat · not supervised');
 eq('reference helpers', [ostRef('75 82105'), isOstRef('OST 7582105'), isOstRef('Rx 1')], ['OST 7582105', true, false]);
+
+// Models answer in different formats: the form must still be read (made-up values only)
+eq('dates: dd/mm/yy, dd-mm-yyyy, spaced boxes, ISO', [toIsoDate('17/11/26'), toIsoDate('3-1-2026'), toIsoDate('17 11 26'), toIsoDate('2026-11-17')], ['2026-11-17', '2026-01-03', '2026-11-17', '2026-11-17']);
+eq('quantities: plain, with (S), with T/A, written as a sum', [ostQuantity('100(S)'), ostQuantity('600 (T/A)'), ostQuantity('90 + 270 TA'), ostQuantity(75)], [100, 600, 360, 75]);
+const loose = OstSchema.parse({
+  serial_no: 9000031, treatment_card_no: 'PH 7001', drug_code: 46115, product: 'Methadone', from_date: '17/11/26', to_date: '23/11/26',
+  daily_dose: '100', days_at_dose: '7', total_figures: 700, total_words: 'Seven hundred', supervised: 'Yes', supervised_days: ['Monday', 'xx'],
+  dispensings: [{ date: '17/11/26', quantity: '100(S)' }, { date: '17 11 26', quantity: '600(T/A)', initialled: true }, 'junk'],
+});
+eq('loosely formatted OST form is still read', [loose.serial_no, loose.product, loose.from_date, loose.supervised, loose.supervised_days, loose.dispensings.slice(0, 2).map((d) => [d.date, d.quantity, d.mode])],
+  ['9000031', 'methadone', '2026-11-17', true, ['mon'], [['2026-11-17', 100, 'supervised'], ['2026-11-17', 600, 'take_away']]]);
+const dec2 = decideOst(loose as any, '2026-11-17');
+eq('…and today\'s supervised + take-away make one supply of 700', [dec2.today.total, dec2.remaining], [700, 0]);
+eq('an empty OST block is spotted (so it is read again)', [ostIsEmpty(OstSchema.parse({})), ostIsEmpty(loose)], [true, false]);
 
 console.log(fail ? `\n${fail} FAILED` : '\nAll passed');
 process.exit(fail ? 1 : 0);
