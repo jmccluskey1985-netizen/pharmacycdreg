@@ -116,6 +116,16 @@ export async function POST(req: Request) {
         else if (address && c[0].address !== address) await db.from('contacts').update({ address, updated_at: new Date().toISOString() }).eq('id', c[0].id);
       } catch { /* quick-fill only; never block a register entry */ }
     }
+    // Remember the prescriber (and address) too, so they're offered next time.
+    if (row.entry_type === 'supply' && typeof row.prescriber_name === 'string' && row.prescriber_name.trim().length >= 3) {
+      try {
+        const name = (row.prescriber_name as string).trim();
+        const address = typeof row.prescriber_address === 'string' && row.prescriber_address.trim() ? row.prescriber_address.trim() : null;
+        const { data: c } = await db.from('contacts').select('id, address').eq('pharmacy_id', account.pharmacyId).eq('kind', 'prescriber').eq('is_active', true).ilike('name', name).limit(1);
+        if (!c?.length) await db.from('contacts').insert({ pharmacy_id: account.pharmacyId, kind: 'prescriber', name, address });
+        else if (address && !c[0].address) await db.from('contacts').update({ address, updated_at: new Date().toISOString() }).eq('id', c[0].id);
+      } catch { /* quick-fill only; never block a register entry */ }
+    }
     if (dup && allow_duplicate) {
       await audit(account.pharmacyId, 'entry.duplicate_override', staff, account.authUserId, { seq: data.seq, similar_to_seq: dup.seq, level: dup.level, reason: duplicate_reason }, { table: 'cd_entries', id: data.id });
     }

@@ -34,10 +34,60 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const kind = url.searchParams.get('kind') as Kind;
     const q = (url.searchParams.get('q') || '').trim();
-    if (!KINDS.includes(kind) || (q.length < 2 && !(kind === 'supplier' && q === ''))) return NextResponse.json({ suggestions: [] });
+    if (!KINDS.includes(kind) || (q.length < 2 && !(q === '' && kind !== 'witness'))) return NextResponse.json({ suggestions: [] });
+    const registerId = url.searchParams.get('register_id');
     const like = `%${q.replace(/[%_,()]/g, ' ')}%`;
     const db = createServiceClient();
     const out: Suggestion[] = [];
+
+    // Nothing typed yet: the usual ones. On a methadone / buprenorphine book, the OST patient list.
+    if (q === '' && kind === 'patient') {
+      let ost = false;
+      if (registerId) {
+        const { data: reg } = await db.from('cd_registers').select('id, product:cd_products(drug_name, class_name, brand)').eq('id', registerId).eq('pharmacy_id', account.pharmacyId).maybeSingle();
+        const pr: any = (reg as any)?.product;
+        ost = !!pr && /methadone|buprenorph/i.test(`${pr.drug_name} ${pr.class_name} ${pr.brand ?? ''}`);
+      }
+      if (ost) {
+        const { data } = await db.from('patients').select('id, first_name, surname, address, date_of_birth, gms_number, gp_name, gp_address, treatment_card_no, ost_daily_dose, ost_register_id')
+          .eq('pharmacy_id', account.pharmacyId).eq('is_ost', true).order('surname', { ascending: true }).limit(60)
+          .then((r) => r, () => ({ data: null }));
+        for (const p of (data ?? []) as any[]) {
+          if (p.ost_register_id && p.ost_register_id !== registerId) continue; // on another product
+          out.push({ name: fullName(p), address: p.address, source: 'patient', patient_id: p.id, dob: p.date_of_birth, gms_number: p.gms_number, usual_prescriber: p.gp_name ? { name: p.gp_name, address: p.gp_address } : null, detail: ['OST', p.treatment_card_no, p.ost_daily_dose ? `${p.ost_daily_dose} a day` : null].filter(Boolean).join(' · ') });
+        }
+      }
+      if (!out.length && registerId) {
+        // Otherwise: people supplied from this book recently
+        const { data } = await db.from('cd_entries').select('recipient_name, recipient_address, prescriber_name, prescriber_address, patient_id').eq('register_id', registerId).eq('entry_type', 'supply').order('recorded_at', { ascending: false }).limit(40);
+        const seen = new Set<string>();
+        for (const r of (data ?? []) as any[]) {
+          if (!r.recipient_name || seen.has(r.recipient_name.toLowerCase())) continue;
+          seen.add(r.recipient_name.toLowerCase());
+          out.push({ name: r.recipient_name, address: r.recipient_address ?? null, source: r.patient_id ? 'patient' : 'register', patient_id: r.patient_id ?? undefined, usual_prescriber: r.prescriber_name ? { name: r.prescriber_name, address: r.prescriber_address ?? null } : null });
+          if (out.length >= 10) break;
+        }
+      }
+      return NextResponse.json({ suggestions: out });
+    }
+    if (q === '' && kind === 'prescriber') {
+      // Doctors already used: the saved list, then the latest on supplies
+      const { data: list } = await db.from('contacts').select('name, address, registration, gms_number, role').eq('pharmacy_id', account.pharmacyId).eq('kind', 'prescriber').eq('is_active', true).order('updated_at', { ascending: false, nullsFirst: false }).limit(10);
+      for (const c of list ?? []) out.push({ ...c, source: 'list' });
+      const { data: regs } = await db.from('cd_registers').select('id').eq('pharmacy_id', account.pharmacyId);
+      const ids = (regs ?? []).map((r) => r.id);
+      if (ids.length) {
+        const { data } = await db.from('cd_entries').select('prescriber_name, prescriber_address').in('register_id', ids).not('prescriber_name', 'is', null).order('recorded_at', { ascending: false }).limit(80);
+        const seen = new Set(out.map((s) => s.name.toLowerCase()));
+        for (const r of (data ?? []) as any[]) {
+          if (!r.prescriber_name || seen.has(r.prescriber_name.toLowerCase())) continue;
+          seen.add(r.prescriber_name.toLowerCase());
+          out.push({ name: r.prescriber_name, address: r.prescriber_address ?? null, source: 'register' });
+          if (out.length >= 12) break;
+        }
+      }
+      return NextResponse.json({ suggestions: out });
+    }
 
     // Patients: structured records first (name, DOB, GMS no.), then names only in the register.
     if (kind === 'patient') {

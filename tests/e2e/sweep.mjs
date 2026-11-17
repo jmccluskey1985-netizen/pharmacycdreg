@@ -398,6 +398,18 @@ await step('a book opened in error is closed in one click (line corrected to 0, 
   if (await page.locator('a[href^="/dashboard/register/"]:has-text("Zzdemo")').count()) throw new Error('book still on the shelf');
 });
 
+await step('methadone book: OST patients and used doctors offered on click, typing a new one still works', async () => {
+  await page.goto(B + '/dashboard/register/r6'); await see('text=CLASS OF DRUG'); await page.waitForTimeout(800);
+  await openNewEntry(); await click('button:has-text("Supplied")');
+  await page.locator('input[placeholder^="Name, DOB"]').click(); await page.waitForTimeout(800);
+  await see('[role=listbox] >> text=Declan Farrell');
+  await page.keyboard.press('Escape');
+  await page.locator('input[placeholder^="Name, IMC"]').click(); await page.waitForTimeout(800);
+  if (!(await page.locator('[role=listbox] button').count())) throw new Error('no doctors offered');
+  await page.locator('input[placeholder^="Name, IMC"]').fill('Dr New Doctor'); // typing a new doctor is allowed
+  await page.keyboard.press('Escape');
+});
+
 await step('no page errors during the workflows', async () => { if (page.errors.length) throw new Error(page.errors.slice(0, 3).join(' | ')); });
 
 await step('sign out from the sidebar returns to the home page', async () => {

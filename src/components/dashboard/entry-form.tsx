@@ -236,9 +236,9 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
       {type === 'supply' && !requisition && (
         <>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Supplied to (name)"><QuickFillInput kind="patient" required value={d.recipient_name ?? ''} onChange={(v) => { setChoice(null); setPick(null); setD((x) => ({ ...x, recipient_name: v, patient_id: null })); }} onPick={pickPatient} onCreate={setNewPatient} createLabel="New patient" placeholder="Name, DOB (dd/mm/yyyy) or GMS no." /></Field>
+            <Field label="Supplied to (name)"><QuickFillInput kind="patient" registerId={registerId} required value={d.recipient_name ?? ''} onChange={(v) => { setChoice(null); setPick(null); setD((x) => ({ ...x, recipient_name: v, patient_id: null })); }} onPick={pickPatient} onCreate={setNewPatient} createLabel="New patient" placeholder="Name, DOB (dd/mm/yyyy) or GMS no." /></Field>
             <Field label="Address"><input className="input" required value={d.recipient_address ?? ''} onChange={set('recipient_address')} /></Field>
-            <Field label="Prescriber name"><QuickFillInput kind="prescriber" value={d.prescriber_name ?? ''} onChange={setVal('prescriber_name')} onPick={pickPrescriber} placeholder="Name, IMC or GMS no." /></Field>
+            <Field label="Prescriber name"><QuickFillInput kind="prescriber" registerId={registerId} value={d.prescriber_name ?? ''} onChange={setVal('prescriber_name')} onPick={pickPrescriber} placeholder="Name, IMC or GMS no." /></Field>
             <Field label="Prescriber address"><input className="input" value={d.prescriber_address ?? ''} onChange={set('prescriber_address')} /></Field>
             <Field label="Authority to be in possession" hint="Prescription / requisition reference"><input className="input" value={d.authority_to_possess ?? ''} onChange={set('authority_to_possess')} placeholder="e.g. Prescription: Dr A. Byrne" /></Field>
             <Field label="Rx / reference no."><input className="input" value={d.prescription_ref ?? ''} onChange={set('prescription_ref')} /></Field>
@@ -269,7 +269,7 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
 
       {type === 'patient_return' && (
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Returned by (patient name)"><QuickFillInput kind="patient" required value={d.recipient_name ?? ''} onChange={(v) => { setChoice(null); setPick(null); setD((x) => ({ ...x, recipient_name: v, patient_id: null })); }} onPick={pickPatient} onCreate={setNewPatient} createLabel="New patient" /></Field>
+          <Field label="Returned by (patient name)"><QuickFillInput kind="patient" registerId={registerId} required value={d.recipient_name ?? ''} onChange={(v) => { setChoice(null); setPick(null); setD((x) => ({ ...x, recipient_name: v, patient_id: null })); }} onPick={pickPatient} onCreate={setNewPatient} createLabel="New patient" /></Field>
           <Field label="Address"><input className="input" value={d.recipient_address ?? ''} onChange={set('recipient_address')} /></Field>
           <p className="text-xs text-muted-foreground sm:col-span-2">Patient returns are not pharmacy stock and do not change the balance. Record their destruction separately once witnessed.</p>
         </div>

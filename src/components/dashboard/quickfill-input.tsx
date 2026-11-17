@@ -23,8 +23,10 @@ type Kind = 'patient' | 'prescriber' | 'supplier' | 'witness';
  * list and its own register history. Picking one calls onPick so the form can fill
  * the linked fields (address, registration, capacity).
  */
-export function QuickFillInput({ kind, value, onChange, onPick, onCreate, createLabel, required, placeholder, id }: {
+export function QuickFillInput({ kind, value, onChange, onPick, onCreate, createLabel, required, placeholder, id, registerId }: {
   kind: Kind;
+  /** The register being written in: on a methadone / buprenorphine book the OST patient list is offered on focus. */
+  registerId?: string;
   /** Offer "+ New …" at the bottom of the list (e.g. create a patient record). */
   onCreate?: (typed: string) => void;
   createLabel?: string;
@@ -43,7 +45,7 @@ export function QuickFillInput({ kind, value, onChange, onPick, onCreate, create
 
   const load = async (q: string) => {
     try {
-      const res = await fetch(`/api/suggest?kind=${kind}&q=${encodeURIComponent(q)}`, { cache: 'no-store' });
+      const res = await fetch(`/api/suggest?kind=${kind}&q=${encodeURIComponent(q)}${registerId ? `&register_id=${registerId}` : ''}`, { cache: 'no-store' });
       const d = await res.json();
       setItems(d.suggestions ?? []);
       setOpen(true);
@@ -80,8 +82,9 @@ export function QuickFillInput({ kind, value, onChange, onPick, onCreate, create
         aria-autocomplete="list"
         onChange={(e) => { typed.current = true; onChange(e.target.value); }}
         onFocus={() => {
-          // Suppliers: show your usual ones (and the main Irish wholesalers) straight away.
-          if (kind === 'supplier' && !value.trim()) load('');
+          // Show the usual ones straight away: suppliers (and the main Irish wholesalers), doctors used
+          // before, and patients (the OST patient list on a methadone / buprenorphine book)
+          if (kind !== 'witness' && !value.trim()) load('');
           else if (items.length) setOpen(true);
         }}
         onKeyDown={(e) => {
@@ -89,7 +92,7 @@ export function QuickFillInput({ kind, value, onChange, onPick, onCreate, create
           if (e.key === 'ArrowDown') { e.preventDefault(); setActive((a) => Math.min(a + 1, items.length - 1)); }
           else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)); }
           else if (e.key === 'Enter') { e.preventDefault(); pick(items[active]); }
-          else if (e.key === 'Escape') setOpen(false);
+          else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); e.nativeEvent.stopImmediatePropagation(); setOpen(false); } // close the list, not the form
         }}
       />
       {open && (items.length > 0 || (onCreate && value.trim().length >= 2)) && (

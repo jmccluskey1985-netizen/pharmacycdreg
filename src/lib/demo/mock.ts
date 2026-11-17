@@ -772,7 +772,23 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     if (needStaff()) return needStaff()!;
     const kind = url.searchParams.get('kind') || '';
     const q = (url.searchParams.get('q') || '').toLowerCase();
-    if (q.length < 2 && !(kind === 'supplier' && q === '')) return res({ suggestions: [] });
+    if (q.length < 2 && !(q === '' && kind !== 'witness')) return res({ suggestions: [] });
+    if (q === '' && kind === 'patient') {
+      const reg = regList().find((r: Json) => r.id === url.searchParams.get('register_id'));
+      const ost = !!reg && /methadone|buprenorph/i.test(`${reg.product.drug_name} ${reg.product.brand ?? ''}`);
+      const list = ost ? demoPatients().filter((p) => p.is_ost) : [];
+      return res({ suggestions: list.map((p) => ({ name: `${p.first_name} ${p.surname}`.trim(), address: p.address, source: 'patient', patient_id: p.id, dob: p.date_of_birth, detail: ['OST', p.treatment_card_no].filter(Boolean).join(' · '), usual_prescriber: p.gp_name ? { name: p.gp_name, address: p.gp_address } : null })) });
+    }
+    if (q === '' && kind === 'prescriber') {
+      const out: Json[] = ((S as any).contacts as Json[]).filter((c) => c.kind === 'prescriber' && c.is_active !== false).slice(0, 10).map((c) => ({ ...c, source: 'list' }));
+      const seen = new Set(out.map((o) => o.name.toLowerCase()));
+      for (const e of [...S.entries].sort((x, y) => y.recorded_at.localeCompare(x.recorded_at))) {
+        if (!e.prescriber_name || seen.has(e.prescriber_name.toLowerCase())) continue;
+        seen.add(e.prescriber_name.toLowerCase()); out.push({ name: e.prescriber_name, address: e.prescriber_address ?? null, source: 'register' });
+        if (out.length >= 12) break;
+      }
+      return res({ suggestions: out });
+    }
     const out: Json[] = [];
     if (kind === 'patient') for (const p of demoPatients().filter((x) => patientMatch(x, q)).slice(0, 8)) out.push({ name: `${p.first_name} ${p.surname}`.trim(), address: p.address, source: 'patient', patient_id: p.id, dob: p.date_of_birth, gms_number: p.gms_number, usual_prescriber: p.gp_name ? { name: p.gp_name, address: p.gp_address } : null });
     if (kind !== 'patient') for (const c of (S as any).contacts) if (c.kind === kind && c.is_active !== false && [c.name, c.gms_number, c.registration].some((v: string) => v && v.toLowerCase().includes(q))) out.push({ ...c, source: 'list' });
