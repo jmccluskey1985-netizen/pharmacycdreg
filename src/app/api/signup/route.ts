@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { createServiceClient } from '@/lib/supabase/server';
 import { checkRateLimit, clientKey } from '@/lib/rate-limit';
 import { sendEmail, adminEmail } from '@/lib/email';
+import { welcomeEmail } from '@/lib/welcome-email';
 
 const Body = z.object({
   pharmacy_name: z.string().trim().min(2).max(120),
@@ -74,9 +75,15 @@ async function handle(req: Request) {
   if (invited) await db.from('signup_invites').update({ used_at: new Date().toISOString(), pharmacy_id: ph.id }).eq('email', b.email);
   await db.from('audit_log').insert({ pharmacy_id: ph.id, action: 'pharmacy.signed_up', auth_user_id: created.user.id, details: { pharmacy_name: b.pharmacy_name, contact_name: b.contact_name } });
 
+  // Welcome the new pharmacy (replies go to the support inbox)
+  const site = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
+  const w = welcomeEmail({ pharmacy: b.pharmacy_name, contact: b.contact_name, trialEnds: new Date(Date.now() + FREE_TRIAL_DAYS * 864e5).toISOString(), site });
+  await sendEmail({ to: b.email, subject: w.subject, html: w.html });
+
   await sendEmail({
     to: adminEmail(),
     subject: `New PharmacyCDReg sign-up: ${b.pharmacy_name}`,
+    replyTo: b.email, // reply straight to the new pharmacy
     html: `<p><b>${b.pharmacy_name}</b>, ${b.address}</p><p>${b.contact_name} · ${b.contact_phone} · ${b.email}${b.psi_premises_number ? `<br>PSI premises ${b.psi_premises_number}` : ''}</p><p>Free month started (no card). They subscribe from Billing.</p>`,
   });
 
