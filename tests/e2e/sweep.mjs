@@ -228,6 +228,27 @@ await step('Rx scan: a misspelt name is matched to the existing patient', async 
   await see('text=Recorded');
 });
 
+await step('Rx scan: Tapentadol FCT suggests the standard Palexia book', async () => {
+  await page.goto(B + '/dashboard/scan?type=prescription');
+  await page.waitForSelector('input[type=file]', { state: 'attached' });
+  await page.evaluate(async () => {
+    for (const [brand, form] of [['Palexia SR', 'prolonged-release tablet'], ['Palexia', 'tablet']]) {
+      const response = await fetch('/api/registers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brand, form, drug_name: 'Tapentadol', class_name: 'Tapentadol', schedule: 2, strength: '50mg', unit: 'tablets' }),
+      });
+      if (!response.ok) throw new Error('Could not open a demo book');
+    }
+  });
+  await page.setInputFiles('input[type=file]', { name: 'tapentadol-fct.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64') });
+  await page.getByRole('button', { name: /Read/ }).first().click();
+  await see('text=YOUR REGISTER', 15000);
+  const selected = await page.locator('select:has(option:text-is("Palexia 50mg tablet")) option:checked').textContent();
+  if (selected !== 'Palexia 50mg tablet') throw new Error('Expected the standard Palexia register');
+  await see('text=→ 7 tablets');
+});
+
 await step('OST methadone form: today\'s supervised + take-away recorded as one supply', async () => {
   await page.goto(B + '/dashboard/scan?type=prescription'); await page.waitForTimeout(1200);
   await page.setInputFiles('input[type=file]', { name: 'ost-form.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64') });

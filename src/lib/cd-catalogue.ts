@@ -31,6 +31,26 @@ export function genericKey(name: string): string {
   return n.replace(SALTS, '').replace(/\s+/g, ' ').trim();
 }
 
+export function isTapentadol(name?: string | null): boolean {
+  return /^(tapentadol|palexia)\b/i.test(name?.trim() ?? '');
+}
+
+export function tapentadolForm(name: string, form?: string | null, brand?: string | null) {
+  const presentation = [name, form, brand].filter(Boolean).join(' ');
+  if (/\b(prolonged|modified|extended|sustained|controlled[ -]release|retard|pr|mr|er|sr|cr|xr)\b/i.test(presentation)) return 'prolonged-release tablet';
+  if (/\b(oral solution|liquid)\b/i.test(presentation)) return 'oral solution';
+  if (/\b(f\.?c\.?t|film[ -]coated|tablets?|tabs?)\b/i.test(presentation)) return 'tablet';
+  return null;
+}
+
+/** Classify a recognised name even when the prescription reader omitted the CD flag. */
+export function recogniseTapentadolRx(item: { drug_name: string; form: string; brand?: string | null; is_controlled_drug: boolean; likely_schedule: number | null }) {
+  if (!isTapentadol(item.drug_name) && !isTapentadol(item.brand)) return;
+  item.is_controlled_drug = true;
+  item.likely_schedule = 2;
+  item.form = tapentadolForm(item.drug_name, item.form, item.brand) ?? item.form;
+}
+
 /**
  * Strength as comparable numbers in a base unit: "100 mcg" and "0.1MG" both → 0.1mg;
  * "10mg/5ml" → 2mg/ml; "25micrograms/hour" → 0.025mg/h. Returns null if unparseable.

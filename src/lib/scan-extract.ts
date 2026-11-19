@@ -258,6 +258,7 @@ Invoices and delivery dockets:
 - If a page appears to be missing (page numbering, "continued"), add a warning.
 
 Prescriptions:
+- Tapentadol (including Palexia and Palexia SR) is Schedule 2. FCT, FC tabs and film-coated tablets describe the tablet form. Preserve any explicit SR or prolonged-release wording. If only the generic name is written, leave brand null. Read a continuation such as "Please supply 7 (seven) 50 (fifty) mg film-coated tablets" with the medicine above it: the written total is 7 tablets, and 50 mg is the tablet strength.
 - Controlled drug prescriptions must state the TOTAL quantity in both words and figures. Copy them exactly into quantity_words and quantity_figures. Put the total in quantity only if it is written; never work a quantity out from a dose and duration (put any duration in duration_text instead).
 - Hospital and discharge prescriptions often state the total as a number of DOSES (e.g. "total to dispense eighteen doses"). Copy it as written (quantity_words "eighteen doses"), set quantity_unit to "doses", and set units_per_dose from the dose and the product strength (5 mg dose of 5 mg capsules = 1). Use the handwritten CD section as the legal wording when present.
 - The prescriber is the person who signed (name and registration number near the signature), not the consultant in the header, unless they are the same.

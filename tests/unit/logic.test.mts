@@ -1,6 +1,7 @@
 // Register logic that protects against wrong entries: duplicates, brand matching, quantities.
 import { findDuplicate } from '../../src/lib/duplicates';
 import { matchRegister } from '../../src/lib/match';
+import { recogniseTapentadolRx } from '../../src/lib/cd-catalogue';
 import { decideQuantity, wordsToNumber } from '../../src/lib/quantity';
 import { productFor, normBrand } from '../../src/data/cd-products';
 
@@ -49,6 +50,26 @@ eq('brand aliases normalise', normBrand('oxy norm'), 'OxyNorm');
 const mregs = [{ id: 'row', label: 'row', drug_name: 'Methadone hydrochloride', class_name: 'Methadone', strength: '1mg/ml', form: 'oral solution', unit: 'ml', brand: 'Methadone Rowex' }];
 eq('a docket\'s "Rowex" goes in the "Methadone Rowex" book', (matchRegister(mregs as any, 'Methadone', '1mg/ml', 'oral solution', 'Rowex') as any).match?.id, 'row');
 eq('…but Methadone DTF never goes in the Rowex book', (matchRegister(mregs as any, 'Methadone', '1mg/ml', 'oral solution', 'Methadone DTF') as any).state, 'no_register');
+
+const tapentadol = { drug_name: 'Tapentadol', class_name: 'Tapentadol', strength: '50mg', unit: 'tablets' };
+const palexia = { ...tapentadol, id: 'palexia', label: 'Palexia', brand: 'Palexia', form: 'tablet' };
+const palexiaSr = { ...tapentadol, id: 'palexia-sr', label: 'Palexia SR', brand: 'Palexia SR', form: 'prolonged-release tablet' };
+const tapBooks = [palexiaSr, palexia];
+const read = { drug_name: 'Tapentadol', brand: null, form: 'FCT', is_controlled_drug: false, likely_schedule: null };
+recogniseTapentadolRx(read);
+eq('Tapentadol FCT is kept as a Schedule 2 tablet without inventing a brand', [read.is_controlled_drug, read.likely_schedule, read.form, read.brand], [true, 2, 'tablet', null]);
+eq('Tapentadol FC tabs select Palexia tablets with both forms stocked', matchRegister(tapBooks, 'Tapentadol', '50mg', 'FC tabs').match?.id, palexia.id);
+eq('Inline FCT in the drug name selects standard tablets', matchRegister(tapBooks, 'Tapentadol FCT', '50mg').match?.id, palexia.id);
+eq('An SR-only book cannot be offered for standard tablets', matchRegister([palexiaSr], 'Tapentadol', '50mg', 'FCT').candidates, []);
+eq('A standard-tablet book cannot be offered for SR', matchRegister([palexia], 'Tapentadol', '50mg', 'SR tablets').candidates, []);
+eq('Explicit SR is recognised from the written brand', matchRegister(tapBooks, 'Palexia SR', '50mg', 'film-coated tablets').match?.id, palexiaSr.id);
+eq('An unknown tapentadol formulation requires selection', matchRegister([palexiaSr], 'Tapentadol', '50mg').state, 'pick_register');
+const otherBrand = { ...palexia, id: 'other', brand: 'Example Pharma' };
+eq('A generic tablet Rx with multiple compatible brands requires selection', matchRegister([palexia, otherBrand], 'Tapentadol', '50mg', 'FCT').state, 'pick_register');
+eq('A brand written inline cannot match a different brand', matchRegister([otherBrand], 'Palexia FCT', '50mg').candidates, []);
+const unrelated = { drug_name: 'Paracetamol', form: 'FCT', brand: null, is_controlled_drug: false, likely_schedule: null };
+recogniseTapentadolRx(unrelated);
+eq('FCT alone does not make a drug controlled', unrelated.is_controlled_drug, false);
 
 // ── Quantities ──
 const base = { quantity: 0, quantity_unit: 'capsules', packs: null, pack_size: null, quantity_figures: null, quantity_words: null, duration_text: null, is_credit: false, confidence: 'high' as const };

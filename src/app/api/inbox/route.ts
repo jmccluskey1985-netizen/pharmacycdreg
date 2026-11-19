@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { requireStaff, errorResponse } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase/server';
-import { liveRegisters, matchRegister } from '@/lib/match';
-import { balancesFor } from '@/lib/registers';
+import { matchRegister } from '@/lib/match';
+import { balancesFor, liveRegisters } from '@/lib/registers';
 import { haloEnabled } from '@/lib/features';
 
 export const dynamic = 'force-dynamic';

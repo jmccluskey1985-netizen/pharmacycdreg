@@ -2,14 +2,14 @@ import { NextResponse } from 'next/server';
 import { requireStaff, errorResponse, audit } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase/server';
 import { extractFromDocument, readOstForm, ostIsEmpty, ScanError } from '@/lib/scan-extract';
-import { balancesFor } from '@/lib/registers';
-import { liveRegisters, matchRegister } from '@/lib/match';
+import { balancesFor, liveRegisters } from '@/lib/registers';
+import { matchRegister } from '@/lib/match';
 import { decideQuantity } from '@/lib/quantity';
 import { getSettings } from '@/lib/settings';
 import { canonicalForm } from '@/data/cd-products';
 import { getReaderConfig } from '@/lib/reader-config';
 import { identifySupplier, looksLikeOwnPharmacy, checkReference } from '@/lib/invoice-rules';
-import { registerExemption } from '@/lib/cd-catalogue';
+import { isTapentadol, recogniseTapentadolRx, registerExemption } from '@/lib/cd-catalogue';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { can } from '@/lib/roles';
 import { findPatientMatches, candidateView } from '@/lib/patients';
@@ -52,6 +52,10 @@ export async function POST(req: Request) {
     }
     // The form the brand really comes in (a script saying "OxyNorm tablet" means OxyNorm capsules).
     for (const item of extraction.items) {
+      if (isTapentadol(item.drug_name) || isTapentadol(item.brand)) {
+        if (extraction.document_type === 'prescription') recogniseTapentadolRx(item);
+        continue;
+      }
       const fix = canonicalForm(item.brand, item.form);
       if (fix && fix.form !== item.form) {
         item.notes = `${item.notes ? `${item.notes} ` : ''}Written as “${item.form}”; ${item.brand} comes as ${fix.form}s.`.trim();
@@ -112,7 +116,7 @@ export async function POST(req: Request) {
     const proposals = await Promise.all(extraction.items.filter((i) => i.is_controlled_drug && !registerExemption(i.drug_name, i.strength, i.form, i.brand)).map(async (item) => {
       const { match, candidates, state, otherBrands } = matchRegister(regs, item.drug_name, item.strength, item.form, item.brand);
       const qty = decideQuantity(item, extraction.document_type);
-      if (otherBrands?.length) qty.flags.unshift(`You have ${otherBrands.map((r) => r.label).join(', ')}: not ${item.brand}. Brands aren’t interchangeable: start a ${item.brand} book or check the brand dispensed.`);
+      if (item.brand && otherBrands?.length) qty.flags.unshift(`You have ${otherBrands.map((r) => r.label).join(', ')}: not ${item.brand}. Brands aren’t interchangeable: start a ${item.brand} book or check the brand dispensed.`);
       qty.flags.push(...docFlags);
       const prior = match ? await priorFor(match.id, qty.quantity) : null;
       if (prior) { qty.flags.unshift(prior.text); if (prior.blocking) qty.blocking = true; }
