@@ -10,6 +10,16 @@ interface Status {
   admin_notify: string | null; my_email: string | null;
 }
 
+function Row({ label, value, ok }: { label: string; value: React.ReactNode; ok: boolean }) {
+  return (
+    <div className="flex items-start gap-2 py-1.5 text-sm">
+      {ok ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand" /> : <X className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />}
+      <span className="w-40 shrink-0 text-muted-foreground">{label}</span>
+      <span className="min-w-0 break-all">{value}</span>
+    </div>
+  );
+}
+
 /** Site owner only: what email is set up, and a one-click test from each sender. */
 export function EmailSettings() {
   const [st, setSt] = useState<Status | null>(null);
@@ -27,13 +37,6 @@ export function EmailSettings() {
   }
 
   if (!st) return <div className="card p-5"><Loader2 className="h-4 w-4 animate-spin" /></div>;
-  const Row = ({ label, value, ok }: { label: string; value: React.ReactNode; ok: boolean }) => (
-    <div className="flex items-start gap-2 py-1.5 text-sm">
-      {ok ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand" /> : <X className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />}
-      <span className="w-40 shrink-0 text-muted-foreground">{label}</span>
-      <span className="min-w-0 break-all">{value}</span>
-    </div>
-  );
   return (
     <div className="card space-y-4 p-5">
       <div>
