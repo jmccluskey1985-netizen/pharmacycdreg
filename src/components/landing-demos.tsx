@@ -626,7 +626,10 @@ function StockReportDemo() {
             </div>
             {phase === 1 && <div className="demo-flash absolute inset-0 bg-white" />}
           </div>
-          <p className={`mt-2 text-center text-xs font-semibold text-muted-foreground ${fade(phase >= 1)}`}>Photo of the printed report (Touchstore, MPS or any system), or a PDF / CSV</p>
+          <p className={`mt-1.5 text-center text-[11px] font-semibold text-muted-foreground ${fade(phase >= 1)}`}>MPS · Drug Search Report</p>
+          <TouchstoreReport phase={phase} read={read} added={added} />
+          <p className={`mt-1.5 text-center text-[11px] font-semibold text-muted-foreground ${fade(phase >= 1)}`}>Touchstore · Controlled Drug Report</p>
+          <p className="mt-2 text-center text-xs text-muted-foreground">A photo of either printed report, or a PDF / CSV export</p>
         </div>
 
         {/* The stock check */}
@@ -671,6 +674,41 @@ function StockReportDemo() {
           <p className="mt-1 max-w-lg text-muted-foreground">Count doesn’t match? Photograph the drug search report from your dispensing system (<b className="text-foreground">Touchstore</b>, <b className="text-foreground">MPS</b> or any other), or upload it as a PDF or CSV. Every line is checked against the register, anything missing is highlighted, and you tick the ones to add. One signature adds them all, with a late-entry footnote on anything over 24 hours old.</p>
           <SampleNote className="mt-2" />
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* Touchstore's "Controlled Drug Report": landscape, two lines per dispensing (who / when / script
+   number, then product / quantity / prescriber), every CD on one report. Made-up people and numbers. */
+function TouchstoreReport({ phase, read, added }: { phase: number; read: boolean; added: boolean }) {
+  const ROWS = [
+    { when: '12/11/2026 09:41 12/11/2026', name: 'HEHIR, Paddy', id: '30418', addr: '3 Mill Lane, Ennis', sch: 'GM', no: 'GM2611/0041', prod: 'OXYNORM 5MG HARD CAPS', pack: '56CAPS', dose: '61204  ONE FOUR TIMES DAILY AS REQUIRED', q: '14', price: '9.80', dr: 'Brennan, Dr Aoife', miss: true },
+    { when: '13/11/2026 10:02 13/11/2026', name: 'FARRELL, Declan', id: '30122', addr: '12 Abbey Court, Ennis', sch: 'ME', no: 'ME2611/0044', prod: 'METHADONE HCL SF 1MG/ML ORAL SOLN', pack: '500ML', dose: '58830  take 60ml once a day', q: '420', price: '14.20', dr: 'Nolan, Dr Ciarán', note: 'Phased : Request of physician 13/11/2026 10:02' },
+    { when: '14/11/2026 15:20 14/11/2026', name: 'LYNCH, Gerard', id: '30877', addr: '8 Weir Road, Clarecastle', sch: 'DP', no: 'DP2611/0102', prod: 'MST CONTINUS 10MG PRO REL TABS', pack: '60TABS', dose: '60411  ONE TO BE TAKEN TWICE DAILY', q: '56', price: '15.85', dr: 'Brennan, Dr Aoife' },
+    { when: '15/11/2026 11:12 15/11/2026', name: 'CORCORAN, Niamh', id: '31056', addr: '27 Station Road, Ennis', sch: 'EM', no: 'EM2611/0118', prod: 'OXYNORM 5MG HARD CAPS', pack: '56CAPS', dose: '62290  ONE EVERY 4-6 HOURS IF REQUIRED', q: '14', price: '9.80', dr: 'Ennis General Hosp.', miss: true },
+  ];
+  const cols = 'grid grid-cols-[5.3rem_4.1rem_1.7rem_minmax(0,1fr)_1.1rem_1.1rem_1.5rem_3.6rem] gap-x-1';
+  return (
+    <div className="relative mt-3 overflow-hidden rounded-xl bg-[#d8d6d2] p-2" aria-hidden="true">
+      <div className={`relative overflow-hidden bg-white px-2 pb-2 pt-1.5 text-[5.6px] leading-[1.3] text-black shadow-[0_6px_18px_rgba(0,0,0,.25)] transition-all duration-700 sm:text-[6.2px] ${phase >= 1 ? 'translate-y-0 rotate-[0.8deg] opacity-100' : 'translate-y-6 rotate-3 opacity-0'}`} style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}>
+        <div className="grid grid-cols-[1fr_auto_1fr] items-end">
+          <span className="text-[7px] font-bold">Schemes</span>
+          <p className="text-[9.5px] font-bold">Controlled Drug Report</p>
+          <p className="text-right text-[7px]">Sample Pharmacy (1)</p>
+        </div>
+        <div className="mt-1 border-y border-black py-0.5 font-bold">
+          <div className={cols}><span className="leading-tight">Disp&apos;d / Prescription Date/Time</span><span>Patient Name</span><span>Patient ID</span><span>Address</span><span className="col-span-1">Scheme</span><span className="col-span-2 text-center">No.</span><span className="text-right">Dispenser</span></div>
+          <div className={cols}><span className="col-span-2">Product Name</span><span>Pack Size</span><span>GMS No. &nbsp;Dosage</span><span>Qty. Disp</span><span>Qty. Ow&apos;d</span><span>Price</span><span className="text-right">Prescriber Name</span></div>
+        </div>
+        {ROWS.map((r) => (
+          <div key={r.no} className={`border-b border-neutral-400 py-[2px] transition-colors duration-500 ${read && r.miss ? (added ? 'bg-brand/25' : 'bg-amber-200') : ''}`}>
+            <div className={cols}><span className="whitespace-nowrap">{r.when}</span><span className="truncate">{r.name}</span><span>{r.id}</span><span className="truncate">{r.addr}</span><span>{r.sch}</span><span className="col-span-2 text-center">{r.no}</span><span className="text-right">Aoife</span></div>
+            <div className={cols}><span className="col-span-2 truncate">{r.prod}</span><span>{r.pack}</span><span className="truncate">{r.dose}</span><span className="text-right">{r.q}</span><span className="text-right">0</span><span className="text-right">{r.price}</span><span className="truncate text-right">{r.dr}</span></div>
+            {r.note && <p className="pl-[5.3rem]">{r.note}</p>}
+          </div>
+        ))}
+        <div className="pointer-events-none absolute -right-6 bottom-[-2.5rem] h-20 w-44 rotate-[14deg] rounded-[45%] bg-neutral-900/20 blur-lg" />
       </div>
     </div>
   );
