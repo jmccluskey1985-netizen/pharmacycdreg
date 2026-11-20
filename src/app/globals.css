@@ -215,3 +215,7 @@
   @bottom-left { content: "PharmacyCDReg.ie: data safety at a glance"; font-size: 7pt; color: #777; }
   @bottom-right { content: none; }
 }
+
+/* Home page: report lines appearing one by one */
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { [style*="fadeInUp"] { animation: none !important; } }

@@ -714,6 +714,71 @@ function TouchstoreReport({ phase, read, added }: { phase: number; read: boolean
   );
 }
 
+function FileChip({ name, sub, on, tone }: { name: string; sub: string; on: boolean; tone: string }) {
+  return (
+    <div className={`flex items-center gap-2.5 rounded-xl bg-white p-2.5 shadow ring-1 ring-slate-200 transition-all duration-700 ${on ? 'translate-y-0 opacity-100' : '-translate-y-6 opacity-0'}`}>
+      <span className={`flex h-10 w-8 flex-col items-center justify-end rounded-sm pb-1 text-[8px] font-extrabold text-white shadow-inner ${tone}`}>{name.split('.').pop()!.toUpperCase()}</span>
+      <span className="min-w-0"><span className="block truncate text-xs font-semibold text-slate-800">{name}</span><span className="block text-[10px] text-slate-500">{sub}</span></span>
+    </div>
+  );
+}
+
+/* Saved report files read exactly, no AI: a Touchstore .QRP and an MPS .csv drop in, their lines
+   come out exactly as printed, and each is checked against its book. Made-up people and numbers. */
+function FileImportDemo() {
+  const { ref, phase } = usePhases([1200, 1100, 2400, 1100, 2400, 3800]);
+  const QRP = [
+    { d: '12/11/2026', n: 'Paddy Hehir', p: 'OXYNORM 5MG HARD CAPS', q: 14, s: 'missing' },
+    { d: '13/11/2026', n: 'Declan Farrell', p: 'METHADONE HCL SF 1MG/ML ORAL SOLN', q: 420, s: 'ok' },
+    { d: '14/11/2026', n: 'Gerard Lynch', p: 'MST CONTINUS 10MG PRO REL TABS', q: 56, s: 'ok' },
+  ];
+  const CSV = [
+    { d: '15/11/2026', n: 'Niamh Corcoran', p: 'OXYNORM 5MG HARD CAPS', q: 14, s: 'missing' },
+    { d: '16/11/2026', n: 'Maura Grehan', p: 'OXYNORM 5MG HARD CAPS', q: 28, s: 'ok' },
+  ];
+  const qrpIn = phase >= 1, qrpRead = phase >= 2, csvIn = phase >= 3, csvRead = phase >= 4, done = phase >= 5;
+  const rows = [...(qrpRead ? QRP.map((r) => ({ ...r, f: 'QRP' })) : []), ...(csvRead ? CSV.map((r) => ({ ...r, f: 'CSV' })) : [])];
+  return (
+    <div ref={ref} className="overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border">
+      <div className="grid gap-6 bg-gradient-to-b from-secondary/70 to-background p-5 md:grid-cols-[minmax(0,17rem)_1fr] md:p-8">
+        <div className="flex flex-col gap-3" aria-hidden="true">
+          <div className={`rounded-xl border-2 border-dashed p-3 text-center text-[11px] font-semibold transition-colors duration-500 ${phase === 1 || phase === 3 ? 'border-brand bg-brand/10 text-brand-dark' : 'border-slate-300 text-slate-500'}`}>Drop the saved report here</div>
+          <FileChip name="Controlled Drug Report.QRP" sub="Touchstore · saved report" on={qrpIn} tone="bg-sky-700" />
+          <FileChip name="DrugSearch.csv" sub="MPS · saved as CSV" on={csvIn} tone="bg-emerald-700" />
+          <p className={`text-center text-[11px] font-semibold text-sky-900 ${fade(qrpRead)}`}>Read exactly from the file: no AI, nothing guessed</p>
+        </div>
+        <div className="flex min-w-0 flex-col">
+          <div className="min-h-[15rem] overflow-x-auto rounded-xl bg-white p-3 text-[11px] text-slate-800 shadow ring-1 ring-slate-200" aria-hidden="true">
+            <div className="flex items-center justify-between"><p className="text-xs font-bold">Check report · every book</p>{phase === 2 || phase === 4 ? <Loader2 className="h-4 w-4 animate-spin text-brand" /> : null}</div>
+            <table className="mt-2 w-full border-collapse">
+              <thead><tr className="border-b border-slate-200 text-left text-[9px] uppercase tracking-wide text-slate-500"><th className="py-1">File</th><th>Date</th><th>Patient</th><th className="hidden sm:table-cell">Product</th><th className="text-right">Qty</th><th className="pl-2 text-right">Register</th></tr></thead>
+              <tbody>
+                {rows.map((r, i) => (
+                  <tr key={r.f + r.d + r.n} className={`border-b border-slate-100 transition-all duration-500 ${done && r.s === 'missing' ? 'bg-amber-50' : ''}`} style={{ animation: 'fadeInUp .45s ease both', animationDelay: `${(r.f === 'CSV' ? i - QRP.length : i) * 120}ms` }}>
+                    <td className="py-1"><span className={`rounded px-1 text-[8px] font-bold text-white ${r.f === 'QRP' ? 'bg-sky-700' : 'bg-emerald-700'}`}>{r.f}</span></td>
+                    <td className="tabular-nums">{r.d.slice(0, 5)}</td><td className="whitespace-nowrap">{r.n}</td><td className="hidden max-w-[9rem] truncate text-[10px] sm:table-cell">{r.p}</td><td className="text-right font-semibold tabular-nums">{r.q}</td>
+                    <td className={`pl-2 text-right text-[10px] font-semibold ${fade(done)} ${r.s === 'missing' ? 'text-amber-800' : 'text-brand-dark'}`}>{r.s === 'missing' ? 'Missing' : '✓ In book'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {done && (
+              <div className={`mt-2 flex flex-wrap gap-1.5 text-[10px] ${fade(done)}`}>
+                <span className="rounded-full bg-secondary px-2 py-0.5 font-semibold">3 books on the report</span>
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-900">2 missing in OxyNorm 5mg capsules</span>
+                <span className="rounded-full bg-brand/15 px-2 py-0.5 font-semibold text-brand-dark">Methadone and MST match</span>
+              </div>
+            )}
+          </div>
+          <h3 className="mt-6 text-2xl font-bold">Or upload the saved report file</h3>
+          <p className="mt-1 max-w-lg text-muted-foreground">Touchstore’s <b className="text-foreground">.QRP</b> report and MPS’s <b className="text-foreground">CSV</b> export are read exactly from the file, without the AI reader. One report is checked against every book at once, with each missing line ready to tick and sign. Excel, PDF and other formats work too.</p>
+          <SampleNote className="mt-2" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* The printable CD balances list (Registers → Balances list). Made-up pharmacy and figures. */
 function BalancesListPreview() {
   const ROWS: [string, string, string, string, boolean?][] = [
@@ -723,8 +788,7 @@ function BalancesListPreview() {
     ['Methadone Rowex 1mg/ml oral solution', '4,580', 'ml', '18/11/2026 (2 days ago)'],
     ['MST Continus (Morphine) 10mg prolonged-release tablet', '64', 'tablets', '23/10/2026 (28 days ago) · due', true],
     ['OxyNorm (Oxycodone) 5mg capsule', '42', 'capsules', '20/11/2026 (today)'],
-    ['Schedule 3', '', '', ''],
-    ['Temgesic (Buprenorphine) 200mcg sublingual tablet', '50', 'tablets', 'Never · due', true],
+    ['Targin (Oxycodone / Naloxone) 10mg/5mg prolonged-release tablet', '28', 'tablets', 'Never · due', true],
   ];
   return (
     <div className="overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border">
@@ -768,6 +832,7 @@ export function LandingDemos() {
       <OstScanDemo />
       <InvoiceDemo />
       <StockReportDemo />
+      <FileImportDemo />
       <BalancesListPreview />
       <div className="grid gap-6 md:grid-cols-2">
         <BalanceDemo />
