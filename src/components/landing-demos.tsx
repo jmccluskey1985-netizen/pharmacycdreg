@@ -599,25 +599,34 @@ function StockReportDemo() {
   const added = phase >= 6;
   return (
     <div ref={ref} className="overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border">
-      <div className="grid gap-6 bg-gradient-to-b from-secondary/70 to-background p-5 md:grid-cols-[minmax(0,21rem)_1fr] md:p-8" aria-hidden="true">
-        {/* The report: a printed drug search report from the dispensing system, photographed on the desk */}
-        <div className="relative mx-auto w-full max-w-[21rem]">
-          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-stone-300 to-stone-400 p-3">
-            <div className={`relative overflow-hidden bg-white px-2.5 pb-3 pt-2 font-sans text-[8.5px] leading-tight text-slate-800 shadow-lg transition-all duration-700 ${phase >= 1 ? 'translate-y-0 rotate-[-1.5deg] opacity-100' : 'translate-y-6 -rotate-6 opacity-0'}`}>
-              <div className="flex items-end justify-between"><p className="text-[7px] font-semibold text-slate-600">Sample Pharmacy</p><p className="text-[8px] font-bold tracking-wide text-slate-700">DRUG SEARCH REPORT</p></div>
-              <div className="mt-1.5 grid grid-cols-[3.4rem_0.9fr_1.4fr_1.1rem] gap-x-1 bg-[#b9c8e8] px-1 py-0.5 text-[7.5px] text-slate-800"><span>Date Dispensed</span><span>Patient Name</span><span>Script Dispensed As</span><span className="text-right">Qty</span></div>
+      <div className="grid gap-6 bg-gradient-to-b from-secondary/70 to-background p-5 md:grid-cols-[minmax(0,24rem)_1fr] md:p-8" aria-hidden="true">
+        {/* The report: a printed "Drug Search Report" from the dispensing system, photographed on the
+            desk the way pharmacists do it (keyboard edge, page at a slight angle, a hand's shadow). */}
+        <div className="relative mx-auto w-full max-w-[24rem]">
+          <div className="relative overflow-hidden rounded-xl bg-[#d8d6d2] pt-5">
+            {/* keyboard edge at the top of the photo */}
+            <div className="absolute inset-x-0 top-0 h-5 bg-gradient-to-b from-neutral-900 to-neutral-700" />
+            <div className="absolute left-3 top-0.5 flex gap-1">{['B', 'N', 'M'].map((k) => <span key={k} className="flex h-3.5 w-4 items-center justify-center rounded-[2px] bg-neutral-800 text-[6px] font-bold text-neutral-300 ring-1 ring-neutral-600">{k}</span>)}</div>
+            <div className={`relative mx-2 mb-3 mt-2 overflow-hidden bg-white px-2 pb-6 pt-2.5 text-[8px] leading-[1.35] sm:px-3 sm:text-[9.5px] text-black shadow-[0_6px_18px_rgba(0,0,0,.25)] transition-all duration-700 ${phase >= 1 ? 'translate-y-0 rotate-[-1.2deg] opacity-100' : 'translate-y-6 -rotate-6 opacity-0'}`} style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}>
+              <div className="grid grid-cols-[1fr_auto_1fr] items-end">
+                <p className="text-[9px] font-bold">Sample Pharmacy</p>
+                <p className="text-[9.5px] font-bold tracking-wide">DRUG SEARCH REPORT</p>
+                <span />
+              </div>
+              <div className="mt-2 grid grid-cols-[4.1rem_1fr_1.45fr_1.1rem] sm:grid-cols-[4.9rem_1fr_1.45fr_1.3rem] gap-x-1.5 bg-[#a9bff0] px-1 py-[1px]"><span className="whitespace-nowrap">Date Dispensed</span><span>Patient Name</span><span>Script Dispensed As</span><span className="text-right">Qty</span></div>
               {REPORT.map((r) => (
-                <div key={r.n} className={`grid grid-cols-[3.4rem_0.9fr_1.4fr_1.1rem] gap-x-1 px-1 py-[1.5px] transition-colors duration-500 ${read && r.miss ? (added ? 'bg-brand/25' : 'bg-amber-200') : ''}`}>
-                  <span>{r.d}</span><span className="truncate">{r.n}</span><span className="whitespace-nowrap text-[7.5px]">OXYNORM 5MG HARD CAPS</span><span className="text-right">{r.q}</span>
+                <div key={r.n} className={`grid grid-cols-[4.1rem_1fr_1.45fr_1.1rem] sm:grid-cols-[4.9rem_1fr_1.45fr_1.3rem] gap-x-1.5 px-1 py-[1px] transition-colors duration-500 ${read && r.miss ? (added ? 'bg-brand/25' : 'bg-amber-200') : ''}`}>
+                  <span>{r.d}</span><span className="truncate">{r.n}</span><span className="whitespace-nowrap">OXYNORM 5MG HARD CAPS</span><span className="text-right">{r.q}</span>
                 </div>
               ))}
+              {/* the hand and phone's shadow across the page */}
+              <div className="pointer-events-none absolute -bottom-10 left-6 h-28 w-56 rotate-[-18deg] rounded-[45%] bg-neutral-900/25 blur-lg" />
+              <div className="pointer-events-none absolute -right-8 -top-10 h-24 w-40 rotate-[25deg] rounded-full bg-neutral-900/10 blur-xl" />
               {phase === 1 && <span className="demo-sweep absolute inset-x-1 h-0.5 bg-brand/80 shadow-[0_0_12px_2px_rgba(84,189,80,.7)]" />}
             </div>
-            {/* the phone's shadow across the page */}
-            <div className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-48 rotate-[-12deg] rounded-full bg-black/25 blur-xl" />
             {phase === 1 && <div className="demo-flash absolute inset-0 bg-white" />}
           </div>
-          <p className={`mt-2 text-center text-xs font-semibold text-muted-foreground ${fade(phase >= 1)}`}>Photo of the printed report, or a PDF / CSV</p>
+          <p className={`mt-2 text-center text-xs font-semibold text-muted-foreground ${fade(phase >= 1)}`}>Photo of the printed report (Touchstore, MPS or any system), or a PDF / CSV</p>
         </div>
 
         {/* The stock check */}
@@ -667,6 +676,53 @@ function StockReportDemo() {
   );
 }
 
+/* The printable CD balances list (Registers → Balances list). Made-up pharmacy and figures. */
+function BalancesListPreview() {
+  const ROWS: [string, string, string, string, boolean?][] = [
+    ['Schedule 2', '', '', ''],
+    ['Concerta XL (Methylphenidate) 18mg prolonged-release tablet', '60', 'tablets', '14/11/2026 (6 days ago)'],
+    ['Durogesic (Fentanyl) 25mcg/hr transdermal patch', '10', 'patches', '14/11/2026 (6 days ago)'],
+    ['Methadone Rowex 1mg/ml oral solution', '4,580', 'ml', '18/11/2026 (2 days ago)'],
+    ['MST Continus (Morphine) 10mg prolonged-release tablet', '64', 'tablets', '23/10/2026 (28 days ago) · due', true],
+    ['OxyNorm (Oxycodone) 5mg capsule', '42', 'capsules', '20/11/2026 (today)'],
+    ['Schedule 3', '', '', ''],
+    ['Temgesic (Buprenorphine) 200mcg sublingual tablet', '50', 'tablets', 'Never · due', true],
+  ];
+  return (
+    <div className="overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border">
+      <div className="grid gap-6 bg-gradient-to-b from-secondary/70 to-background p-5 md:grid-cols-[1fr_minmax(0,18rem)] md:p-8">
+        <div className="min-w-0 overflow-x-auto" aria-hidden="true">
+          <div className="min-w-[30rem] rotate-[0.3deg] rounded-sm bg-white p-4 text-black shadow-[0_8px_24px_rgba(0,0,0,.15)] ring-1 ring-slate-200">
+            <div className="flex items-start justify-between border-b-[3px] border-[#184B21] pb-1.5">
+              <div><p className="text-lg font-extrabold leading-tight text-[#184B21]">CD Balances</p><p className="text-[10px] text-slate-600">Sample Pharmacy · 1 Main Street, Ennis</p></div>
+              <div className="text-right"><p className="text-[11px] font-bold">Date: 20/11/2026</p><p className="text-[9px] text-slate-600">Balances at 09:15 · 6 books · 2 stock checks due</p></div>
+            </div>
+            <table className="mt-2 w-full border-collapse text-[10px]">
+              <thead><tr className="bg-[#B7B7B7] [&>th]:border [&>th]:border-slate-400 [&>th]:px-1.5 [&>th]:py-1"><th className="text-left">CD Medicine</th><th className="w-[4.5rem]">Balance</th><th className="w-[9.5rem]">Last stock check</th></tr></thead>
+              <tbody>
+                {ROWS.map(([name, bal, unit, last, due], i) => bal === '' ? (
+                  <tr key={i}><td colSpan={3} className="border border-slate-400 bg-[#E6F4E5] px-1.5 py-0.5 font-bold text-[#184B21]">{name}</td></tr>
+                ) : (
+                  <tr key={i} className="[&>td]:border [&>td]:border-slate-400 [&>td]:px-1.5 [&>td]:py-1">
+                    <td>{name}</td>
+                    <td className="text-center font-bold tabular-nums">{bal} <span className="text-[8px] font-normal text-slate-600">{unit}</span></td>
+                    <td className={`text-center text-[9px] ${due ? 'font-semibold text-amber-700' : ''}`}>{last}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div className="flex flex-col justify-center">
+          <h3 className="text-2xl font-bold">Every balance on one page</h3>
+          <p className="mt-1 text-muted-foreground">Print a dated list of every CD with its balance and when its stock was last checked, with overdue checks flagged. Save it as a PDF or download it for Excel. Add count columns when you want a sheet to count against.</p>
+          <SampleNote className="mt-2" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function LandingDemos() {
   return (
     <div className="space-y-6">
@@ -674,6 +730,7 @@ export function LandingDemos() {
       <OstScanDemo />
       <InvoiceDemo />
       <StockReportDemo />
+      <BalancesListPreview />
       <div className="grid gap-6 md:grid-cols-2">
         <BalanceDemo />
         <RepeatDemo />
