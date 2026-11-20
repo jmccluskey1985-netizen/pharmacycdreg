@@ -68,7 +68,7 @@ export default function ReportCheckAll() {
             {files.length > 0 && !busy && <button onClick={() => { setFiles([]); setRes(null); setError(null); }} className="btn-ghost text-sm">Clear</button>}
           </div>
           {files.length > 0 && <ul className="flex flex-wrap gap-1.5 text-xs">{files.map((f, i) => <li key={i} className="rounded-full bg-muted px-2.5 py-1">{f.name || `Page ${i + 1}`}</li>)}</ul>}
-          <p className="text-xs text-muted-foreground">Up to 10 at a time: a photo of each page, or the saved report in any format (PDF, Excel, CSV, HTML, Touchstore .QRP…). You can drop files here. Touchstore .QRP files are read exactly, without the AI reader. The report isn’t kept.</p>
+          <p className="text-xs text-muted-foreground">Up to 10 at a time: a photo of each page, or the saved report in any format (PDF, Excel, CSV, HTML, Touchstore .QRP…). You can drop files here. Touchstore .QRP files and CSV exports (e.g. MPS) are read exactly, without the AI reader. The report isn’t kept.</p>
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
       )}
@@ -79,7 +79,7 @@ export default function ReportCheckAll() {
             <span className="rounded-full bg-secondary px-2.5 py-1 font-semibold">{res.books.length} book{res.books.length === 1 ? '' : 's'} on the report</span>
             <span className={`rounded-full px-2.5 py-1 font-semibold ${missing ? 'bg-amber-100 text-amber-900' : 'bg-brand/15 text-brand-dark'}`}>{missing} missing entr{missing === 1 ? 'y' : 'ies'}</span>
             {res.unmatched.length > 0 && <span className="rounded-full bg-muted px-2.5 py-1 font-semibold">{res.unmatched.length} line{res.unmatched.length === 1 ? '' : 's'} for products without a book</span>}
-            {res.exact && <span className="rounded-full bg-sky-100 px-2.5 py-1 font-semibold text-sky-900">Read exactly from the .QRP file</span>}
+            {res.exact && <span className="rounded-full bg-sky-100 px-2.5 py-1 font-semibold text-sky-900">Read exactly from the saved file</span>}
           </div>
           {res.warnings.length > 0 && <ul className="space-y-0.5 text-xs text-amber-800">{res.warnings.map((w, k) => <li key={k}>⚠ {w}</li>)}</ul>}
 

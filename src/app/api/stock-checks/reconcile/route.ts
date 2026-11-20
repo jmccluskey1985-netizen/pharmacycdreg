@@ -34,9 +34,9 @@ export async function POST(req: Request) {
     const unit = reg.product?.unit ?? 'units';
     const db = createServiceClient();
     const read = await readReport(files, db, { product: `${productTitle(reg.product)} (${reg.product?.drug_name ?? ''} ${reg.product?.strength ?? ''} ${reg.product?.form ?? ''})`, unit });
-    // Exactly-read .QRP lines list every product: keep this book's
+    // Exactly-read .QRP / CSV lines can list every product: keep this book's (a CSV with no product column is this book's)
     const regs = read.exactRows.length ? await liveRegisters(account.pharmacyId) : [];
-    const mine = read.exactRows.filter((r) => matchProductText(regs, r.product)?.id === reg.id);
+    const mine = read.exactRows.filter((r) => !r.product || matchProductText(regs, r.product)?.id === reg.id);
     const rows = [...read.rows, ...mine];
     const skipped = read.skipped + read.exactRows.length - mine.length;
     const result = { warnings: read.warnings, period_from: read.period.from, period_to: read.period.to };

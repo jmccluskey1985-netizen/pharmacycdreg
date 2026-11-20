@@ -6,6 +6,7 @@ import { irishToday } from '@/lib/late-entry';
 import { isQrp, qrpPages, qrpToText, touchstoreRows } from '@/lib/qrp';
 import { HttpError } from '@/lib/access';
 import { extractReport } from '@/lib/report-text';
+import { csvReportRows } from '@/lib/report-csv';
 
 const MAX_BYTES = 15 * 1024 * 1024;
 
@@ -14,7 +15,8 @@ const MAX_BYTES = 15 * 1024 * 1024;
  * photos of each page, PDF, Excel, CSV / text, HTML, RTF, or a QuickReport .QRP file (e.g. Touchstore). A Touchstore .QRP is read
  * exactly from its own text: nothing is sent to the AI reader. Everything else goes to the EU
  * reader as usual. Returns the reader's lines (`rows`; with one book given, only that book's) and
- * the exactly-read .QRP lines (`exactRows`, every product: match them to books with matchProductText).
+ * the exactly-read .QRP and CSV lines (`exactRows`, every product: match them to books with
+ * matchProductText; a CSV without a product column is for the book being checked).
  *
  * `register`: check one book (the reader marks which lines are for it); omitted: every line.
  */
@@ -46,7 +48,12 @@ export async function readReport(files: File[], db: SupabaseClient, register?: {
       if (!x) throw new HttpError(400, `Couldn’t read ${f.name || 'that file'}. Upload it as a PDF, photo, Excel, CSV or text file, or print the report to PDF from your dispensing system.`);
       if (x.kind === 'unsupported') throw new HttpError(400, `${f.name} is ${x.why}, which can’t be read directly. Open it and save it as PDF, .xlsx or CSV, or print the report to PDF from your dispensing system.`);
       if (x.kind === 'doc') docs.push({ base64: buf.toString('base64'), mediaType: x.mediaType });
-      else if (x.text.trim()) texts.push(`--- ${f.name || 'report'} ---\n${x.text}`);
+      else if (x.text.trim()) {
+        // CSV / TSV exports (e.g. MPS) with recognisable column headings are read exactly
+        const csv = /\.(csv|tsv|txt|prn)$/i.test(f.name) || /csv|tab-separated/.test(f.type) ? csvReportRows(x.text) : null;
+        if (csv?.length) { exact++; exactRows.push(...csv); continue; }
+        texts.push(`--- ${f.name || 'report'} ---\n${x.text}`);
+      }
     }
   }
 
