@@ -1,5 +1,6 @@
 import { COMPANY } from '@/config/company';
 import { PLAN } from '@/config/pricing';
+import type { GuideMeta } from '@/lib/guides';
 
 const SITE = 'https://pharmacycdreg.ie';
 
@@ -117,3 +118,38 @@ export function faqJsonLd(items: { q: string; a: string; detail: string }[]) {
 
 /** Safe to drop into a <script type="application/ld+json">: "<" can't close the tag. */
 export const jsonLd = (o: object) => JSON.stringify(o).replace(/</g, '\\u003c');
+
+/** A guide: Article (plus HowTo steps where the guide is a procedure) and its breadcrumb. */
+export function guideJsonLd(g: GuideMeta, steps?: { name: string; text: string }[]) {
+  const url = `${SITE}/guides/${g.slug}`;
+  const graph: object[] = [
+    {
+      '@type': 'Article',
+      '@id': `${url}#article`,
+      headline: g.title,
+      description: g.description,
+      url,
+      mainEntityOfPage: url,
+      inLanguage: 'en-IE',
+      datePublished: g.published,
+      dateModified: g.updated,
+      timeRequired: `PT${g.minutes}M`,
+      image: `${SITE}/opengraph-image`,
+      author: { '@id': `${SITE}/#organization`, '@type': 'Organization', name: 'PharmacyCDReg.ie', url: SITE },
+      publisher: { '@id': `${SITE}/#organization`, '@type': 'Organization', name: 'PharmacyCDReg.ie', url: SITE, logo: `${SITE}/icon-512.png` },
+      audience: { '@type': 'MedicalAudience', audienceType: 'Community pharmacists and pharmacy staff in Ireland' },
+      about: { '@type': 'Thing', name: 'Controlled Drugs Register' },
+      isPartOf: { '@type': 'WebSite', '@id': `${SITE}/#website`, url: SITE, name: 'PharmacyCDReg.ie' },
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'PharmacyCDReg.ie', item: SITE },
+        { '@type': 'ListItem', position: 2, name: 'Guides', item: `${SITE}/guides` },
+        { '@type': 'ListItem', position: 3, name: g.short, item: url },
+      ],
+    },
+  ];
+  if (steps?.length) graph.push({ '@type': 'HowTo', '@id': `${url}#howto`, name: g.title, description: g.description, totalTime: `PT${g.minutes}M`, step: steps.map((s, i) => ({ '@type': 'HowToStep', position: i + 1, name: s.name, text: s.text, url: `${url}#step-${i + 1}` })) });
+  return { '@context': 'https://schema.org', '@graph': graph };
+}

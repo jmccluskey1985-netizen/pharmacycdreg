@@ -371,6 +371,16 @@ await step('check one report (any file) against every book: missing lines found 
   await see('text=/Added: register line/');
 });
 
+await step('public guides: index and every guide load, with their animations and schema', async () => {
+  for (const path of ['/guides', '/guides/electronic-cd-register-ireland', '/guides/cd-stock-check-touchstore-mps', '/guides/paper-to-electronic-cd-register']) {
+    await page.goto(B + path); await see('h1');
+    const ld = await page.locator('script[type="application/ld+json"]').first().textContent();
+    if (!ld || !JSON.parse(ld)['@context']) throw new Error('no JSON-LD on ' + path);
+  }
+  await see('text=Step 1.'); await see('text=The last paper balance becomes the first electronic line');
+  await page.goto(B + '/dashboard'); await page.waitForTimeout(800);
+});
+
 await step('lock and switch user', async () => {
   await click('aside button[aria-label="Lock / switch user"]'); await see('text=/Enter your PIN/i');
   for (const d of '2345') await page.getByRole('button', { name: d, exact: true }).first().click();

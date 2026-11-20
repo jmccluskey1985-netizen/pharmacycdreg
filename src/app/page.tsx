@@ -11,6 +11,7 @@ import { DEMO } from '@/lib/demo/flag';
 import { RegisterCoverPreview } from '@/components/register-cover-preview';
 import { LandingDemos, SampleNote } from '@/components/landing-demos';
 import { homepageJsonLd, faqJsonLd, jsonLd } from '@/lib/structured-data';
+import { GUIDES } from '@/lib/guides';
 
 /** Plain answers to what pharmacists ask first. Every answer must stay true of the live system. */
 const DATA_QA: { q: string; a: string; detail: string; more: string }[] = [
@@ -250,6 +251,28 @@ export default function LandingPage() {
           <p className="text-sm font-semibold uppercase tracking-widest text-brand">See it in action</p>
           <h2 className="mt-2 text-3xl font-bold tracking-tight text-brand-dark">The jobs that eat your time, done in seconds</h2>
           <div className="mt-10"><LandingDemos /></div>
+        </div>
+      </section>
+
+      {/* Guides */}
+      <section className="border-t border-border bg-gradient-to-b from-secondary/50 to-background">
+        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-widest text-brand">Guides</p>
+              <h2 className="mt-2 text-2xl font-bold tracking-tight text-brand-dark sm:text-3xl">Controlled drugs, made clear</h2>
+            </div>
+            <a href="/guides" className="text-sm font-semibold text-brand-dark underline">All guides →</a>
+          </div>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {GUIDES.map((g) => (
+              <a key={g.slug} href={`/guides/${g.slug}`} className="group rounded-2xl bg-card p-5 shadow-soft ring-1 ring-border transition hover:-translate-y-0.5 hover:ring-brand/40">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-brand">{g.tag} · {g.minutes} min</span>
+                <span className="mt-1.5 block font-bold leading-snug group-hover:text-brand-dark">{g.title}</span>
+                <span className="mt-1 block text-sm text-muted-foreground">{g.description}</span>
+              </a>
+            ))}
+          </div>
         </div>
       </section>
 

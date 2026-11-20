@@ -7,7 +7,7 @@ export function PublicPage({ title, intro, children }: { title: string; intro?: 
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3 px-4 py-4">
           <Link href="/?home=1" aria-label="PharmacyCDReg.ie home"><Logo size="sm" /></Link>
-          <nav className="flex gap-3 text-sm text-muted-foreground"><Link href="/data-safety" className="hover:text-foreground">Data safety</Link><Link href="/security" className="hover:text-foreground">Security</Link><Link href="/privacy" className="hover:text-foreground">Privacy</Link><Link href="/terms" className="hover:text-foreground">Terms</Link></nav>
+          <nav className="flex gap-3 text-sm text-muted-foreground"><Link href="/guides" className="hover:text-foreground">Guides</Link><Link href="/data-safety" className="hover:text-foreground">Data safety</Link><Link href="/security" className="hover:text-foreground">Security</Link><Link href="/privacy" className="hover:text-foreground">Privacy</Link><Link href="/terms" className="hover:text-foreground">Terms</Link></nav>
         </div>
       </header>
       <article className="prose-cd mx-auto max-w-3xl space-y-4 px-4 py-10">
@@ -23,7 +23,7 @@ export function PublicPage({ title, intro, children }: { title: string; intro?: 
 export function PublicFooter() {
   return (
     <footer className="border-t border-border py-6 text-center text-xs text-muted-foreground">
-      <nav className="mb-2 flex flex-wrap justify-center gap-4"><Link href="/data-safety">Data safety</Link><Link href="/security">Security</Link><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link></nav>
+      <nav className="mb-2 flex flex-wrap justify-center gap-4"><Link href="/guides">Guides</Link><Link href="/data-safety">Data safety</Link><Link href="/security">Security</Link><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link></nav>
       PharmacyCDReg.ie is an independent service. It is not affiliated with the PSI, the HSE or the IPU.
     </footer>
   );

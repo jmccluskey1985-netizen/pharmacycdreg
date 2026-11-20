@@ -584,7 +584,7 @@ function IntegrityDemo() {
 /* Stock check against a dispensing-system report: two supplies missing from the register are
    found, ticked and added (one as a late entry with its footnote), and the balance meets the count.
    Every name, number and pharmacy here is made up. */
-function StockReportDemo() {
+export function StockReportDemo() {
   const { ref, phase } = usePhases([1800, 1700, 1200, 2600, 1700, 900, 3800, 600]);
   const REPORT = [
     { d: '05/11/2026', n: 'Grehan Maura', q: 28 },
@@ -725,7 +725,7 @@ function FileChip({ name, sub, on, tone }: { name: string; sub: string; on: bool
 
 /* Saved report files read exactly, no AI: a Touchstore .QRP and an MPS .csv drop in, their lines
    come out exactly as printed, and each is checked against its book. Made-up people and numbers. */
-function FileImportDemo() {
+export function FileImportDemo() {
   const { ref, phase } = usePhases([1200, 1100, 2400, 1100, 2400, 3800]);
   const QRP = [
     { d: '12/11/2026', n: 'Paddy Hehir', p: 'OXYNORM 5MG HARD CAPS', q: 14, s: 'missing' },
@@ -780,7 +780,7 @@ function FileImportDemo() {
 }
 
 /* The printable CD balances list (Registers → Balances list). Made-up pharmacy and figures. */
-function BalancesListPreview() {
+export function BalancesListPreview() {
   const ROWS: [string, string, string, string, boolean?][] = [
     ['Schedule 2', '', '', ''],
     ['Concerta XL (Methylphenidate) 18mg prolonged-release tablet', '60', 'tablets', '14/11/2026 (6 days ago)'],
