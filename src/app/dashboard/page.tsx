@@ -88,7 +88,7 @@ export default function RegistersPage() {
         </div>
         <div className="flex min-w-0 flex-wrap gap-2">
           <a href="/api/export" className="btn-secondary" title="Download every register as one file. Keep a recent copy for business continuity"><Download className="h-4 w-4" /> <span className="hidden sm:inline">Export all</span></a>
-          <Link href="/dashboard/stock-sheet" className="btn-secondary" title="Printable stock count sheet with today’s register balances"><ClipboardList className="h-4 w-4" /> <span className="hidden sm:inline">Count sheet</span></Link>
+          <Link href="/dashboard/stock-sheet" className="btn-secondary" title="Printable list of every CD balance and when its stock was last checked"><ClipboardList className="h-4 w-4" /> <span className="hidden sm:inline">Balances list</span></Link>
           {writable && canDo('scan') && <Link href="/dashboard/scan?type=invoice" className="btn-secondary"><ScanLine className="h-4 w-4" /> Invoice</Link>}
           {canOpen && view === 'shelf' && <button onClick={toggleAll} className={`btn-secondary ${showAll ? 'ring-2 ring-brand/40' : ''}`} aria-pressed={showAll} title="Show every common CD, including ones you haven't started">{showAll ? 'All CD types' : 'My books only'}</button>}
           <div className="flex rounded-lg border border-border bg-card p-0.5" role="group" aria-label="View">

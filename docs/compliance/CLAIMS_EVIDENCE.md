@@ -24,6 +24,7 @@ Pages: **Home** (`src/app/page.tsx`: hero ticks, trust strip, "Your data, securi
 | R8 | Laid out like the paper register, printable, CSV export (Data safety) | Register page and print view; CSV export per register and all registers | ✅ |
 | R9 | Built around the IPU eCDR requirements (Home hero) | Conformance Test Plan and Evidence Register completed (FR / NFR mapping); DEC-001 declaration | ✅ Wording only: **don't** say "IPU verified" or use the IPU logo until verification is granted |
 | R10 | Works on phone, tablet and PC (Home ticks) | Responsive layout; automated phone-width checks in `tests/e2e/sweep.mjs` | ✅ |
+| R11 | Stock check reads the drug search report from Touchstore, MPS or any other dispensing system (Home, stock check section) | `src/lib/report-reconcile.ts`: reads printed / photographed reports, PDF or CSV by their columns, not a fixed format; unit tests in `tests/unit/report-reconcile.test.mts` | 🟡 Keep a successful real Touchstore and MPS report test on file (layout only, no patient data kept) |
 
 ## Access and security
 

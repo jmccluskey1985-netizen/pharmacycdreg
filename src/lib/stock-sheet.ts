@@ -3,11 +3,20 @@
  * write the physical count, the difference and initials. Printable, and as a styled Excel file
  * (built in the browser; no patient data, only product names and balances).
  */
-export interface SheetRow { label: string; unit: string; balance: number; quarantined: number }
+export interface SheetRow { label: string; unit: string; balance: number; quarantined: number; lastChecked: string | null; due: boolean }
 export interface SheetSection { title: string; rows: SheetRow[] }
 
 export const ddmmyyyy = (d: Date) => d.toLocaleDateString('en-IE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Dublin' });
 export const hhmm = (d: Date) => d.toLocaleTimeString('en-IE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Dublin' });
+
+/** "12/11/2026 (8 days ago)", "Today", or "Never"; plus " · due" when a check is due. */
+export function lastCheckedText(r: Pick<SheetRow, 'lastChecked' | 'due'>, now: Date) {
+  if (!r.lastChecked) return r.due ? 'Never · due' : 'Never';
+  const d = new Date(r.lastChecked);
+  const days = Math.floor((now.getTime() - d.getTime()) / 864e5);
+  const ago = days <= 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
+  return `${ddmmyyyy(d)} (${ago})${r.due ? ' · due' : ''}`;
+}
 
 export function sheetLabel(p: { brand?: string | null; drug_name: string; strength: string; form: string }) {
   const name = p.brand && !p.brand.toLowerCase().includes(p.drug_name.toLowerCase()) ? `${p.brand} (${p.drug_name})` : p.brand || p.drug_name;
@@ -19,7 +28,7 @@ export function buildSections(registers: any[]): SheetSection[] {
   for (const r of registers) {
     const s = Number(r.product?.schedule ?? 2);
     if (!by.has(s)) by.set(s, []);
-    by.get(s)!.push({ label: sheetLabel(r.product), unit: r.product.unit, balance: Number(r.balance ?? 0), quarantined: Number(r.quarantined ?? 0) });
+    by.get(s)!.push({ label: sheetLabel(r.product), unit: r.product.unit, balance: Number(r.balance ?? 0), quarantined: Number(r.quarantined ?? 0), lastChecked: r.last_checked_at ?? null, due: !!r.check_due });
   }
   return [...by.entries()].sort((a, b) => a[0] - b[0]).map(([s, rows]) => ({
     title: `Schedule ${s}`,
@@ -28,34 +37,38 @@ export function buildSections(registers: any[]): SheetSection[] {
 }
 
 /** Styled .xlsx: big title, grey header row, schedule bands, difference formula highlighted when not zero. */
-export async function downloadSheetXlsx(sections: SheetSection[], pharmacy: { name?: string | null; address?: string | null }, when: Date) {
+export async function downloadSheetXlsx(sections: SheetSection[], pharmacy: { name?: string | null; address?: string | null }, when: Date, withCount = false) {
   const ExcelJS = (await import('exceljs')).default;
   const wb = new ExcelJS.Workbook();
   wb.creator = 'PharmacyCDReg.ie';
   wb.created = when;
-  const ws = wb.addWorksheet('CD stock count', {
+  const title = withCount ? 'CD Stock Count' : 'CD Balances';
+  const ws = wb.addWorksheet(title, {
     pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 } },
     headerFooter: { oddFooter: '&LPharmacyCDReg.ie&RPage &P of &N' },
     views: [{ state: 'frozen', ySplit: 6 }],
   });
-  ws.columns = [{ width: 58 }, { width: 18 }, { width: 18 }, { width: 15 }, { width: 14 }];
+  ws.columns = withCount ? [{ width: 58 }, { width: 18 }, { width: 30 }, { width: 14 }, { width: 14 }, { width: 12 }] : [{ width: 62 }, { width: 20 }, { width: 34 }];
+  const last = withCount ? 'F' : 'C';
   const green = 'FF184B21', light = 'FFE6F4E5', grey = 'FFB7B7B7';
   const thin = { style: 'thin' as const, color: { argb: 'FF9CA3AF' } };
   const box = { top: thin, left: thin, bottom: thin, right: thin };
 
-  ws.mergeCells('A1:E1');
-  Object.assign(ws.getCell('A1'), { value: 'CD Stock Count', font: { size: 24, bold: true, color: { argb: green } } });
+  ws.mergeCells(`A1:${last}1`);
+  Object.assign(ws.getCell('A1'), { value: title, font: { size: 24, bold: true, color: { argb: green } } });
   ws.getRow(1).height = 36;
-  ws.mergeCells('A2:E2');
+  ws.mergeCells(`A2:${last}2`);
   Object.assign(ws.getCell('A2'), { value: [pharmacy.name, pharmacy.address].filter(Boolean).join(' · '), font: { size: 12, color: { argb: 'FF475569' } } });
-  ws.mergeCells('A3:E3');
+  ws.mergeCells(`A3:${last}3`);
   Object.assign(ws.getCell('A3'), { value: `Date: ${ddmmyyyy(when)}      Register balances at ${hhmm(when)}`, font: { size: 14, bold: true } });
-  ws.mergeCells('A4:E4');
-  Object.assign(ws.getCell('A4'), { value: 'Counted by: ______________________      Checked by: ______________________', font: { size: 12 } });
-  ws.getRow(4).height = 22;
+  if (withCount) {
+    ws.mergeCells(`A4:${last}4`);
+    Object.assign(ws.getCell('A4'), { value: 'Counted by: ______________________      Checked by: ______________________', font: { size: 12 } });
+    ws.getRow(4).height = 22;
+  }
 
   const head = ws.getRow(6);
-  head.values = ['CD Medicine', 'Register', 'Stock', 'Difference', 'Initials'];
+  head.values = withCount ? ['CD Medicine', 'Register balance', 'Last stock check', 'Stock', 'Difference', 'Initials'] : ['CD Medicine', 'Balance', 'Last stock check'];
   head.height = 26;
   head.eachCell((c) => { c.font = { bold: true, size: 14 }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: grey } }; c.border = box; c.alignment = { vertical: 'middle', horizontal: Number(c.col) === 1 ? 'left' : 'center' }; });
   ws.pageSetup.printTitlesRow = '6:6';
@@ -63,7 +76,7 @@ export async function downloadSheetXlsx(sections: SheetSection[], pharmacy: { na
   let r = 7;
   const diffs: string[] = [];
   for (const s of sections) {
-    ws.mergeCells(`A${r}:E${r}`);
+    ws.mergeCells(`A${r}:${last}${r}`);
     const band = ws.getCell(`A${r}`);
     band.value = s.title;
     band.font = { bold: true, size: 13, color: { argb: green } };
@@ -73,34 +86,35 @@ export async function downloadSheetXlsx(sections: SheetSection[], pharmacy: { na
     r++;
     for (const row of s.rows) {
       const x = ws.getRow(r);
-      x.values = [row.quarantined ? `${row.label}  (incl. ${row.quarantined} set aside)` : row.label, row.balance, null, { formula: `IF(C${r}="","",C${r}-B${r})` }, null];
+      const name = row.quarantined ? `${row.label}  (incl. ${row.quarantined} set aside)` : row.label;
+      x.values = withCount ? [name, row.balance, lastCheckedText(row, when), null, { formula: `IF(D${r}="","",D${r}-B${r})` }, null] : [name, row.balance, lastCheckedText(row, when)];
       x.height = 26;
       x.eachCell({ includeEmpty: true }, (c) => {
         c.border = box;
-        c.font = { size: 14, bold: Number(c.col) === 2 };
+        c.font = { size: Number(c.col) === 3 ? 12 : 14, bold: Number(c.col) === 2, color: Number(c.col) === 3 && row.due ? { argb: 'FFB45309' } : undefined };
         c.alignment = { vertical: 'middle', horizontal: Number(c.col) === 1 ? 'left' : 'center', wrapText: Number(c.col) === 1 };
       });
       x.getCell(2).numFmt = `0" ${row.unit.replace(/"/g, '')}"`;
-      diffs.push(`D${r}`);
+      diffs.push(`E${r}`);
       r++;
     }
   }
-  if (diffs.length) {
+  if (withCount && diffs.length) {
     ws.addConditionalFormatting({
-      ref: `D7:D${r - 1}`,
-      rules: [{ type: 'expression', priority: 1, formulae: ['AND(D7<>"",D7<>0)'], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFFECACA' } }, font: { bold: true, color: { argb: 'FF991B1B' } } } }],
+      ref: `E7:E${r - 1}`,
+      rules: [{ type: 'expression', priority: 1, formulae: ['AND(E7<>"",E7<>0)'], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFFECACA' } }, font: { bold: true, color: { argb: 'FF991B1B' } } } }],
     });
   }
   r++;
-  ws.mergeCells(`A${r}:E${r}`);
-  Object.assign(ws.getCell(`A${r}`), { value: 'Any difference: investigate, then record it in the register with Stock check (the original lines stay; a correction is added).', font: { italic: true, size: 11, color: { argb: 'FF475569' } }, alignment: { wrapText: true } });
+  ws.mergeCells(`A${r}:${last}${r}`);
+  Object.assign(ws.getCell(`A${r}`), { value: withCount ? 'Any difference: investigate, then record it in the register with Stock check (the original lines stay; a correction is added).' : 'Balances include stock set aside for destruction. "Due" means a stock check is due under your Settings → Stock checks frequency.', font: { italic: true, size: 11, color: { argb: 'FF475569' } }, alignment: { wrapText: true } });
   ws.getRow(r).height = 30;
 
   const buf = await wb.xlsx.writeBuffer();
   const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
   const a = document.createElement('a');
   a.href = url;
-  a.download = `CD-stock-count-${when.toISOString().slice(0, 10)}.xlsx`;
+  a.download = `${withCount ? 'CD-stock-count' : 'CD-balances'}-${when.toISOString().slice(0, 10)}.xlsx`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }

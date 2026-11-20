@@ -659,7 +659,7 @@ function StockReportDemo() {
             )}
           </div>
           <h3 className="mt-6 text-2xl font-bold">Stock check that finds the missing entries</h3>
-          <p className="mt-1 max-w-lg text-muted-foreground">Count doesn’t match? Photograph the drug search report from your dispensing system, or upload it as a PDF or CSV. Every line is checked against the register, anything missing is highlighted, and you tick the ones to add. One signature adds them all, with a late-entry footnote on anything over 24 hours old.</p>
+          <p className="mt-1 max-w-lg text-muted-foreground">Count doesn’t match? Photograph the drug search report from your dispensing system (<b className="text-foreground">Touchstore</b>, <b className="text-foreground">MPS</b> or any other), or upload it as a PDF or CSV. Every line is checked against the register, anything missing is highlighted, and you tick the ones to add. One signature adds them all, with a late-entry footnote on anything over 24 hours old.</p>
           <SampleNote className="mt-2" />
         </div>
       </div>

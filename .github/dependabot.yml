@@ -9,6 +9,11 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    # Major versions (e.g. TypeScript 7, Tailwind 4) change how the app is built and need a
+    # planned upgrade, so they aren't proposed automatically. Security fixes still are.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: monthly }
