@@ -9,7 +9,8 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 
 /**
  * Lands here from a password-reset email or a new-pharmacy invite (?welcome=1).
- * The link carries a one-time sign-in, either as ?code=… or as tokens after # . It's turned
+ * Our emails carry ?token_hash=…&type=recovery|invite (redeemed here with verifyOtp); older
+ * Supabase links carry ?code=… or tokens after # . It's turned
  * into a session first, then the person chooses their password.
  */
 export default function ResetPassword() {
@@ -29,8 +30,14 @@ export default function ResetPassword() {
     (async () => {
       const hash = new URLSearchParams(url.hash.slice(1));
       const code = url.searchParams.get('code');
+      const tokenHash = url.searchParams.get('token_hash');
+      const type = url.searchParams.get('type');
       if (hash.get('error_description')) { setMsg(hash.get('error_description')); setReady('expired'); return; }
-      if (hash.get('access_token') && hash.get('refresh_token')) {
+      if (tokenHash && (type === 'recovery' || type === 'invite')) {
+        // Our own emails: redeem the one-time token here (link scanners that open it don't use it up)
+        const { error } = await sb.auth.verifyOtp({ token_hash: tokenHash, type });
+        if (error) setMsg('This link has already been used or has expired.');
+      } else if (hash.get('access_token') && hash.get('refresh_token')) {
         await sb.auth.setSession({ access_token: hash.get('access_token')!, refresh_token: hash.get('refresh_token')! });
       } else if (code) {
         await sb.auth.exchangeCodeForSession(code).catch(() => null);
@@ -45,10 +52,20 @@ export default function ResetPassword() {
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (pw !== pw2) return setMsg('The passwords don’t match.');
+    if (pw.length < 10) return setMsg('Use at least 10 characters.');
+    const sb = getSupabaseClient();
+    const { data: who } = await sb.auth.getUser();
+    const local = (who.user?.email ?? '').split('@')[0].toLowerCase();
+    if (/^(.)\1+$/.test(pw) || /^(password|pharmacy|1234567890|qwertyuiop)/i.test(pw) || (local.length >= 4 && pw.toLowerCase().includes(local))) {
+      return setMsg('Choose something harder to guess: not your email, “password”, or repeated characters. A short phrase works well.');
+    }
     setBusy(true); setMsg(null);
-    const { error } = await getSupabaseClient().auth.updateUser({ password: pw });
+    const { error } = await sb.auth.updateUser({ password: pw });
+    if (error) { setBusy(false); return setMsg(error.message); }
+    // Sign out every other device that had the old password, and email a security notice
+    await sb.auth.signOut({ scope: 'others' }).catch(() => {});
+    if (!welcome) await fetch('/api/auth/password-changed', { method: 'POST' }).catch(() => {});
     setBusy(false);
-    if (error) return setMsg(error.message);
     router.push('/dashboard');
   }
 

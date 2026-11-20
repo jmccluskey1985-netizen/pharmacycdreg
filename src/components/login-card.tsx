@@ -123,10 +123,15 @@ export function LoginCard() {
       return;
     }
     setError(null);
-    await getSupabaseClient().auth.resetPasswordForEmail(normalizeEmail(email), {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    setNotice('If that email has an account, a reset link is on its way.');
+    if (DEMO) { setNotice('If that email has an account, a reset link is on its way.'); return; }
+    try {
+      const r = await fetch('/api/auth/forgot', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: normalizeEmail(email) }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { setError(d.error || 'Couldn’t send the reset email. Try again in a moment.'); return; }
+      setNotice(d.message || 'If that email has an account, a reset link is on its way.');
+    } catch {
+      setError('Couldn’t send the reset email. Check your connection and try again.');
+    }
   }
 
   if (factorId) {

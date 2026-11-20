@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { authLink, inviteEmail } from '@/lib/auth-emails';
+import { sendEmail } from '@/lib/email';
 import { z } from 'zod';
 import { requireStaff, requireAccount, errorResponse, audit } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase/server';
@@ -113,9 +115,14 @@ export async function POST(req: Request) {
 async function linkSuperintendentLogin(db: ReturnType<typeof createServiceClient>, pharmacyId: string, staffId: string, addedBy: string | null, email: string, origin: string) {
   let userId: string | null = null;
   let invited = false;
-  const inv = await db.auth.admin.inviteUserByEmail(email, { redirectTo: `${origin}/reset-password?welcome=1` });
-  if (inv.data?.user) { userId = inv.data.user.id; invited = true; }
-  else if (/already|registered|exists/i.test(inv.error?.message ?? '')) {
+  const site = process.env.NEXT_PUBLIC_SITE_URL || origin;
+  const inv = await authLink(email, 'invite', site, { welcome: true });
+  if (inv.user && inv.link) {
+    userId = inv.user.id; invited = true;
+    const { data: ph } = await db.from('pharmacies').select('name').eq('id', pharmacyId).maybeSingle();
+    const m = inviteEmail(inv.link, ph?.name);
+    await sendEmail({ to: email, subject: m.subject, html: m.html, sender: 'welcome' });
+  } else if (/already|registered|exists/i.test(inv.error ?? '')) {
     // Existing login: look it up without emailing anything
     const gen = await db.auth.admin.generateLink({ type: 'magiclink', email });
     userId = gen.data?.user?.id ?? null;
