@@ -7,7 +7,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
  *  Receipts
  *   - same invoice/docket number already received into this register      → BLOCK
  *     (an invoice and its CD docket / MDA receipt list the same goods)
- *   - same quantity received within 4 days (different/no number)          → WARN
+ *   - same quantity received within 4 days, when either has no number      → WARN
+ *     (two different invoice numbers are two deliveries: no warning)
  *  Supplies
  *   - same patient + same prescription/order reference                    → BLOCK
  *   - same patient + same quantity on the same day                        → BLOCK
@@ -57,6 +58,8 @@ export async function findDuplicate(db: SupabaseClient, registerId: string, e: R
     }
     for (const r of data ?? []) {
       if (r.supplier_name === 'Balance brought forward') continue;
+      // Both have an invoice/docket number and they differ: a different delivery, not a duplicate
+      if (tokens.length && refTokens(r.notes).length) continue;
       if (Number(r.quantity) === qty && Math.abs(new Date(r.transaction_date).getTime() - new Date(date).getTime()) <= 4 * DAY) {
         return { level: 'warn', seq: r.seq, message: `${qty} were already received on ${r.transaction_date} (line ${r.seq}${r.notes ? `, ${r.notes}` : ''}${r.supplier_name ? `, ${r.supplier_name}` : ''}). Is this the same delivery?` };
       }

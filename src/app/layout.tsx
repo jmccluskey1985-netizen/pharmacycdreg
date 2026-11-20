@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   openGraph: { type: 'website', locale: 'en_IE', siteName: 'PharmacyCDReg.ie', title: 'PharmacyCDReg.ie: your digital Controlled Drugs Register', description: 'Save time on CD record-keeping. Running balances, a tamper-evident audit trail and inspection-ready reports for Irish community pharmacies.', images: ['/previews/register-cover.webp'] },
   appleWebApp: { capable: true, title: 'CD Register', statusBarStyle: 'default' },
   // Tab icon: the green pin with the white cross (same mark as the logo).
-  icons: { icon: [{ url: '/favicon.ico', sizes: '48x48' }, { url: '/icon.svg', type: 'image/svg+xml' }, { url: '/favicon-32.png', type: 'image/png', sizes: '32x32' }], apple: '/apple-touch-icon.png' },
+  icons: { icon: [{ url: '/favicon.ico', sizes: '48x48' }, { url: '/icon.svg', type: 'image/svg+xml' }, { url: '/favicon-32.png', type: 'image/png', sizes: '32x32' }, { url: '/icon-192.png', type: 'image/png', sizes: '192x192' }], apple: '/apple-touch-icon.png' },
 };
 
 export const viewport: Viewport = {

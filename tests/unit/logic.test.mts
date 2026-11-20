@@ -24,7 +24,8 @@ const db: any = { from: () => { let r = rows.slice(); const q: any = {
 const dup = async (e: any) => (await findDuplicate(db, 'R', e))?.level ?? 'ok';
 eq('same invoice scanned twice is blocked', await dup({ entry_type: 'receipt', transaction_date: '2026-11-10', quantity: 56, notes: 'Invoice 0972709426' }), 'block');
 eq('same invoice typed as bare number is blocked', await dup({ entry_type: 'receipt', transaction_date: '2026-11-11', quantity: 56, notes: '0972709426' }), 'block');
-eq('same quantity, different invoice, 2 days later warns', await dup({ entry_type: 'receipt', transaction_date: '2026-11-12', quantity: 56, notes: 'Invoice 0972712000' }), 'warn');
+eq('same quantity, different invoice, next day is fine (two deliveries)', await dup({ entry_type: 'receipt', transaction_date: '2026-11-12', quantity: 56, notes: 'Invoice 0972712000' }), 'ok');
+eq('same quantity, no invoice number, 2 days later warns', await dup({ entry_type: 'receipt', transaction_date: '2026-11-12', quantity: 56, notes: null }), 'warn');
 eq('different invoice a week later is fine', await dup({ entry_type: 'receipt', transaction_date: '2026-11-18', quantity: 112, notes: 'Invoice 0972799999' }), 'ok');
 eq('same Rx reference again is blocked', await dup({ entry_type: 'supply', transaction_date: '2026-11-13', quantity: 18, recipient_name: 'TYRONE  BURKE', prescription_ref: '2075963163' }), 'block');
 eq('same patient + amount same day is blocked', await dup({ entry_type: 'supply', transaction_date: '2026-11-12', quantity: 18, recipient_name: 'Tyrone Burke' }), 'block');

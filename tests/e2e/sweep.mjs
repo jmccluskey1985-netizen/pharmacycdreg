@@ -105,6 +105,28 @@ await step('duplicate supply is caught', async () => {
   await page.keyboard.press('Escape');
 });
 
+await step('different invoice numbers aren’t a duplicate; a flagged one can be recorded with a reason from the main button', async () => {
+  // Same amount as the earlier receipt, new invoice number: a second delivery, no warning
+  await openNewEntry(); await click('button:has-text("Obtained")');
+  await page.fill('input[type=number]', '56');
+  await page.locator('input[placeholder*="United"]').fill('Uniphar');
+  await field('Address').fill('Belgard Rd, Dublin 24');
+  await field('Invoice / docket no.').fill('Invoice 99002');
+  await click('button:has-text("Sign & record")');
+  await page.waitForSelector('form', { state: 'detached', timeout: 8000 });
+  // Same amount, no number: flagged; reason typed, then the main button records it
+  await openNewEntry(); await click('button:has-text("Obtained")');
+  await page.fill('input[type=number]', '56');
+  await page.locator('input[placeholder*="United"]').fill('Uniphar');
+  await field('Address').fill('Belgard Rd, Dublin 24');
+  await click('button:has-text("Sign & record")');
+  await see('text=/Possible duplicate/i');
+  await click('button:has-text("It’s a separate")');
+  await page.locator('input[placeholder*="Second delivery"]').fill('Second delivery, docket to follow');
+  await click('button:has-text("Sign & record")');
+  await page.waitForSelector('form', { state: 'detached', timeout: 8000 });
+});
+
 await step('correction keeps the original struck through with a footnote', async () => {
   await page.waitForTimeout(500);
   const lines = page.locator('button[aria-label^="Correct line"]');

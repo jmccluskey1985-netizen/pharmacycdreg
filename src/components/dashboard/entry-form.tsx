@@ -136,6 +136,11 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
 
   async function submit(e?: React.FormEvent, override = false) {
     e?.preventDefault();
+    // The main button also confirms "It's a separate delivery/supply" once a reason is typed
+    if (e && dup && overriding) {
+      if (dupReason.trim().length < 5) { setError('Type why this is a separate entry (at least 5 characters), or press Don’t record it.'); return; }
+      override = true;
+    }
     setBusy(true);
     setError(null);
     if (!override) { setDup(null); setOverriding(false); }
