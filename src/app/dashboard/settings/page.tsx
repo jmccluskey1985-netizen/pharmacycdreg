@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { UserCog, ScanLine, Building2, ShieldCheck, ClipboardCheck, Database, Loader2, Check, Download, Users, BookUser, CreditCard, Plug, ChevronRight, Archive } from 'lucide-react';
+import { UserCog, ScanLine, Mail, Building2, ShieldCheck, ClipboardCheck, Database, Loader2, Check, Download, Users, BookUser, CreditCard, Plug, ChevronRight, Archive } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 import { useStaff } from '@/components/dashboard/staff-context';
 import { can } from '@/lib/roles';
 import { TwoStepSettings } from '@/components/dashboard/two-step';
 import { ReaderSettings } from '@/components/dashboard/reader-settings';
+import { EmailSettings } from '@/components/dashboard/email-settings';
 import { PermissionsSettings } from '@/components/dashboard/permissions-settings';
 import { useTheme } from '@/components/dashboard/theme';
 import { BackupButton } from '@/components/dashboard/backup-button';
@@ -80,7 +81,7 @@ export default function SettingsPage() {
     { id: 'roles', label: 'Roles & permissions', icon: UserCog },
     { id: 'stock', label: 'Stock checks', icon: ClipboardCheck },
     { id: 'data', label: 'Data & backups', icon: Database },
-    ...(pharmacy?.is_site_admin ? [{ id: 'reader', label: 'Document reading', icon: ScanLine }] : []),
+    ...(pharmacy?.is_site_admin ? [{ id: 'reader', label: 'Document reading', icon: ScanLine }, { id: 'email', label: 'Email', icon: Mail }] : []),
   ];
   const current = TABS.some((t) => t.id === tab) ? tab : 'general';
 
@@ -133,6 +134,7 @@ export default function SettingsPage() {
         {current === 'stock' && <StockChecks s={s} regs={regs} onSaved={(x) => { onSaved(x); load(); }} />}
         {current === 'data' && <Data regs={regs} reload={load} />}
         {current === 'reader' && pharmacy?.is_site_admin && <ReaderSettings />}
+        {current === 'email' && pharmacy?.is_site_admin && <EmailSettings />}
       </div>
     </div>
   );

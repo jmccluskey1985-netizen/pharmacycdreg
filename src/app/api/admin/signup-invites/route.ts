@@ -42,6 +42,7 @@ export async function POST(req: Request) {
     if (send_email !== false) {
       emailed = (await sendEmail({
         to: email,
+        sender: 'welcome',
         subject: 'Your invitation to PharmacyCDReg.ie',
         html: `<p>Hello,</p><p>You're invited to set up your pharmacy on <b>PharmacyCDReg.ie</b>, the electronic Controlled Drugs Register.</p><p><a href="${link}">Create your account</a> using this email address (${email}). Your free month starts straight away, with no card needed.</p><p>PharmacyCDReg.ie</p>`,
       })).sent;

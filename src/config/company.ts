@@ -6,6 +6,8 @@ export const COMPANY = {
   legalName: process.env.NEXT_PUBLIC_COMPANY_NAME || 'PharmacyCDReg.ie',
   address: process.env.NEXT_PUBLIC_COMPANY_ADDRESS || 'Ireland',
   email: process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'support@pharmacycdreg.ie',
+  /** Sender of welcome and invitation emails; everything else comes from `email` (support). */
+  welcomeEmail: process.env.EMAIL_FROM_WELCOME || 'welcome@pharmacycdreg.ie',
   updated: '17 November 2026',
   updatedIso: '2026-11-17',
 };

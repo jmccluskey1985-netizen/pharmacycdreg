@@ -78,7 +78,7 @@ async function handle(req: Request) {
   // Welcome the new pharmacy (replies go to the support inbox)
   const site = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
   const w = welcomeEmail({ pharmacy: b.pharmacy_name, contact: b.contact_name, trialEnds: new Date(Date.now() + FREE_TRIAL_DAYS * 864e5).toISOString(), site });
-  await sendEmail({ to: b.email, subject: w.subject, html: w.html });
+  await sendEmail({ to: b.email, subject: w.subject, html: w.html, sender: 'welcome' });
 
   await sendEmail({
     to: adminEmail(),
