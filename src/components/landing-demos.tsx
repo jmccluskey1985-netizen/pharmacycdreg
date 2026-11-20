@@ -474,7 +474,7 @@ function BalanceDemo() {
           <div key={r.n} className="grid grid-cols-[3rem_1fr_3rem_3rem_3.5rem] border-t border-slate-100 px-2 py-1.5"><span>{r.d}</span><span>{r.n}</span><span className="text-right font-semibold">{r.inQ ?? ''}</span><span className="text-right font-semibold">{r.outQ ?? ''}</span><span className="text-right font-bold">{r.b}</span></div>
         ))}
         <div className={`grid grid-cols-[3rem_1fr_3rem_3rem_3.5rem] border-t border-slate-100 px-2 py-1.5 ${fade(added, added ? 'bg-brand/10' : '')}`}>
-          <span>13/11</span><span>John Murphy</span><span /><span className="text-right font-semibold">28</span>
+          <span>13/11</span><span>Colm Tuohy</span><span /><span className="text-right font-semibold">28</span>
           <span className="text-right font-bold text-brand-dark"><Counter value={added ? 112 : 140} /></span>
         </div>
       </div>
@@ -587,10 +587,10 @@ function IntegrityDemo() {
 function StockReportDemo() {
   const { ref, phase } = usePhases([1800, 1700, 1200, 2600, 1700, 900, 3800, 600]);
   const REPORT = [
-    { d: '05/11/2026', n: 'Kelly Mary', q: 28 },
-    { d: '07/11/2026', n: 'Murphy John', q: 28 },
+    { d: '05/11/2026', n: 'Grehan Maura', q: 28 },
+    { d: '07/11/2026', n: 'Tuohy Colm', q: 28 },
     { d: '12/11/2026', n: 'Hehir* Paddy', q: 14, miss: 'late' },
-    { d: '14/11/2026', n: 'O’Brien Seán', q: 28 },
+    { d: '14/11/2026', n: 'Kinsella Bríd', q: 28 },
     { d: '15/11/2026', n: 'Corcoran Niamh', q: 14, miss: 'new' },
   ];
   const tidy = (n: string) => n.replace('*', '').split(' ').reverse().join(' ');
