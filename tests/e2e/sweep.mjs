@@ -293,7 +293,7 @@ await step('OST patients onboarded from bag labels', async () => {
 await step('stock check: dispensing report shows missing entries, ticked ones added (late with footnote)', async () => {
   await page.goto(B + '/dashboard/register/r1'); await page.waitForTimeout(1000);
   await click('button:has-text("Stock check")');
-  await page.setInputFiles('input[type=file][accept*="csv"]', { name: 'cd-report.csv', mimeType: 'text/csv', buffer: Buffer.from('date,patient,qty\n') });
+  await page.setInputFiles('input[aria-label="Report file"]', { name: 'cd-report.csv', mimeType: 'text/csv', buffer: Buffer.from('date,patient,qty\n') });
   await see('text=Paddy Hehir', 8000);
   await see('text=/Over 24 hours/');
   await see('text=/quantity differs/');
@@ -358,6 +358,17 @@ await step('CD balances list: dated, every open book with its balance and last s
   [dl] = await Promise.all([page.waitForEvent('download', { timeout: 15000 }), page.click('button:has-text("Excel")')]);
   if (!/^CD-stock-count-/.test(dl.suggestedFilename())) throw new Error(dl.suggestedFilename());
   await dl.saveAs('/tmp/claude-0/sheet.xlsx');
+});
+
+await step('check one report (any file) against every book: missing lines found in their book and added', async () => {
+  await page.goto(B + '/dashboard/report-check'); await see('text=Check a dispensing report');
+  await page.setInputFiles('input[type=file]', [{ name: 'report.QRP', mimeType: 'application/octet-stream', buffer: Buffer.from('demo') }, { name: 'page2.jpg', mimeType: 'image/jpeg', buffer: Buffer.from([0xff, 0xd8, 0xff]) }]);
+  await see('text=report.QRP'); await see('text=page2.jpg');
+  await click('button:has-text("against all books")');
+  await see('text=/2 missing entries/'); await see('text=XANAX 500MCG TABS'); await see('text=/books? match the report/');
+  await see('text=Maura Grehan'); await see('text=Eamon Tobin');
+  await click('button:has-text("Sign & add 2 missing")');
+  await see('text=/Added: register line/');
 });
 
 await step('lock and switch user', async () => {

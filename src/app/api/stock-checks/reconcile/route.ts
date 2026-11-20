@@ -2,18 +2,17 @@ import { NextResponse } from 'next/server';
 import { requireStaff, errorResponse, audit } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getRegisterForPharmacy, currentBalance } from '@/lib/registers';
-import { readDocument, parseJsonWith, ScanError } from '@/lib/scan-extract';
-import { ReportSchema, REPORT_JSON_SCHEMA, REPORT_SYSTEM, reportPrompt, usableRows, reconcile } from '@/lib/report-reconcile';
-import { findPatientMatches } from '@/lib/patients';
+import { ScanError } from '@/lib/scan-extract';
+import { reconcile } from '@/lib/report-reconcile';
+import { readReport } from '@/lib/report-read';
+import { draftLines } from '@/lib/report-drafts';
+import { matchProductText } from '@/lib/report-match';
+import { liveRegisters } from '@/lib/match';
 import { productTitle } from '@/lib/product-name';
-import { isLate, irishToday } from '@/lib/late-entry';
-import { getReaderConfig } from '@/lib/reader-config';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { can } from '@/lib/roles';
 
 export const dynamic = 'force-dynamic';
-const DOC_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
-const MAX_BYTES = 15 * 1024 * 1024;
 const addDays = (d: string, n: number) => { const t = new Date(`${d}T00:00:00Z`); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
 
 /**
@@ -32,22 +31,15 @@ export async function POST(req: Request) {
     const reg = await getRegisterForPharmacy(String(form.get('register_id') ?? ''), account.pharmacyId);
     if (!reg) return NextResponse.json({ error: 'Register not found' }, { status: 404 });
     const files = form.getAll('file').filter((f): f is File => f instanceof File);
-    if (!files.length) return NextResponse.json({ error: 'Attach the report (PDF, photo or CSV)' }, { status: 400 });
-    if (files.length > 10) return NextResponse.json({ error: 'Up to 10 pages at a time' }, { status: 400 });
-    if (files.reduce((n, f) => n + f.size, 0) > MAX_BYTES) return NextResponse.json({ error: 'The report is too large (max 15 MB)' }, { status: 400 });
-    const isText = (f: File) => /^text\/|csv/.test(f.type) || /\.(csv|txt|tsv)$/i.test(f.name);
-    if (files.some((f) => !isText(f) && !DOC_TYPES.includes(f.type))) return NextResponse.json({ error: 'Use a PDF, photo (JPG/PNG) or CSV export. For Excel, save as CSV first.' }, { status: 400 });
-    const text = (await Promise.all(files.filter(isText).map((f) => f.text()))).join('\n').slice(0, 300_000);
-    const docs = await Promise.all(files.filter((f) => !isText(f)).map(async (f) => ({ base64: Buffer.from(await f.arrayBuffer()).toString('base64'), mediaType: f.type })));
-
     const unit = reg.product?.unit ?? 'units';
     const db = createServiceClient();
-    const { result } = await readDocument(docs, {
-      reader: await getReaderConfig(db), system: REPORT_SYSTEM, schema: REPORT_JSON_SCHEMA, name: 'cd_report',
-      prompt: reportPrompt(`${productTitle(reg.product)} (${reg.product?.drug_name ?? ''} ${reg.product?.strength ?? ''} ${reg.product?.form ?? ''})`, unit, text || undefined),
-      parse: parseJsonWith(ReportSchema),
-    });
-    const { rows, skipped } = usableRows(result, irishToday());
+    const read = await readReport(files, db, { product: `${productTitle(reg.product)} (${reg.product?.drug_name ?? ''} ${reg.product?.strength ?? ''} ${reg.product?.form ?? ''})`, unit });
+    // Exactly-read .QRP lines list every product: keep this book's
+    const regs = read.exactRows.length ? await liveRegisters(account.pharmacyId) : [];
+    const mine = read.exactRows.filter((r) => matchProductText(regs, r.product)?.id === reg.id);
+    const rows = [...read.rows, ...mine];
+    const skipped = read.skipped + read.exactRows.length - mine.length;
+    const result = { warnings: read.warnings, period_from: read.period.from, period_to: read.period.to };
     if (!rows.length) return NextResponse.json({ error: `No ${productTitle(reg.product)} supplies or receipts were found on this report.`, warnings: result.warnings }, { status: 422 });
 
     const from = addDays(rows.reduce((m, r) => (r.date < m ? r.date : m), rows[0].date), -3);
@@ -57,23 +49,7 @@ export async function POST(req: Request) {
       .eq('register_id', reg.id).in('entry_type', ['supply', 'receipt']).gte('transaction_date', from).lte('transaction_date', to).limit(5000);
     const out = reconcile(rows, (ledger ?? []) as any);
 
-    // Fill what a register line needs for each missing one: the patient's record / the supplier's address
-    const { data: suppliers } = await db.from('contacts').select('name, address').eq('pharmacy_id', account.pharmacyId).eq('kind', 'supplier').eq('is_active', true).limit(200);
-    const lines = await Promise.all(out.map(async (r, i) => {
-      const base = { i, ...r, late: isLate(r.row.date) };
-      if (r.status !== 'missing') return base;
-      if (r.row.kind === 'receipt') {
-        const s = (suppliers ?? []).find((c) => r.row.name && c.name.toLowerCase().split(/\s+/)[0] === r.row.name.toLowerCase().split(/\s+/)[0]);
-        return { ...base, draft: { entry_type: 'receipt', transaction_date: r.row.date, quantity: r.row.quantity, supplier_name: s?.name ?? r.row.name ?? '', supplier_address: r.row.address ?? s?.address ?? '', notes: r.row.reference ? `Invoice ${r.row.reference}` : null } };
-      }
-      const m = r.row.name ? await findPatientMatches(db, account.pharmacyId, { full_name: r.row.name, address: r.row.address }).catch(() => null) : null;
-      const p: any = m?.pick?.patient ?? null;
-      return { ...base, patient: p ? { id: p.id, name: [p.first_name, p.surname].filter(Boolean).join(' '), address: p.address ?? null } : null, draft: {
-        entry_type: 'supply', transaction_date: r.row.date, quantity: r.row.quantity,
-        recipient_name: p ? [p.first_name, p.surname].filter(Boolean).join(' ') : (r.row.name ?? '').replace(/\*/g, '').replace(/\s+/g, ' ').trim(), recipient_address: r.row.address ?? p?.address ?? '', patient_id: p?.id ?? null,
-        prescriber_name: r.row.prescriber, authority_to_possess: r.row.prescriber ? `Prescription: ${r.row.prescriber}` : 'Prescription', prescription_ref: r.row.reference,
-      } };
-    }));
+    const lines = await draftLines(db, account.pharmacyId, out);
     await audit(account.pharmacyId, 'stock_check.report_reconcile', staff, account.authUserId, { register_id: reg.id, lines: rows.length, missing: out.filter((r) => r.status === 'missing').length, differs: out.filter((r) => r.status === 'quantity_differs').length });
     return NextResponse.json({ lines, skipped, period: { from: result.period_from, to: result.period_to }, balance: await currentBalance(reg.id), unit, warnings: result.warnings });
   } catch (err) {

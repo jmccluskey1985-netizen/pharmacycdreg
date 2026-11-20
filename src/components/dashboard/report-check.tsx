@@ -22,11 +22,11 @@ const NOTE = 'Added at stock check from the dispensing report';
  * register (highlighted), tick the ones to add and add them in one go. Lines older than a day are
  * late entries and carry the footnote. Quantity differences are shown to investigate, never added.
  */
-export function ReportCheck({ registerId, unit, balance, counted, draft = false, onAdded }: { registerId: string; unit: string; balance: number; counted: number | null; draft?: boolean; onAdded: () => void }) {
+export function ReportCheck({ registerId, unit, balance, counted, draft = false, onAdded, preloaded, title }: { registerId: string; unit: string; balance: number; counted: number | null; draft?: boolean; onAdded: () => void; preloaded?: { lines: Line[]; skipped: number; warnings: string[] }; title?: React.ReactNode }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<{ lines: Line[]; skipped: number; warnings: string[] } | null>(null);
-  const [sel, setSel] = useState<Record<number, boolean>>({});
+  const [data, setData] = useState<{ lines: Line[]; skipped: number; warnings: string[] } | null>(preloaded ?? null);
+  const [sel, setSel] = useState<Record<number, boolean>>(() => preloaded ? Object.fromEntries(preloaded.lines.filter((l) => l.status === 'missing' && !((l.row.date_options?.length ?? 0) > 1)).map((l) => [l.i, true])) : {});
   const [edit, setEdit] = useState<Record<number, Record<string, string>>>({});
   const [reason, setReason] = useState(`Not entered on the day; found at the stock check on ${fmt(irishToday())} by checking the dispensing report`);
   const [results, setResults] = useState<Record<number, Result>>({});
@@ -87,16 +87,18 @@ export function ReportCheck({ registerId, unit, balance, counted, draft = false,
 
   return (
     <div className="space-y-3 rounded-xl border border-border p-3 text-sm">
+      {title ?? (
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="flex items-center gap-2 font-semibold"><FileSearch className="h-4 w-4 text-brand" /> Check against a dispensing report</p>
-          <p className="text-xs text-muted-foreground">Upload a CD report from your dispensing system (PDF, photo or CSV export). Anything on it that isn’t in this register is highlighted.</p>
+          <p className="text-xs text-muted-foreground">Upload a CD report from your dispensing system: photos of each page, or the saved file in any format (PDF, Excel, CSV, Touchstore .QRP…). Anything on it that isn’t in this register is highlighted.</p>
         </div>
         <label className={`btn-secondary cursor-pointer ${busy ? 'pointer-events-none opacity-60' : ''}`}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSearch className="h-4 w-4" />} {busy ? 'Reading report…' : data ? 'Another report' : 'Upload report'}
-          <input type="file" accept="application/pdf,image/*,.csv,.txt,text/csv,text/plain" multiple className="sr-only" onChange={(e) => { read(e.target.files); e.target.value = ''; }} />
+          <input type="file" multiple aria-label="Report file" className="sr-only" onChange={(e) => { read(e.target.files); e.target.value = ''; }} />
         </label>
       </div>
+      )}
       {error && <p className="text-destructive">{error}</p>}
 
       {data && (

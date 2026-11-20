@@ -660,6 +660,28 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     });
     return res({ lines, skipped: 2, period: { from: daysAgo(30), to: today() }, balance: balance(regId), unit: reg.product.unit, warnings: [] });
   }
+  if (path === '/api/stock-checks/reconcile-all' && method === 'POST') {
+    if (needStaff()) return needStaff()!;
+    await new Promise((r) => setTimeout(r, 1200));
+    // A made-up report covering several books: two books match, one has two missing supplies
+    const books = regList().slice(0, 3).map((reg: Json, k: number) => {
+      const recent = ledger(reg.id).filter((e) => (e.entry_type === 'supply' || e.entry_type === 'receipt') && e.supplier_name !== 'Balance brought forward');
+      const rows: ReportRow[] = recent.map((e) => ({ date: e.transaction_date, kind: e.entry_type, name: e.entry_type === 'supply' ? e.recipient_name : e.supplier_name, address: null, prescriber: e.prescriber_name ?? null, reference: e.prescription_ref ?? null, quantity: Number(e.quantity), product: null }));
+      if (k === 0) {
+        rows.push({ date: daysAgo(4), kind: 'supply', name: 'GREHAN, Maura', address: '3 Mill Lane, Ennis', prescriber: 'Brennan, Dr Aoife', reference: 'GM2611/0041', quantity: 14, product: null });
+        rows.push({ date: daysAgo(0), kind: 'supply', name: 'TOBIN, Eamon', address: '27 Station Road, Ennis', prescriber: 'Ennis General', reference: 'EM2611/0118', quantity: 10, product: null });
+      }
+      const out = reconcile(rows, recent as any);
+      const lines = out.map((r, i) => {
+        const b = { i, ...r, late: isLate(r.row.date) };
+        if (r.status !== 'missing') return b;
+        const nm = (r.row.name ?? '').replace(/^([^,]+),\s*(.+)$/, '$2 $1').replace(/\b([A-Z])([A-Z]+)\b/g, (_m: string, a: string, z: string) => a + z.toLowerCase());
+        return { ...b, patient: null, draft: { entry_type: r.row.kind, transaction_date: r.row.date, quantity: r.row.quantity, recipient_name: nm, recipient_address: r.row.address ?? '', prescriber_name: r.row.prescriber, authority_to_possess: `Prescription: ${r.row.prescriber}`, prescription_ref: r.row.reference } };
+      });
+      return { register_id: reg.id, label: productTitle(reg.product), unit: reg.product.unit, balance: balance(reg.id), lines, skipped: 0, warnings: [] };
+    });
+    return res({ books, unmatched: [{ product: 'XANAX 500MCG TABS', date: daysAgo(2), quantity: 7 }], skipped: 0, warnings: [], period: { from: daysAgo(14), to: today() }, exact: true });
+  }
   if (path === '/api/scan/labels' && method === 'POST') {
     if (needStaff()) return needStaff()!;
     await new Promise((r) => setTimeout(r, 1200));
