@@ -63,7 +63,7 @@ Mirrors PharmacyConsultation.ie, with prices set in `src/config/pricing.ts`:
 - **The register is never locked.** Without an active trial or subscription it is **read-only**: view, search, print and export still work, but there are no new entries, registers or scans. This is enforced server-side in `requireStaff(…, { write: true })`.
 
 ### Stripe setup (same account as PharmacyConsultation.ie)
-The app uses Stripe Checkout (subscription mode), the customer portal and a webhook. Stripe SDK 23, API version `2026-10-28.endive`. Build and test in a Stripe **sandbox** first, then repeat in live mode.
+The app uses Stripe Checkout (subscription mode), the customer portal and a webhook. Stripe SDK 23, API version `2026-10-28.endive`. Build and test in a Stripe **sandbox** first, then repeat in live mode. Live mode was set up on 20 Nov 2026 (see HANDOVER.md); Preview and Development keep sandbox keys.
 1. Create a product "PharmacyCDReg" with a **€19/month recurring price**, tax behaviour **exclusive**. Its price ID goes in `STRIPE_PRICE_ID`.
 2. **Tax:** Settings → Tax, add the Irish VAT registration. Checkout uses `automatic_tax`, which collects **nothing** (and shows no error) until a registration is active.
 3. **Webhook** at `https://pharmacycdreg.ie/api/stripe/webhook`, API version `2026-10-28.endive`, events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`, `charge.dispute.created`, `charge.refunded`, `radar.early_fraud_warning.created`. Signing secret → `STRIPE_WEBHOOK_SECRET`. Failed payments email the pharmacy (and the owner); disputes, refunds and fraud warnings email the owner; all are in the audit trail.
