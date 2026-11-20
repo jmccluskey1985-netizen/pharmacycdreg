@@ -61,7 +61,7 @@ export default function ResetPassword() {
     }
     setBusy(true); setMsg(null);
     const { error } = await sb.auth.updateUser({ password: pw });
-    if (error) { setBusy(false); return setMsg(error.message); }
+    if (error) { setBusy(false); return setMsg(/different from the old/i.test(error.message) ? 'That’s your current password. Choose a new one, or go back and sign in with it.' : error.message); }
     // Sign out every other device that had the old password, and email a security notice
     await sb.auth.signOut({ scope: 'others' }).catch(() => {});
     if (!welcome) await fetch('/api/auth/password-changed', { method: 'POST' }).catch(() => {});
