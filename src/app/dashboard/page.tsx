@@ -4,7 +4,7 @@ import { GettingStarted } from '@/components/dashboard/getting-started';
 import { productTitle, genericLine, brandOf } from '@/lib/product-name';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Plus, ScanLine, Users, Download, Camera, Loader2, AlertTriangle, CheckCircle2, GalleryHorizontal, Table2, ListChecks, ChevronRight, Search, X } from 'lucide-react';
+import { Plus, ScanLine, Users, Download, Camera, Loader2, AlertTriangle, CheckCircle2, GalleryHorizontal, Table2, ListChecks, ChevronRight, Search, X, ClipboardList } from 'lucide-react';
 import { SetupFromList } from '@/components/dashboard/setup-from-list';
 import { SnapPaperRegisters } from '@/components/dashboard/snap-paper-registers';
 import { Shelf, type Ghost } from '@/components/dashboard/shelf';
@@ -88,6 +88,7 @@ export default function RegistersPage() {
         </div>
         <div className="flex min-w-0 flex-wrap gap-2">
           <a href="/api/export" className="btn-secondary" title="Download every register as one file. Keep a recent copy for business continuity"><Download className="h-4 w-4" /> <span className="hidden sm:inline">Export all</span></a>
+          <Link href="/dashboard/stock-sheet" className="btn-secondary" title="Printable stock count sheet with today’s register balances"><ClipboardList className="h-4 w-4" /> <span className="hidden sm:inline">Count sheet</span></Link>
           {writable && canDo('scan') && <Link href="/dashboard/scan?type=invoice" className="btn-secondary"><ScanLine className="h-4 w-4" /> Invoice</Link>}
           {canOpen && view === 'shelf' && <button onClick={toggleAll} className={`btn-secondary ${showAll ? 'ring-2 ring-brand/40' : ''}`} aria-pressed={showAll} title="Show every common CD, including ones you haven't started">{showAll ? 'All CD types' : 'My books only'}</button>}
           <div className="flex rounded-lg border border-border bg-card p-0.5" role="group" aria-label="View">

@@ -349,6 +349,14 @@ await step('CSV export of a register downloads', async () => {
   if (!/\.csv$/.test(dl.suggestedFilename())) throw new Error(dl.suggestedFilename());
 });
 
+await step('stock count sheet: dated, every open book with its balance, Excel download', async () => {
+  await page.goto(B + '/dashboard/stock-sheet'); await see('text=CD Stock Count'); await see('text=/Schedule 2/');
+  await see('text=/Date: \\d{2}\\/\\d{2}\\/\\d{4}/');
+  const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 15000 }), page.click('button:has-text("Excel")')]);
+  if (!/^CD-stock-count-\d{4}-\d{2}-\d{2}\.xlsx$/.test(dl.suggestedFilename())) throw new Error(dl.suggestedFilename());
+  await dl.saveAs('/tmp/claude-0/sheet.xlsx');
+});
+
 await step('lock and switch user', async () => {
   await click('aside button[aria-label="Lock / switch user"]'); await see('text=/Enter your PIN/i');
   for (const d of '2345') await page.getByRole('button', { name: d, exact: true }).first().click();
