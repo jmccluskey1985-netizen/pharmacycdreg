@@ -7,12 +7,12 @@ import { headers } from 'next/headers';
 
 export const metadata: Metadata = {
   title: 'PharmacyCDReg.ie: Electronic Controlled Drug Register',
-  description: 'Electronic Controlled Drug Register for Irish community pharmacies.',
+  description: 'Electronic Controlled Drugs Register (eCDR) for Irish community pharmacies: running balances, scanned invoices and prescriptions, stock checks against your Touchstore or MPS report, and a tamper-evident audit trail. Data kept in the EU.',
   metadataBase: new URL('https://pharmacycdreg.ie'),
   // Public pages are indexable; the app and private routes set noindex (and robots.txt disallows them).
   robots: { index: true, follow: true },
   alternates: { canonical: '/' },
-  openGraph: { type: 'website', locale: 'en_IE', siteName: 'PharmacyCDReg.ie', title: 'PharmacyCDReg.ie: your digital Controlled Drugs Register', description: 'Save time on CD record-keeping. Running balances, a tamper-evident audit trail and inspection-ready reports for Irish community pharmacies.', images: ['/previews/register-cover.webp'] },
+  openGraph: { type: 'website', locale: 'en_IE', siteName: 'PharmacyCDReg.ie', title: 'PharmacyCDReg.ie: your digital Controlled Drugs Register', description: 'Save time on CD record-keeping. Running balances, a tamper-evident audit trail and inspection-ready reports for Irish community pharmacies.' },
   appleWebApp: { capable: true, title: 'CD Register', statusBarStyle: 'default' },
   // Tab icon: the green pin with the white cross (same mark as the logo).
   icons: { icon: [{ url: '/favicon.ico', sizes: '48x48' }, { url: '/icon.svg', type: 'image/svg+xml' }, { url: '/favicon-32.png', type: 'image/png', sizes: '32x32' }, { url: '/icon-192.png', type: 'image/png', sizes: '192x192' }], apple: '/apple-touch-icon.png' },

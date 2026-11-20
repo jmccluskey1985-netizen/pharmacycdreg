@@ -5,6 +5,7 @@ import { Logo } from '@/components/logo';
 import { PublicFooter } from '@/components/public/public-page';
 import { COMPANY, SUBPROCESSORS } from '@/config/company';
 import { PrintButton } from './print-button';
+import { infoPageJsonLd, jsonLd } from '@/lib/structured-data';
 
 export const metadata: Metadata = {
   title: 'Data safety at a glance | PharmacyCDReg.ie',
@@ -87,6 +88,7 @@ const SECTIONS = [
 export default function DataSafetyPage() {
   return (
     <main className="data-sheet-page theme-light min-h-screen bg-gradient-to-b from-secondary/70 to-background print:bg-white print:bg-none">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(infoPageJsonLd('/data-safety', 'Data safety at a glance', COMPANY.updatedIso)) }} />
       <header className="border-b border-border bg-card print:hidden">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-4">
           <Link href="/?home=1" aria-label="PharmacyCDReg.ie home"><Logo size="sm" /></Link>

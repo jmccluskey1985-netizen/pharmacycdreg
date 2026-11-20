@@ -10,7 +10,7 @@ import { LoginCard } from '@/components/login-card';
 import { DEMO } from '@/lib/demo/flag';
 import { RegisterCoverPreview } from '@/components/register-cover-preview';
 import { LandingDemos, SampleNote } from '@/components/landing-demos';
-import { homepageJsonLd, jsonLd } from '@/lib/structured-data';
+import { homepageJsonLd, faqJsonLd, jsonLd } from '@/lib/structured-data';
 
 /** Plain answers to what pharmacists ask first. Every answer must stay true of the live system. */
 const DATA_QA: { q: string; a: string; detail: string; more: string }[] = [
@@ -162,6 +162,7 @@ export default function LandingPage() {
   return (
     <main className="theme-light min-h-screen bg-gradient-to-b from-secondary to-background">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(homepageJsonLd()) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqJsonLd(DATA_QA)) }} />
       <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-5 sm:px-6">
         <Logo size="md" />
         {!unlocked && <AccessGate onUnlock={unlock} />}

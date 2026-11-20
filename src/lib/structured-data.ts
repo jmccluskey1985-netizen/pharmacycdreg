@@ -40,6 +40,11 @@ export function homepageJsonLd() {
       'Witnessed destruction record and a separate CD destruction record book',
       'Read-only, time-limited access links for inspectors',
       'Individual staff PINs, roles and optional two-step sign-in',
+      'Stock check against your dispensing system’s report (Touchstore, MPS or any other): missing entries found across every book',
+      'Touchstore .QRP and MPS CSV reports read exactly from the file',
+      'Printable list of every CD balance with the last stock check date',
+      'Technicians draft entries for a pharmacist to check and sign',
+      'Methadone and buprenorphine (OST) prescriptions with instalment dispensing',
       'Data hosted in the European Union',
     ],
     audience: { '@type': 'MedicalAudience', audienceType: 'Community pharmacists and pharmacy staff in Ireland', geographicArea: { '@type': 'Country', name: 'Ireland' } },
@@ -70,17 +75,43 @@ export function homepageJsonLd() {
   return { '@context': 'https://schema.org', '@graph': [org, app, page] };
 }
 
-/** For /privacy, /terms, /security. */
+/** For /privacy, /terms, /security, /data-safety: the page plus its breadcrumb trail. */
 export function infoPageJsonLd(path: string, name: string, lastReviewed?: string) {
   return {
     '@context': 'https://schema.org',
-    '@type': 'WebPage',
-    url: `${SITE}${path}`,
-    name,
+    '@graph': [
+      {
+        '@type': 'WebPage',
+        '@id': `${SITE}${path}#webpage`,
+        url: `${SITE}${path}`,
+        name,
+        inLanguage: 'en-IE',
+        ...(lastReviewed ? { lastReviewed } : {}),
+        isPartOf: { '@type': 'WebSite', '@id': `${SITE}/#website`, url: SITE, name: 'PharmacyCDReg.ie' },
+        about: { '@id': `${SITE}/#software` },
+        publisher: { '@id': `${SITE}/#organization`, '@type': 'Organization', name: 'PharmacyCDReg.ie', url: SITE },
+        breadcrumb: { '@id': `${SITE}${path}#breadcrumb` },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        '@id': `${SITE}${path}#breadcrumb`,
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'PharmacyCDReg.ie', item: SITE },
+          { '@type': 'ListItem', position: 2, name, item: `${SITE}${path}` },
+        ],
+      },
+    ],
+  };
+}
+
+/** FAQPage from the home page's "Your data, security and AI, answered" questions (the same text people see). */
+export function faqJsonLd(items: { q: string; a: string; detail: string }[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    '@id': `${SITE}/#faq`,
     inLanguage: 'en-IE',
-    ...(lastReviewed ? { lastReviewed } : {}),
-    isPartOf: { '@type': 'WebSite', url: SITE, name: 'PharmacyCDReg.ie' },
-    publisher: { '@type': 'Organization', name: 'PharmacyCDReg.ie', url: SITE },
+    mainEntity: items.map((x) => ({ '@type': 'Question', name: x.q, acceptedAnswer: { '@type': 'Answer', text: `${x.a}. ${x.detail}` } })),
   };
 }
 
