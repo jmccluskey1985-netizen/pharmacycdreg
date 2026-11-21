@@ -431,6 +431,28 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     const l = ((S as any).inspectorLinks || []).find((x: Json) => x.id === m![1]); if (l) l.revoked_at = new Date().toISOString();
     return res({ ok: true });
   }
+  if (path === '/api/risk-assessment' || path === '/api/risk-assessment/sign') {
+    if (needStaff()) return needStaff()!;
+    const RA = ((S as any).risk ||= []) as Json[];
+    const lead = st!.role === 'supervising_pharmacist' || st!.role === 'superintendent_pharmacist';
+    const roleName = (r: string) => (r === 'superintendent_pharmacist' ? 'Superintendent pharmacist' : 'Supervising pharmacist');
+    if (method === 'GET') {
+      const sup = S.staff.find((x) => x.role === 'supervising_pharmacist');
+      const draft = RA.find((r) => r.status === 'draft') ?? null;
+      const signed = RA.filter((r) => r.status === 'signed').reverse();
+      return res({ prefill: { head: { pharmacy: S.pharmacy.name, psi: S.pharmacy.psi_premises_number, address: S.pharmacy.address, assessor: sup ? `${sup.full_name}, Supervising pharmacist` : '', date: today(), golive: daysAgo(40), system: 'PharmacyCDReg.ie', review: new Date(Date.now() + 365 * 864e5).toISOString().slice(0, 10) }, plan: { pins: true, twofa: false, books: true, stockcheck: !!((S as any).checks || []).length } },
+        draft, signed: signed[0] ?? null, versions: signed.map((r) => ({ id: r.id, signed_at: r.signed_at, signed_by_name: r.signed_by_name })), can_sign: lead, me: { name: st!.full_name, psi: st!.psi_number, role: roleName(st!.role) } });
+    }
+    if (!lead) return fail(403, 'Only the superintendent or supervising pharmacist can do this');
+    const draft = RA.find((r) => r.status === 'draft');
+    if (method === 'PUT') { if (draft) draft.data = body.data; else RA.push({ id: uid(), status: 'draft', data: body.data }); return res({ ok: true, saved_at: new Date().toISOString() }); }
+    if (method === 'POST') {
+      if (body.confirm !== true) return fail(400, 'Tick to confirm you have reviewed it');
+      const signer = { status: 'signed', data: body.data, signed_by_name: st!.full_name, signed_by_psi: st!.psi_number, signed_by_role: roleName(st!.role), signed_at: new Date().toISOString() };
+      if (draft) Object.assign(draft, signer); else RA.push({ id: uid(), ...signer });
+      return res({ ok: true });
+    }
+  }
   if (path === '/api/onboarding') {
     return res({ steps: [
       { key: 'team', label: 'Add your team, each with their own PIN', done: true, href: '/dashboard/team' },
@@ -438,6 +460,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
       { key: 'twofa', label: 'Turn on two-step sign-in', done: false, href: '/dashboard/settings' },
       { key: 'scan', label: 'Try scanning a prescription', done: false, href: '/dashboard/scan?type=prescription' },
       { key: 'check', label: 'Do your first stock check', done: !!((S as any).checks || []).length, href: '/dashboard' },
+      { key: 'risk', label: 'Review and sign your risk assessment', done: !!(((S as any).risk || []) as Json[]).some((r) => r.status === 'signed'), href: '/dashboard/risk-assessment' },
       { key: 'reminder', label: 'Set up a reminder for a regular weekly supply', done: REM().length > 1, href: '/dashboard/reminders' },
       { key: 'backup', label: 'Download a full backup and keep it safe', done: false, href: '/dashboard/settings' },
     ] });

@@ -57,7 +57,7 @@ src/lib/                         rules: entries, duplicates, late entries, OST, 
 src/components/dashboard/**      entry form, register book, scanner folder, stock check, To confirm, settings panels
 src/data/cd-products.ts          CD catalogue (brands, strengths, schedule paragraph)
 src/lib/demo/mock.ts             demo / training mode: in-browser copy of the API
-supabase/migrations/             0001–0024
+supabase/migrations/             0001–0025
 tests/unit, tests/db, tests/e2e  tests (see Commands)
 docs/                            operations, scanning, backup and restore, patient matching, compliance
 ```

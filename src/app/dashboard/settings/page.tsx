@@ -81,6 +81,7 @@ export default function SettingsPage() {
     { id: 'roles', label: 'Roles & permissions', icon: UserCog },
     { id: 'stock', label: 'Stock checks', icon: ClipboardCheck },
     { id: 'data', label: 'Data & backups', icon: Database },
+    { id: 'risk', label: 'Risk assessment', icon: ClipboardCheck },
     ...(pharmacy?.is_site_admin ? [{ id: 'reader', label: 'Document reading', icon: ScanLine }, { id: 'email', label: 'Email', icon: Mail }] : []),
   ];
   const current = TABS.some((t) => t.id === tab) ? tab : 'general';
@@ -133,6 +134,13 @@ export default function SettingsPage() {
         )}
         {current === 'stock' && <StockChecks s={s} regs={regs} onSaved={(x) => { onSaved(x); load(); }} />}
         {current === 'data' && <Data regs={regs} reload={load} />}
+        {current === 'risk' && (
+          <div className="card space-y-2 p-5">
+            <h2 className="font-semibold">Risk assessment for the electronic register</h2>
+            <p className="text-sm text-muted-foreground">PSI guidance expects a risk assessment before using electronic records. Yours is ready-made from your pharmacy’s details with suggested answers: review it, then the superintendent or supervising pharmacist signs it with one click. Print it any time.</p>
+            <Link href="/dashboard/risk-assessment" className="btn-primary w-fit">Open risk assessment</Link>
+          </div>
+        )}
         {current === 'reader' && pharmacy?.is_site_admin && <ReaderSettings />}
         {current === 'email' && pharmacy?.is_site_admin && <EmailSettings />}
       </div>

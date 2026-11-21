@@ -45,7 +45,7 @@ export default function Page() {
 
       <GH2 id="before-you-rely">Before you switch from paper</GH2>
       <Callout tone="amber" title="Your responsibility as the pharmacy">
-        The 2026 changes to the legislation allow Controlled Drugs Registers to be kept electronically. The pharmacy owner, and those managing the pharmacy, are responsible for making sure the system used meets the legal requirements, and PSI guidance expects an appropriate risk assessment before you switch to electronic records. The IPU’s eCDR verification process helps by checking that a specific version of a supplier’s software supports those requirements.
+        The 2026 changes to the legislation allow Controlled Drugs Registers to be kept electronically. The pharmacy owner, and those managing the pharmacy, are responsible for making sure the system used meets the legal requirements, and PSI guidance expects an appropriate risk assessment before you switch to electronic records. The IPU’s eCDR verification process helps by checking that a specific version of a supplier’s software supports those requirements. A <a href="/risk-assessment" className="font-semibold underline">free risk assessment template</a> covers what to assess.
       </Callout>
       <p>When choosing a system, ask:</p>
       <ul className="list-disc space-y-2 pl-6">

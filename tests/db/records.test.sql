@@ -102,3 +102,11 @@ select pg_temp.ok((select count(*) = 2 from ost_dispensings), 'OST form held onc
 -- 0023: OST patients and drug codes
 update patients set treatment_card_no = 'PH4417', is_ost = true where id = (select id from patients limit 1);
 select pg_temp.ok((select count(*) = 1 from patients where is_ost and treatment_card_no = 'PH4417') and to_regclass('public.ost_drug_codes') is not null, 'OST patients flagged with treatment card; drug-code table');
+
+-- 0025: risk assessments: one draft per pharmacy; a signed version can never be changed or deleted
+insert into risk_assessments(pharmacy_id, data) select id, '{"head":{"pharmacy":"Test"}}' from pharmacies limit 1;
+select pg_temp.expect_error($$ insert into risk_assessments(pharmacy_id) select id from pharmacies limit 1 $$, 'duplicate key');
+update risk_assessments set status = 'signed', signed_by_name = 'Aoife Byrne', signed_at = now() where status = 'draft';
+select pg_temp.expect_error($$ update risk_assessments set data = '{}' where status = 'signed' $$, 'can''t be changed');
+select pg_temp.expect_error($$ delete from risk_assessments where status = 'signed' $$, 'can''t be changed');
+select pg_temp.ok((select count(*) = 1 from risk_assessments where status = 'signed' and data->'head'->>'pharmacy' = 'Test') and (select relrowsecurity from pg_class where relname = 'risk_assessments'), 'risk assessment: one draft each, signed version final, RLS on');

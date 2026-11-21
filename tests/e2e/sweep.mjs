@@ -381,6 +381,19 @@ await step('public guides: index and every guide load, with their animations and
   await page.goto(B + '/dashboard'); await page.waitForTimeout(800);
 });
 
+await step('risk assessment: filled in from the pharmacy, saved, signed with one click, printable', async () => {
+  await page.goto(B + '/dashboard/risk-assessment'); await see('text=Not signed yet');
+  if (await page.inputValue('input >> nth=0') !== 'Quayside Pharmacy (demo)') throw new Error('pharmacy name not filled in');
+  await see('text=from your account');
+  await page.locator('textarea').first().fill('PINs never shared. Leavers removed on their last day.');
+  await page.waitForTimeout(1200);
+  await page.check('text=I’ve reviewed this risk assessment');
+  await click('button:has-text("Sign as Aoife Byrne")');
+  await see('text=/Signed electronically by Aoife Byrne \\(PSI 12345\\)/'); await see('text=/Signed versions \\(1\\)/');
+  await see('button:has-text("Review and update")');
+  await page.goto(B + '/dashboard/settings?tab=risk'); await see('text=Open risk assessment');
+});
+
 await step('lock and switch user', async () => {
   await click('aside button[aria-label="Lock / switch user"]'); await see('text=/Enter your PIN/i');
   for (const d of '2345') await page.getByRole('button', { name: d, exact: true }).first().click();

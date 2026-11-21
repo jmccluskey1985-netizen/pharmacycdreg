@@ -77,6 +77,7 @@ export default function StartPage() {
             <input type="checkbox" required className="mt-0.5 h-5 w-5" checked={f.accept_terms} onChange={(e) => setF({ ...f, accept_terms: e.target.checked })} />
             <span>I agree to the terms of service and privacy policy, and confirm I&apos;m authorised to set this up for the pharmacy.</span>
           </label>
+          <p className="-mt-1 pl-7 text-xs text-muted-foreground">We’ll also prepare your pharmacy’s risk assessment for the electronic register (PSI guidance) from these details. Review it and sign it with one click from your dashboard.</p>
 
           <button className="btn-primary w-full text-base" disabled={busy}>
             {busy ? <><Loader2 className="h-5 w-5 animate-spin" /> Setting up…</> : 'Continue to free month'}

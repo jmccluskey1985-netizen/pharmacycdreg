@@ -22,6 +22,7 @@ export async function GET() {
       count('dispense_reminders', (q) => q.eq('pharmacy_id', ph)),
       count('audit_log', (q) => q.eq('pharmacy_id', ph).in('action', ['data.backup_downloaded', 'register.exported_all'])),
     ]);
+    const riskSigned = await count('risk_assessments', (q) => q.eq('pharmacy_id', ph).eq('status', 'signed'));
     // Opioid substitution: only when the pharmacy keeps a methadone / buprenorphine book
     const { data: ostRegs } = await db.from('cd_registers').select('id, product:cd_products(drug_name)').eq('pharmacy_id', ph).is('closed_at', null);
     const hasOst = (ostRegs ?? []).some((r: any) => /methadone|buprenorphine/i.test(r.product?.drug_name ?? ''));
@@ -30,6 +31,7 @@ export async function GET() {
     const steps = [
       { key: 'team', label: 'Add your team, each with their own PIN', done: staff > 1, href: '/dashboard/team' },
       { key: 'registers', label: 'Open a CD book for each product you stock', done: registers > 0, href: '/dashboard?new=register' },
+      { key: 'risk', label: 'Review and sign your risk assessment (ready-made from your details)', done: riskSigned > 0, href: '/dashboard/risk-assessment' },
       { key: 'twofa', label: 'Turn on two-step sign-in', done: !!f?.totp?.some((x) => x.status === 'verified'), href: '/dashboard/settings' },
       ...(hasOst ? [{ key: 'ost', label: 'Add your methadone / buprenorphine patients from their bag labels (once)', done: ostPatients > 0, href: '/dashboard/patients?ost=labels' }] : []),
       { key: 'scan', label: 'Try scanning a prescription', done: scans > 0, href: '/dashboard/scan?type=prescription' },
