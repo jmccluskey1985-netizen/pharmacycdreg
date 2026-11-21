@@ -1,4 +1,17 @@
 import { createServiceClient } from '@/lib/supabase/server';
+import { productTitle, genericLine } from '@/lib/product-name';
+import type { RegisterOption } from '@/lib/match';
+
+export async function liveRegisters(pharmacyId: string): Promise<RegisterOption[]> {
+  const db = createServiceClient();
+  const { data } = await db
+    .from('cd_registers')
+    .select('id, product:cd_products(*)')
+    .eq('pharmacy_id', pharmacyId)
+    .is('closed_at', null);
+  // Register id must win over the product's own id; label leads with the brand.
+  return (data ?? []).map((r: any) => ({ ...r.product, id: r.id, label: `${productTitle(r.product)}${genericLine(r.product) ? ` (${genericLine(r.product)})` : ''}` }));
+}
 
 export async function getRegisterForPharmacy(registerId: string, pharmacyId: string) {
   const db = createServiceClient();

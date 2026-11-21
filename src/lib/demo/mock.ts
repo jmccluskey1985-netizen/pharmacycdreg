@@ -17,7 +17,8 @@ import { can as rolesCan, type StaffRole } from '@/lib/roles';
 import { permits, cleanOverrides } from '@/lib/permissions';
 import { matchPatients as matchP, preselect, patientKeys, type MatchPatient } from '@/lib/patient-match';
 const matchPatients = (probe: Parameters<typeof matchP>[0], pool: Json[], limit?: number) => matchP(probe, pool as unknown as (MatchPatient & Json)[], limit);
-import { genericKey, sameStrength, registerExemption } from '@/lib/cd-catalogue';
+import { recogniseTapentadolRx, registerExemption } from '@/lib/cd-catalogue';
+import { matchRegister } from '@/lib/match';
 
 type Json = Record<string, any>;
 const today = () => new Date().toISOString().slice(0, 10);
@@ -717,22 +718,31 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     const fd = init?.body as FormData;
     const isRx = fd?.get?.('hint') === 'prescription';
     // A file named like "ost…" plays the HSE OST (methadone) form, with made-up details
-    const isOst = isRx && /ost/i.test(String((fd?.get?.('file') as File | null)?.name ?? ''));
-    const extraction = isRx
+    const filename = (fd?.get?.('file') as File | null)?.name ?? '';
+    const isOst = isRx && /ost/i.test(filename);
+    const isTapentadolRx = isRx && filename === 'tapentadol-fct.png';
+    const baseExtraction = isRx
       ? { document_type: 'prescription', document_date: today(), reference: 'Rx 10302', supplier_name: null, supplier_address: null, patient_name: 'MARY KELY', patient_first_name: 'Mary', patient_surname: 'Kely', patient_dob: '1948-07-01', gms_number: '1234567B', patient_address: '14 Main Street, Ennis', prescriber_name: 'Dr A. Walsh', prescriber_address: 'Ennis Medical Centre', prescriber_registration: '012345', warnings: [], items: [{ drug_name: 'Oxycodone hydrochloride', strength: '5mg', form: 'capsule', quantity: 28, quantity_unit: 'capsules', pack_description: '28 (twenty-eight)', is_controlled_drug: true, likely_schedule: 2, confidence: 'high', notes: '', brand: 'OxyNorm', packs: null, pack_size: null, quantity_figures: '28', quantity_words: 'twenty-eight', duration_text: null, is_credit: false }] }
       : { document_type: 'invoice', document_date: today(), reference: 'Invoice 4472210', supplier_name: 'United Drug', supplier_address: 'Magna Business Park, Citywest, Dublin 24', patient_name: null, patient_address: null, prescriber_name: null, prescriber_address: null, prescriber_registration: null, warnings: [], items: [
           { drug_name: 'Oxycodone hydrochloride', strength: '5mg', form: 'capsule', quantity: 112, quantity_unit: 'capsules', pack_description: 'OXYNORM CAPS 5MG 56: CD2', is_controlled_drug: true, likely_schedule: 2, confidence: 'high', notes: '', brand: 'OxyNorm', packs: 2, pack_size: 56, quantity_figures: null, quantity_words: null, duration_text: null, is_credit: false },
           { drug_name: 'Morphine sulfate', strength: '10mg', form: 'prolonged-release tablet', quantity: 60, quantity_unit: 'tablets', pack_description: 'MST CONTINUS 10MG PR TABLETS 60', is_controlled_drug: true, likely_schedule: 2, confidence: 'high', notes: '', brand: 'MST Continus', packs: 1, pack_size: 60, quantity_figures: null, quantity_words: null, duration_text: null, is_credit: false },
           { drug_name: 'Morphine sulfate', strength: '10mg/5ml', form: 'oral solution', quantity: 300, quantity_unit: 'ml', pack_description: 'ORAMORPH 10MG/5ML 100ML', is_controlled_drug: true, likely_schedule: 5, confidence: 'high', notes: '', brand: 'Oramorph', packs: 3, pack_size: 100, quantity_figures: null, quantity_words: null, duration_text: null, is_credit: false },
           { drug_name: 'Paracetamol', strength: '500mg', form: 'tablet', quantity: 100, quantity_unit: 'tablets', pack_description: '1 x 100', is_controlled_drug: false, likely_schedule: null, confidence: 'high', notes: '', brand: null, packs: 1, pack_size: 100, quantity_figures: null, quantity_words: null, duration_text: null, is_credit: false }] };
+    const tapentadolItem = {
+      drug_name: 'Tapentadol', brand: null, strength: '50mg', form: 'FCT', quantity_unit: 'tablets',
+      quantity: 7, pack_description: '7 (seven)', quantity_figures: '7', quantity_words: 'seven',
+      is_controlled_drug: false, likely_schedule: null, confidence: 'high', notes: '',
+      packs: null, pack_size: null, duration_text: null, is_credit: false,
+    };
+    if (isTapentadolRx) recogniseTapentadolRx(tapentadolItem);
+    const extraction = { ...baseExtraction, items: isTapentadolRx ? [tapentadolItem] : baseExtraction.items };
     const regs = regList();
+    const registerOptions = regs.map((r) => ({ ...r.product, id: r.id, label: productTitle(r.product), balance: r.balance }));
     const exempt = extraction.items.filter((i: any) => i.is_controlled_drug && registerExemption(i.drug_name, i.strength, i.form, i.brand)).map((i: any) => ({ label: `${i.brand ?? i.drug_name} ${i.strength}`, reason: registerExemption(i.drug_name, i.strength, i.form, i.brand) }));
     const proposals = extraction.items.filter((i: any) => i.is_controlled_drug && !registerExemption(i.drug_name, i.strength, i.form, i.brand)).map((item: any) => {
-      const same = regs.filter((r) => [item.drug_name, item.brand].filter(Boolean).some((n: string) => genericKey(n) === genericKey(r.product.drug_name)));
-      const exact = same.filter((r) => sameStrength(r.product.strength, item.strength));
-      const match = exact.length === 1 ? exact[0] : null;
+      const { match, state, candidates } = matchRegister(registerOptions, item.drug_name, item.strength, item.form, item.brand);
       const qty = decideQuantity(item, extraction.document_type as any);
-      return { item, qty, match_state: match ? 'your_register' : same.length ? 'pick_register' : 'no_register', register_id: match?.id ?? null, register_label: match ? productTitle(match.product) : null, current_balance: match?.balance ?? null, candidates: regs.filter((r) => norm(r.product.drug_name).includes(norm(item.drug_name))).map((r) => ({ id: r.id, label: productTitle(r.product) })), draft: { entry_type: isRx ? 'supply' : 'receipt', transaction_date: today(), quantity: qty.quantity ?? '', supplier_name: extraction.supplier_name, supplier_address: extraction.supplier_address, recipient_name: extraction.patient_name, recipient_address: extraction.patient_address, patient_dob: (extraction as any).patient_dob ?? null, patient_details: isRx ? { first_name: (extraction as any).patient_first_name, surname: (extraction as any).patient_surname, gms: (extraction as any).gms_number } : null, prescriber_name: extraction.prescriber_name, prescriber_address: extraction.prescriber_address, authority_to_possess: isRx ? `Prescription: ${extraction.prescriber_name}` : null, prescription_ref: extraction.reference, notes: isRx ? null : extraction.reference, scan_id: null } };
+      return { item, qty, match_state: state, register_id: match?.id ?? null, register_label: match?.label ?? null, current_balance: regs.find((r) => r.id === match?.id)?.balance ?? null, candidates: candidates.map(({ id, label }) => ({ id, label })), draft: { entry_type: isRx ? 'supply' : 'receipt', transaction_date: today(), quantity: qty.quantity ?? '', supplier_name: extraction.supplier_name, supplier_address: extraction.supplier_address, recipient_name: extraction.patient_name, recipient_address: extraction.patient_address, patient_dob: (extraction as any).patient_dob ?? null, patient_details: isRx ? { first_name: (extraction as any).patient_first_name, surname: (extraction as any).patient_surname, gms: (extraction as any).gms_number } : null, prescriber_name: extraction.prescriber_name, prescriber_address: extraction.prescriber_address, authority_to_possess: isRx ? `Prescription: ${extraction.prescriber_name}` : null, prescription_ref: extraction.reference, notes: isRx ? null : extraction.reference, scan_id: null } };
     });
     audit('scan.read', { document_type: extraction.document_type });
     let patient_match: Json | null = null;
