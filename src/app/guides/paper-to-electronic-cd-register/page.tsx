@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 const STEPS = [
-  { name: 'Confirm you can go paperless', text: 'Check with the PSI or the IPU that electronic registers apply to your pharmacy. Until then, run the electronic register alongside paper.' },
+  { name: 'Do your risk assessment', text: 'PSI guidance expects an appropriate risk assessment before you switch to electronic records. Note how you’ll handle access, backups and outages; the system’s data safety sheet covers most of it.' },
   { name: 'Choose a changeover date', text: 'The start of a week or month works well: quieter, and easy to find later. Tell the team.' },
   { name: 'Do a full stock check', text: 'Count every Schedule 2 CD and make sure each paper balance matches the safe before you carry it across.' },
   { name: 'Open each book with its balance brought forward', text: 'Pick your products from the CD list, or photograph the last page of each paper book: the balance is read for you. A pharmacist signs each opening line.' },
@@ -36,7 +36,7 @@ export default function Page() {
       <p className="text-xl leading-relaxed text-foreground">Changing from the paper CD book to an electronic register takes an afternoon, not a weekend. The key is a clean stock check on the day, so every balance you carry across is one you’ve counted.</p>
 
       <GH2 id="before">Before you start</GH2>
-      <Callout tone="amber" title="One check first">Before you stop writing in the paper register, confirm with the PSI or the IPU that electronic registers apply to your pharmacy. You can set everything up and run both side by side in the meantime.</Callout>
+<Callout tone="amber" title="Your responsibility">The 2026 changes to the legislation allow electronic CD registers. As the pharmacy, you’re responsible for making sure the system you use meets the legal requirements, and PSI guidance expects a risk assessment before you switch. The <a href="/data-safety" className="font-semibold underline">data safety sheet</a> answers most of what it needs.</Callout>
       <TickList items={['A quiet hour and a second person', 'Every paper CD book to hand', 'Your phone, to photograph the last pages', 'The team’s names and PSI numbers']} />
 
       <GH2 id="steps">The changeover, step by step</GH2>

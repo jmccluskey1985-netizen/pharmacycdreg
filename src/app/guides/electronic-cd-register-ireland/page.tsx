@@ -15,7 +15,7 @@ const TOC = [
   { id: 'what-it-records', label: 'What an entry records' },
   { id: 'rules', label: 'Rules that don’t change' },
   { id: 'kept-safe', label: 'How electronic keeps it safe' },
-  { id: 'before-you-rely', label: 'Before you go paperless' },
+  { id: 'before-you-rely', label: 'Before you switch' },
   { id: 'questions', label: 'Common questions' },
 ];
 
@@ -43,9 +43,9 @@ export default function Page() {
         <li><b>Backups you hold.</b> Download a password-protected copy of everything whenever you like.</li>
       </ul>
 
-      <GH2 id="before-you-rely">Before you rely on it instead of paper</GH2>
-      <Callout tone="amber" title="Check that you can stop the paper register">
-        Electronic CD registers are being introduced in Ireland, with the IPU verifying systems against its eCDR requirements. Before you stop keeping the paper register, confirm with the PSI or the IPU that the change applies to your pharmacy. Until then, you can run an electronic register alongside paper.
+      <GH2 id="before-you-rely">Before you switch from paper</GH2>
+      <Callout tone="amber" title="Your responsibility as the pharmacy">
+        The 2026 changes to the legislation allow Controlled Drugs Registers to be kept electronically. The pharmacy owner, and those managing the pharmacy, are responsible for making sure the system used meets the legal requirements, and PSI guidance expects an appropriate risk assessment before you switch to electronic records. The IPU’s eCDR verification process helps by checking that a specific version of a supplier’s software supports those requirements.
       </Callout>
       <p>When choosing a system, ask:</p>
       <ul className="list-disc space-y-2 pl-6">

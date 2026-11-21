@@ -6,7 +6,7 @@ export const GUIDES: GuideMeta[] = [
     slug: 'electronic-cd-register-ireland',
     title: 'Electronic CD registers in Ireland: a practical guide',
     short: 'Electronic CD registers in Ireland',
-    description: 'What a Controlled Drugs Register entry records, how an electronic register keeps it safe, and what to check before you rely on one in an Irish community pharmacy.',
+    description: 'What a Controlled Drugs Register entry records, how an electronic register keeps it safe, and what to check before you switch from paper in an Irish community pharmacy.',
     minutes: 6, tag: 'Essentials', published: '2026-11-20', updated: '2026-11-21',
   },
   {
