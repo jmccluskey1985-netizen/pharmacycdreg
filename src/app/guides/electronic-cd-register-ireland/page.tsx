@@ -49,7 +49,6 @@ export default function Page() {
       </Callout>
       <p>When choosing a system, ask:</p>
       <ul className="list-disc space-y-2 pl-6">
-        <li>Is it built to the IPU’s eCDR requirements, and has it been submitted for verification?</li>
         <li>Can lines ever be edited or deleted? (They shouldn’t be.)</li>
         <li>Where is the data kept? (In the EU, under a data processing agreement with your pharmacy.)</li>
         <li>Can you export everything, and can an inspector be given read-only access?</li>

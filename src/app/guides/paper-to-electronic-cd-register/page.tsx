@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ShieldCheck, CalendarDays, ClipboardCheck, BookPlus, PenLine, Users, Pill, Eye } from 'lucide-react';
+import { ShieldCheck, CalendarDays, ClipboardCheck, BookPlus, PenLine, Users, Pill, FileText } from 'lucide-react';
 import { GuideLayout, GH2, Callout } from '@/components/guides/guide-layout';
 import { StepTimeline, PaperToDigital } from '@/components/guides/animations';
 import { TickList } from '@/components/fade-in';
@@ -20,14 +20,14 @@ const STEPS = [
   { name: 'Close the paper books properly', text: 'Draw a line under the last entry and write “Continued in electronic register from [date]”, signed and dated. Keep the paper registers for two years from that last entry.' },
   { name: 'Set up the team', text: 'Each person gets their own PIN and role. Technicians draft; pharmacists sign. Turn on two-step sign-in for the pharmacy login.' },
   { name: 'Add your OST patients and contacts', text: 'Add methadone and buprenorphine patients once from their bag labels, and your regular doctors and suppliers, so entries fill themselves in.' },
-  { name: 'Check daily for the first fortnight', text: 'Print the balances list each morning and spot-check a few books. Keep a paper fallback sheet by the CD cabinet for outages.' },
+  { name: 'Keep a paper fallback sheet handy', text: 'Print a few and keep them by the CD cabinet, in case the internet or a computer is down. Enter the lines when you’re back online.' },
 ];
-const ICONS = [ShieldCheck, CalendarDays, ClipboardCheck, BookPlus, PenLine, Users, Pill, Eye].map((I, i) => <I key={i} className="h-5 w-5 text-brand" />);
+const ICONS = [ShieldCheck, CalendarDays, ClipboardCheck, BookPlus, PenLine, Users, Pill, FileText].map((I, i) => <I key={i} className="h-5 w-5 text-brand" />);
 const TOC = [
   { id: 'before', label: 'Before you start' },
   { id: 'steps', label: 'The changeover, step by step' },
   { id: 'carry-forward', label: 'Carrying balances forward' },
-  { id: 'first-weeks', label: 'The first few weeks' },
+  { id: 'after', label: 'After the changeover' },
 ];
 
 export default function Page() {
@@ -47,12 +47,10 @@ export default function Page() {
       <PaperToDigital />
       <p>One book per drug, strength and form, just as on paper. Brands stay separate: OxyNorm and Shortec are different books even at the same strength.</p>
 
-      <GH2 id="first-weeks">The first few weeks</GH2>
+      <GH2 id="after">After the changeover</GH2>
       <ul className="list-disc space-y-2 pl-6">
-        <li><b>Print the balances list each morning</b> for the first fortnight and spot-check a few books against the safe.</li>
-        <li><b>Do your first full stock check after a week</b>, using your dispensing system’s report to catch anything that slipped through (<Link href="/guides/cd-stock-check-touchstore-mps" className="font-semibold text-brand-dark underline">here’s how</Link>).</li>
-        <li><b>Keep a paper fallback sheet</b> by the CD cabinet in case the internet or a computer is down.</li>
         <li><b>Keep the old paper registers</b> safe for two years from their last entry.</li>
+        <li><b>Stock checks carry on as usual</b>, and your dispensing system’s report can now find any missing entries for you (<Link href="/guides/cd-stock-check-touchstore-mps" className="font-semibold text-brand-dark underline">here’s how</Link>).</li>
       </ul>
     </GuideLayout>
   );
