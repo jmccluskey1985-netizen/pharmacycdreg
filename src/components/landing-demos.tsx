@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { BellRing, CheckCircle2, ScanLine, ShieldCheck, Camera, Loader2, ImagePlus, Sparkles } from 'lucide-react';
+import { BellRing, CheckCircle2, ScanLine, ShieldCheck, Camera, Loader2, ImagePlus, Sparkles, BadgeCheck, Printer } from 'lucide-react';
 
 /**
  * "See it in action": four small looping animations of what the dashboard does. Pure React + CSS,
@@ -825,6 +825,75 @@ export function BalancesListPreview() {
   );
 }
 
+/* The risk assessment PSI guidance expects before going electronic: details fill in from the
+   pharmacy's account, each risk is rated, the checklist ticks itself, then it's signed with one
+   click. Made-up pharmacy and pharmacist. */
+export function RiskAssessmentDemo() {
+  const { ref, phase } = usePhases([1300, 1800, 2600, 1800, 1400, 3800]);
+  const DETAILS: [string, string][] = [['Pharmacy', 'Sample Pharmacy, Ennis'], ['PSI no.', '1234'], ['Assessed by', 'Aoife Byrne, Supervising pharmacist'], ['Review date', '21/11/2027']];
+  const RISKS: [string, 'Low' | 'Medium'][] = [['Access and security', 'Low'], ['Integrity of the record', 'Low'], ['System or internet outage', 'Low'], ['Data loss and recovery', 'Low'], ['Data protection (GDPR)', 'Low'], ['Staff training', 'Medium']];
+  const CHECKS = ['Every staff member has their own PIN', 'Each book opened with balance brought forward', 'Two-step sign-in turned on'];
+  const signed = phase >= 5;
+  return (
+    <div ref={ref} className="overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border">
+      <div className="grid gap-6 bg-gradient-to-b from-secondary/70 to-background p-5 md:grid-cols-[1fr_minmax(0,18rem)] md:p-8">
+        <div className="min-w-0 rounded-xl bg-white p-4 text-[11px] text-slate-800 shadow ring-1 ring-slate-200" aria-hidden="true">
+          <div className="flex items-center justify-between gap-2 border-b-2 border-[#184B21] pb-1.5">
+            <p className="text-sm font-extrabold text-[#184B21]">Risk assessment: electronic CD register</p>
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold transition-colors duration-500 ${signed ? 'bg-brand/15 text-brand-dark' : 'bg-amber-100 text-amber-900'}`}>{signed ? '✓ Signed' : 'Not signed yet'}</span>
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
+            {DETAILS.map(([k, v], i) => (
+              <div key={k}><p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">{k}</p>
+                <p className="h-4 overflow-hidden whitespace-nowrap border-b border-slate-200 font-medium"><span className="inline-block transition-all duration-500" style={{ clipPath: phase >= 1 ? 'inset(0 0 0 0)' : 'inset(0 100% 0 0)', transitionDelay: phase >= 1 ? `${i * 250}ms` : '0ms', transitionDuration: '600ms' }}>{v}</span></p>
+              </div>
+            ))}
+          </div>
+          {phase >= 1 && <p className={`mt-1 text-[9px] font-semibold text-brand-dark ${fade(phase >= 1)}`}>Filled in from your account</p>}
+          <div className="mt-3 space-y-1">
+            {RISKS.map(([name, level], i) => (
+              <div key={name} className={`flex items-center gap-2 rounded-md bg-slate-50 px-2 py-1 transition-all duration-500 ${phase >= 2 ? 'translate-x-0 opacity-100' : 'translate-x-3 opacity-0'}`} style={{ transitionDelay: phase === 2 ? `${i * 250}ms` : '0ms' }}>
+                <span className="w-4 text-[9px] font-bold text-slate-400">{i + 1}</span>
+                <span className="flex-1 truncate font-medium">{name}</span>
+                <span className="hidden text-[9px] text-slate-500 sm:inline">controls in place</span>
+                <span className={`w-14 rounded px-1.5 py-0.5 text-center text-[9px] font-bold ${level === 'Low' ? 'bg-brand/15 text-brand-dark' : 'bg-amber-100 text-amber-900'}`}>{level}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 grid gap-1 sm:grid-cols-3">
+            {CHECKS.map((c, i) => (
+              <p key={c} className="flex items-start gap-1.5 text-[10px]">
+                <span className={`mt-px flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded-sm border text-[9px] font-bold text-white transition-all duration-300 ${phase >= 3 ? 'border-brand bg-brand' : 'border-slate-300 bg-white'}`} style={{ transitionDelay: phase === 3 ? `${i * 300}ms` : '0ms' }}>{phase >= 3 ? '✓' : ''}</span>{c}
+              </p>
+            ))}
+          </div>
+          <div className="mt-3 rounded-lg bg-slate-50 p-2.5">
+            {!signed ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`flex h-4 w-4 items-center justify-center rounded border text-[10px] font-bold text-white transition-colors ${phase >= 4 ? 'border-brand bg-brand' : 'border-slate-300 bg-white'}`}>{phase >= 4 ? '✓' : ''}</span>
+                <span className="flex-1 text-[10px]">I’ve reviewed this risk assessment</span>
+                <span className={`relative rounded-md bg-brand-dark px-3 py-1.5 text-[10px] font-semibold text-white transition-transform duration-150 ${phase === 4 ? 'scale-95 ring-4 ring-brand/30' : ''} ${phase >= 4 ? 'opacity-100' : 'opacity-50'}`}>Sign as Aoife Byrne (PSI 12345)</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2" style={{ animation: 'fadeInUp .45s ease both' }}>
+                <BadgeCheck className="h-5 w-5 flex-shrink-0 text-brand" />
+                <div><p className="text-[11px] font-bold">Signed electronically by Aoife Byrne (PSI 12345), Supervising pharmacist</p><p className="text-[9px] text-slate-500">21 November 2026 at 09:15 · this signed version can’t be changed</p></div>
+                <span className="ml-auto hidden items-center gap-1 rounded-md bg-white px-2 py-1 text-[9px] font-semibold ring-1 ring-slate-200 sm:inline-flex"><Printer className="h-3 w-3" /> Print</span>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-col justify-center">
+          <h3 className="text-2xl font-bold">Your risk assessment, ready to sign</h3>
+          <p className="mt-1 text-muted-foreground">PSI guidance expects a risk assessment before you move to electronic records. Yours is filled in from your pharmacy’s details, with every risk and suggested answer already there. Change anything that’s different, sign with one click, and print it whenever you need it.</p>
+          <a href="/risk-assessment" className="mt-3 text-sm font-semibold text-brand-dark underline">See the free template →</a>
+          <SampleNote className="mt-2" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function LandingDemos() {
   return (
     <div className="space-y-6">
@@ -834,6 +903,7 @@ export function LandingDemos() {
       <StockReportDemo />
       <FileImportDemo />
       <BalancesListPreview />
+      <RiskAssessmentDemo />
       <div className="grid gap-6 md:grid-cols-2">
         <BalanceDemo />
         <RepeatDemo />
