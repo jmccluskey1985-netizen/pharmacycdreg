@@ -26,6 +26,8 @@ interface Raw {
 }
 interface Ledger extends Raw { running_balance: string; correction_count: number }
 interface Person { id: string; full_name: string; psi_number: string | null }
+/** A completed stock check, shown as its own line in the book. */
+interface Check { id: string; counted: string | number; register_balance: string | number; notes: string | null; checked_by_staff_id: string | null; checked_by_name: string; checked_at: string; count_started_at?: string | null }
 
 /** One printed line of the book. */
 interface Line {
@@ -35,6 +37,7 @@ interface Line {
   balance: string | null;
   footnote: number | null;
   correctable: boolean;
+  check?: Check;
 }
 
 const fmtDate = (d: string) => new Date(d + (d.length === 10 ? 'T00:00:00' : '')).toLocaleDateString('en-IE', { day: '2-digit', month: '2-digit', year: '2-digit' });
@@ -67,7 +70,7 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
   const params = use(props.params);
   const { staff, pharmacy, refresh } = useStaff();
   const canDo = useCan();
-  const [data, setData] = useState<{ register: any; ledger: Ledger[]; entries: Raw[]; staff: Person[] } | null>(null);
+  const [data, setData] = useState<{ register: any; ledger: Ledger[]; entries: Raw[]; staff: Person[]; checks?: Check[] } | null>(null);
   const [opened, setOpened] = useState(false);
   const [page, setPage] = useState(0);
   const [adding, setAdding] = useState(false);
@@ -123,8 +126,17 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
       notes.push({ n, text: `Line ${e.seq}: late entry. Transaction dated ${fmtDate(e.transaction_date)}, entered ${stamp(e.recorded_at)} by ${who?.full_name ?? 'unknown'}${who?.psi_number ? ` (PSI ${who.psi_number})` : ''}. Reason: ${reason}` });
       return n;
     };
+    // Completed stock checks go in the book at the point they were counted, after the entries made before them
+    const pending = [...(data.checks ?? [])].sort((a, b) => a.checked_at.localeCompare(b.checked_at));
+    const flushChecks = (before: string | null) => {
+      while (pending.length && (before === null || pending[0].checked_at < before)) {
+        const c = pending.shift()!;
+        out.push({ key: `check-${c.id}`, raw: { id: c.id, seq: 0, entry_type: 'stock_check' as EntryType, transaction_date: c.checked_at, recorded_at: c.checked_at, quantity: '0', recorded_by_staff_id: c.checked_by_staff_id ?? '' } as Raw, struck: false, balance: null, footnote: null, correctable: false, check: c });
+      }
+    };
     for (const e of data.entries) {
       if (e.entry_type === 'correction') continue;
+      flushChecks(e.recorded_at);
       const led = ledgerById.get(e.id);
       const corrs = correctionsFor.get(e.id) ?? [];
       const late = lateFootnote(e);
@@ -149,6 +161,7 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
       out[out.length - 1].correctable = true;
       out[out.length - 1].raw = { ...out[out.length - 1].raw, id: e.id, seq: e.seq };
     }
+    flushChecks(null);
     const bal = data.ledger.length ? Number(data.ledger[data.ledger.length - 1].running_balance) : 0;
     return { lines: out, footnotes: notes, balance: bal };
   }, [data]);
@@ -257,6 +270,7 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
                       </thead>
                       <tbody>
                         {pageLines.map((l) => {
+                          if (l.check) return <CheckRow key={l.key} c={l.check} unit={p.unit} who={l.check.checked_by_staff_id ? people.get(l.check.checked_by_staff_id) : undefined} withAction={!!mayRecord} />;
                           const r = l.raw;
                           const party = partyCell(r);
                           const who = people.get(r.recorded_by_staff_id);
@@ -376,5 +390,28 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
         )}
       </Modal>
     </div>
+  );
+}
+
+/** A completed stock check as a line of the book: balance confirmed correct, or what was found. */
+function CheckRow({ c, unit, who, withAction }: { c: Check; unit: string; who?: Person; withAction: boolean }) {
+  const diff = Number(c.counted) - Number(c.register_balance);
+  const ok = diff === 0;
+  const started = c.count_started_at ? `Stock count started ${fmtDate(c.count_started_at)}` : 'Stock check';
+  return (
+    <tr className={ok ? 'bg-emerald-50/80 dark:bg-emerald-950/30' : 'bg-red-50/80 dark:bg-red-950/30'} data-stock-check={ok ? 'correct' : 'difference'}>
+      <td className="tabular-nums">{fmtDate(c.checked_at)}</td>
+      <td>
+        <span className="font-medium">STOCK CHECK</span>
+        <span className={`block text-xs font-semibold ${ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
+          {ok ? `✓ Balance confirmed correct: ${fmtQty(c.counted)} ${unit} counted` : `Counted ${fmtQty(c.counted)} ${unit}, register ${fmtQty(c.register_balance)}: difference ${diff > 0 ? '+' : ''}${fmtQty(diff)}`}
+        </span>
+      </td>
+      <td className="text-xs">{started}{c.notes && <span className="block opacity-80">Note: {c.notes}</span>}</td>
+      <td /><td />
+      <td className="text-right font-bold tabular-nums">{fmtQty(c.register_balance)}{ok && <span className="ml-0.5 text-emerald-600" aria-hidden>✓</span>}</td>
+      <td className="text-xs">{who?.full_name ?? c.checked_by_name}{who?.psi_number && <span className="block opacity-70">PSI {who.psi_number}</span>}</td>
+      {withAction && <td className="no-print" />}
+    </tr>
   );
 }

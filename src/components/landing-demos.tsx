@@ -894,6 +894,84 @@ export function RiskAssessmentDemo() {
   );
 }
 
+/* Stock count: type what's on the shelf, differences show green (0) or red, tick each row complete,
+   and it's written into that drug's register as a "balance confirmed" line. Made-up pharmacy and figures. */
+export function StockCountDemo() {
+  const { ref, phase } = usePhases([1200, 2600, 1600, 2200, 2600, 4200]);
+  const ROWS: { name: string; unit: string; bal: number; count: number; note?: string }[] = [
+    { name: 'OxyNorm 5mg capsule', unit: 'capsules', bal: 42, count: 42 },
+    { name: 'Methadone Rowex 1mg/ml', unit: 'ml', bal: 4580, count: 4580 },
+    { name: 'MST Continus 10mg tablet', unit: 'tablets', bal: 64, count: 62, note: 'Two found in returns bag, being checked' },
+    { name: 'Durogesic 25mcg/hr patch', unit: 'patches', bal: 10, count: 10 },
+  ];
+  const typed = phase >= 1, diffs = phase >= 2, noted = phase >= 3, logged = phase >= 3, book = phase >= 4;
+  return (
+    <div ref={ref} className="overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-border">
+      <div className="grid gap-6 bg-gradient-to-b from-secondary/70 to-background p-5 md:grid-cols-[1fr_minmax(0,18rem)] md:p-8">
+        <div className="min-w-0 space-y-3" aria-hidden="true">
+          <div className="overflow-x-auto rounded-xl bg-white p-3 text-[11px] text-slate-800 shadow ring-1 ring-slate-200">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-bold">Stock count</p>
+              <p className="text-[10px] font-semibold text-slate-500">Start date: 21/11/2026 09:00</p>
+            </div>
+            <table className="mt-2 w-full min-w-[26rem] border-collapse">
+              <thead><tr className="border-b border-slate-200 text-left text-[9px] uppercase tracking-wide text-slate-500"><th className="py-1">Medicine</th><th className="text-right">Register</th><th className="text-right">Counted</th><th className="text-center">Difference</th><th className="text-center">Complete</th></tr></thead>
+              <tbody>
+                {ROWS.map((r, i) => {
+                  const d = r.count - r.bal;
+                  return (
+                    <tr key={r.name} className="border-b border-slate-100">
+                      <td className="py-1.5 font-medium">{r.name}
+                        {r.note && noted && <span className="ml-1 rounded bg-amber-100 px-1 text-[8px] font-semibold text-amber-900" style={{ animation: 'fadeInUp .4s ease both' }}>note</span>}
+                      </td>
+                      <td className="text-right tabular-nums text-slate-500">{r.bal.toLocaleString('en-IE')}</td>
+                      <td className="text-right">
+                        <span className={`inline-block min-w-[3.2rem] rounded border px-1 py-0.5 text-right font-semibold tabular-nums transition-colors duration-300 ${typed ? 'border-brand/50' : 'border-slate-200 text-transparent'}`} style={{ transitionDelay: typed ? `${i * 450}ms` : '0ms' }}>
+                          {typed ? r.count.toLocaleString('en-IE') : '0'}
+                        </span>
+                      </td>
+                      <td className="text-center">
+                        <span className={`inline-block min-w-[2.2rem] rounded-full px-1.5 py-0.5 text-[10px] font-bold transition-all duration-500 ${diffs ? (d === 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-700') : 'opacity-0'}`} style={{ transitionDelay: diffs ? `${i * 200}ms` : '0ms' }}>{d > 0 ? `+${d}` : d}</span>
+                      </td>
+                      <td className="text-center">
+                        <span className={`inline-flex h-4 items-center justify-center rounded px-1 text-[9px] font-bold transition-all duration-300 ${logged ? 'bg-brand text-white' : 'border border-slate-300 bg-white text-transparent'}`} style={{ transitionDelay: logged ? `${i * 250}ms` : '0ms' }}>{logged ? '✓ Logged' : '·'}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {noted && <p className="mt-1.5 rounded bg-amber-50 px-2 py-1 text-[10px] text-amber-900" style={{ animation: 'fadeInUp .4s ease both' }}>MST Continus note: Two found in returns bag, being checked</p>}
+          </div>
+          <div className={`overflow-x-auto rounded-sm bg-[#fffdf6] p-3 text-[10px] text-slate-800 shadow ring-1 ring-slate-200 transition-all duration-700 ${book ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`}>
+            <p className="text-[10px] font-bold uppercase">Product: <span className="text-xs normal-case underline decoration-dotted underline-offset-2">OxyNorm (Oxycodone) 5mg capsule</span></p>
+            <table className="mt-1.5 w-full min-w-[26rem] border-collapse [&_td]:border [&_td]:border-slate-300 [&_td]:px-1.5 [&_td]:py-1 [&_th]:border [&_th]:border-slate-300 [&_th]:px-1.5 [&_th]:py-0.5">
+              <thead><tr className="text-[8px] uppercase text-slate-500"><th className="text-left">Date</th><th className="text-left">Name and address</th><th>Obtained</th><th>Supplied</th><th>Balance</th><th className="text-left">Pharmacist</th></tr></thead>
+              <tbody>
+                <tr><td className="tabular-nums">19/11/26</td><td>Niamh Corcoran<span className="block text-[8px] opacity-70">Station Rd, Ennis</span></td><td /><td className="text-right font-semibold">14</td><td className="text-right font-bold">42</td><td>A. Byrne</td></tr>
+                {book && (
+                  <tr className="bg-emerald-50" style={{ animation: 'fadeInUp .5s ease both', animationDelay: '300ms' }}>
+                    <td className="tabular-nums">21/11/26</td>
+                    <td><span className="font-semibold">STOCK CHECK</span><span className="block text-[9px] font-semibold text-emerald-700">✓ Balance confirmed correct: 42 capsules counted</span></td>
+                    <td /><td />
+                    <td className="text-right font-bold">42<span className="text-emerald-600">✓</span></td>
+                    <td>A. Byrne</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div className="flex flex-col justify-center">
+          <h3 className="text-2xl font-bold">Count stock on screen, logged in every book</h3>
+          <p className="mt-1 text-muted-foreground">Type what’s on the shelf and the difference works itself out: <b className="text-green-700">0 in green</b>, anything else <b className="text-red-700">in red</b> with a note on what you found. Tick each row complete and it’s written into that drug’s register as a dated line, showing the balance was confirmed correct and who checked it. Counts can run over several days, and print or download for Excel.</p>
+          <SampleNote className="mt-2" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function LandingDemos() {
   return (
     <div className="space-y-6">
@@ -903,6 +981,7 @@ export function LandingDemos() {
       <StockReportDemo />
       <FileImportDemo />
       <BalancesListPreview />
+      <StockCountDemo />
       <RiskAssessmentDemo />
       <div className="grid gap-6 md:grid-cols-2">
         <BalanceDemo />

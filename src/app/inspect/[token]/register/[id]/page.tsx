@@ -19,11 +19,17 @@ export default async function InspectRegister(props: { params: Promise<{ token: 
   const { data: reg } = await db.from('cd_registers').select('id, opened_at, closed_at, product:cd_products(*)').eq('id', params.id).eq('pharmacy_id', pharmacy.id).maybeSingle();
   if (!reg) notFound();
   const p: any = (reg as any).product;
-  const [{ data: rows }, { data: people }, chain] = await Promise.all([
+  const [{ data: rows }, { data: people }, chain, { data: checks }] = await Promise.all([
     db.from('cd_ledger').select('*').eq('register_id', reg.id).order('seq'),
     db.from('staff').select('id, full_name, psi_number').eq('pharmacy_id', pharmacy.id),
     db.rpc('verify_register_chain', { reg: reg.id }),
+    db.from('stock_checks').select('id, counted, register_balance, notes, checked_by_staff_id, checked_by_name, checked_at').eq('pharmacy_id', pharmacy.id).eq('register_id', reg.id).order('checked_at'),
   ]);
+  // Entries and completed stock checks, in time order
+  const items: { at: string; row?: any; check?: any }[] = [
+    ...(rows ?? []).map((r: any) => ({ at: r.recorded_at as string, row: r })),
+    ...(checks ?? []).map((c: any) => ({ at: c.checked_at as string, check: c })),
+  ].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
   const who = new Map((people ?? []).map((s) => [s.id, `${s.full_name}${s.psi_number ? ` (PSI ${s.psi_number})` : ''}`]));
   const integrity: any = chain.error ? null : Array.isArray(chain.data) ? chain.data[0] : chain.data;
   const notes = (rows ?? []).filter((r: any) => r.correction_count > 0);
@@ -37,7 +43,21 @@ export default async function InspectRegister(props: { params: Promise<{ token: 
             <tr><th>Line</th><th>Date</th><th>Name and address of person from whom obtained or to whom supplied</th><th>Authority to possess / prescriber / reference</th><th>Obtained</th><th>Supplied</th><th>Balance</th><th>Pharmacist</th></tr>
           </thead>
           <tbody>
-            {(rows ?? []).map((r: any) => {
+            {items.map(({ row: r, check: c }) => {
+              if (c) {
+                const diff = Number(c.counted) - Number(c.register_balance);
+                return (
+                  <tr key={`check-${c.id}`} className={diff === 0 ? 'bg-emerald-50/80' : 'bg-red-50/80'}>
+                    <td />
+                    <td className="tabular-nums">{fmtDate(c.checked_at)}</td>
+                    <td><span className="font-medium">STOCK CHECK</span><span className={`block text-xs font-semibold ${diff === 0 ? 'text-emerald-700' : 'text-red-700'}`}>{diff === 0 ? `Balance confirmed correct: ${fmtQty(c.counted)} counted` : `Counted ${fmtQty(c.counted)}, register ${fmtQty(c.register_balance)}: difference ${diff > 0 ? '+' : ''}${fmtQty(diff)}`}</span></td>
+                    <td className="text-xs">{c.notes ?? ''}</td>
+                    <td /><td />
+                    <td className="text-right font-semibold tabular-nums">{fmtQty(c.register_balance)}</td>
+                    <td className="text-xs">{(c.checked_by_staff_id && who.get(c.checked_by_staff_id)) || c.checked_by_name}<span className="block opacity-60">{new Date(c.checked_at).toLocaleString('en-IE', { dateStyle: 'short', timeStyle: 'short' })}</span></td>
+                  </tr>
+                );
+              }
               const [name, addr] = party(r);
               const inQ = ['receipt', 'adjustment_in'].includes(r.entry_type) ? fmtQty(r.quantity) : '';
               const outQ = ['supply', 'destruction', 'adjustment_out', 'patient_return_destruction'].includes(r.entry_type) ? fmtQty(r.quantity) : '';

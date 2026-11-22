@@ -283,7 +283,9 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
       return res({ ok: true });
     }
     audit('register.viewed');
-    return res({ register: { id: r.id, product: productOf(r.id) }, ledger: ledger(r.id), entries: S.entries.filter((e) => e.register_id === r.id).sort((a, b) => a.seq - b.seq), staff: S.staff });
+    const started = new Map((((S as any).countLines || []) as Json[]).map((l) => [l.stock_check_id, ((((S as any).counts || []) as Json[]).find((c) => c.id === l.count_id) ?? {}).started_at ?? null]));
+    const checks = (((S as any).checks || []) as Json[]).filter((c) => c.register_id === r.id).map((c): Json => ({ ...c, checked_by_staff_id: c.checked_by_staff_id ?? S.staff.find((p) => p.full_name === c.checked_by_name)?.id ?? null, count_started_at: started.get(c.id) ?? null })).sort((a, b) => a.checked_at.localeCompare(b.checked_at));
+    return res({ register: { id: r.id, product: productOf(r.id) }, ledger: ledger(r.id), entries: S.entries.filter((e) => e.register_id === r.id).sort((a, b) => a.seq - b.seq), staff: S.staff, checks });
   }
   if (path === '/api/entries/drafts') {
     if (needStaff()) return needStaff()!;

@@ -382,6 +382,20 @@ await step('stock count: start date, counts saved with their date, green 0 / red
   await see('text=/Last count finished/');
 });
 
+await step('completed stock checks show as lines in their register: balance confirmed correct (green) or the difference with its note (red)', async () => {
+  await page.goto(B + '/dashboard'); await page.waitForSelector('a[href^="/dashboard/register/"]');
+  const hrefs = [...new Set(await page.locator('a[href^="/dashboard/register/"]').evaluateAll((as) => as.map((a) => a.getAttribute('href'))))];
+  let ok = 0, diff = 0, noted = false;
+  for (const h of hrefs) {
+    await page.goto(B + h); await page.waitForSelector('table.register-table');
+    ok += await page.locator('tr[data-stock-check="correct"]:has-text("Balance confirmed correct")').count();
+    const d = page.locator('tr[data-stock-check="difference"]');
+    diff += await d.count();
+    if (await d.filter({ hasText: '2 owed to patient' }).count()) noted = true;
+  }
+  if (ok < 1 || diff < 1 || !noted) throw new Error(`book lines: ${ok} confirmed, ${diff} differences, note ${noted}`);
+});
+
 
 
 await step('check one report (any file) against every book: missing lines found in their book and added', async () => {
