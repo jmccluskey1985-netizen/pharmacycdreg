@@ -377,7 +377,7 @@ await step('stock count: start date, counts saved with their date, green 0 / red
   await page.reload(); await page.check('text=Stock count (enter counts'); await page.waitForTimeout(1200);
   if (await page.locator('input[aria-label^="Stock counted"]').nth(0).inputValue() !== String(firstBal)) throw new Error('count not saved');
   page.once('dialog', (d) => d.accept());
-  await click('button:has-text("Finish count")'); await see('text=/Count finished: 2 books logged, 1 with a difference/');
+  await click('button:has-text("Complete stock count") >> nth=0'); await see('text=/Stock count complete: 2 books logged, 1 with a difference/');
   await see('text=/Started by .* · Finished \\d{2}\\/\\d{2}/');
   await see('text=/Last count finished/');
 });

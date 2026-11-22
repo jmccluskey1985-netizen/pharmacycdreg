@@ -65,9 +65,9 @@ export default function StockSheet() {
   }
   async function start() { setBusy(true); try { const d = await api('/api/stock-counts', { method: 'POST' }); setCount(d.count); setLines({}); await loadCount(); } finally { setBusy(false); } }
   async function finish() {
-    if (!count || !confirm('Finish this count? Every counted line is logged in its book as a stock check, and the count can no longer be changed.')) return;
+    if (!count || !confirm('Complete this stock count? Every counted line is logged in its book as a stock check, and the count can no longer be changed.')) return;
     setBusy(true); setMsg(null);
-    try { const d = await api(`/api/stock-counts/${count.id}/finish`, { method: 'POST' }); setMsg({ ok: true, text: `Count finished: ${d.recorded} book${d.recorded === 1 ? '' : 's'} logged${d.differences ? `, ${d.differences} with a difference` : ', all matching'}.` }); await loadCount(); await loadRegs(); }
+    try { const d = await api(`/api/stock-counts/${count.id}/finish`, { method: 'POST' }); setMsg({ ok: true, text: `Stock count complete: ${d.recorded} book${d.recorded === 1 ? '' : 's'} logged${d.differences ? `, ${d.differences} with a difference` : ', all matching'}.` }); await loadCount(); await loadRegs(); }
     catch (e) { setMsg({ ok: false, text: e instanceof ApiError ? e.message : 'Could not finish' }); }
     finally { setBusy(false); }
   }
@@ -81,7 +81,7 @@ export default function StockSheet() {
       <div className="no-print flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">{withCount ? 'Stock count' : 'CD balances'}</h1>
-          <p className="max-w-2xl text-sm text-muted-foreground">{withCount ? 'Type the stock beside each book; it saves as you go and works out any difference. Tick Complete on a row to log it in that book. A count can run over several days: each line keeps its own date.' : 'Every open CD book with its balance right now and when its stock was last checked. Print it, save it as a PDF, or download it for Excel.'}</p>
+          <p className="max-w-2xl text-sm text-muted-foreground">{withCount ? 'Type the stock beside each book; it saves as you go and works out any difference. Tick Complete on a row to log it in that book, or Complete stock count to log them all. A count can run over several days: each line keeps its own date.' : 'Every open CD book with its balance right now and when its stock was last checked. Print it, save it as a PDF, or download it for Excel.'}</p>
           <label className="mt-2 inline-flex items-center gap-2 text-sm">
             <input type="checkbox" checked={withCount} onChange={(e) => { setWithCount(e.target.checked); setViewId(''); setMsg(null); }} className="h-4 w-4" />
             Stock count (enter counts, differences and notes)
@@ -96,6 +96,7 @@ export default function StockSheet() {
               </select>
             </label>
           )}
+          {withCount && open && <button onClick={finish} disabled={busy || !entered} className="btn-primary"><Flag className="h-4 w-4" /> Complete stock count</button>}
           <button onClick={excel} disabled={!total || busy} className="btn-secondary">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />} Excel</button>
           <button onClick={() => window.print()} disabled={!total} className="btn-primary"><Printer className="h-4 w-4" /> Print / PDF</button>
         </div>
@@ -220,8 +221,8 @@ export default function StockSheet() {
 
       {withCount && open && (
         <div className="no-print flex flex-wrap items-center justify-between gap-3 rounded-xl bg-card p-3 shadow-soft ring-1 ring-border">
-          <span className="text-sm text-muted-foreground">{done} of {total} complete · {entered} counted. Finishing logs every counted book and closes the count.</span>
-          <button onClick={finish} disabled={busy || !entered} className="btn-primary"><Flag className="h-4 w-4" /> Finish count</button>
+          <span className="text-sm text-muted-foreground">{done} of {total} complete · {entered} counted. Completing the stock count logs every counted book and closes the count.</span>
+          <button onClick={finish} disabled={busy || !entered} className="btn-primary"><Flag className="h-4 w-4" /> Complete stock count</button>
         </div>
       )}
     </div>
