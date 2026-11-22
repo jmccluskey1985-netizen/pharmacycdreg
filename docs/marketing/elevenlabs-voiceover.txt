@@ -1,15 +1,16 @@
-Six o'clock. Shop's closed.
+It's six o'clock... The shop's closed.
 <break time="0.6s" />
 And you're still balancing the C D register by hand.
-<break time="1.5s" />
+<break time="3.0s" />
 Meet Pharmacy C D Reg dot I E.
 <break time="0.5s" />
 The electronic C D register, built for Irish pharmacies.
 <break time="3.0s" />
-<break time="3.0s" />
-Snap an invoice, or a prescription.
+Snap a prescription on your phone.
 <break time="0.6s" />
-The entries are drafted for you. You check, and save.
+The patient, prescriber and quantity are read for you. You check, and sign.
+<break time="2.5s" />
+A wholesaler invoice? Same again. Every line goes into the right book.
 <break time="2.5s" />
 Photos are read securely in the E U, and never used to train A I.
 <break time="1.5s" />
@@ -19,25 +20,21 @@ So your record stands up to any inspection.
 <break time="2.0s" />
 Upload your M P S or Touchstore report...
 <break time="3.0s" />
-<break time="3.0s" />
-...and anything missing, in any book, is found for you.
+and anything missing, in any book, is found for you.
 <break time="1.5s" />
-Count your stock on screen.
-<break time="3.0s" />
+Count your stock on screen, and it's logged in every book.
 <break time="3.0s" />
 <break time="2.0s" />
-Your risk assessment?
-<break time="0.5s" />
-Already filled in. Just sign.
-<break time="2.0s" />
+It works on any device. Your phone, a tablet, or the dispensary P C.
+<break time="1.0s" />
 Every staff member has their own PIN.
 <break time="0.5s" />
 Your data is encrypted and stays in the E U,
 <break time="0.4s" />
 and it's always yours to download.
 <break time="1.5s" />
-First month free, then nineteen euro a month.
+First month free, then nineteen euro a month for a limited period.
 <break time="0.8s" />
 Pharmacy C D Reg dot I E.
 <break time="0.8s" />
-Less paperwork. More time for patients.
+Less paperwork. More time for your patients.
