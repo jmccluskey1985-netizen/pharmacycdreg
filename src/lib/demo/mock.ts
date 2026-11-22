@@ -208,7 +208,8 @@ const REM = (): Json[] => {
 };
 const BOOK = (): Json[] => ((S as any).destructionBook ||= []);
 const qFor = (regId: string) => Q().filter((i) => i.register_id === regId && i.status === 'awaiting').reduce((n, i) => n + Number(i.quantity), 0);
-const regList = () => S.registers.filter((r) => !r.closed_at).map((r) => ({ id: r.id, opened_at: r.opened_at, closed_at: null, product: productOf(r.id), balance: balance(r.id), quarantined: qFor(r.id), entry_count: S.entries.filter((e) => e.register_id === r.id).length }));
+const lastCheck = (id: string) => ((((S as any).checks || []) as Json[]).filter((c) => c.register_id === id).map((c) => c.checked_at).sort().pop() ?? null);
+const regList = () => S.registers.filter((r) => !r.closed_at).map((r) => ({ id: r.id, opened_at: r.opened_at, closed_at: null, product: productOf(r.id), balance: balance(r.id), quarantined: qFor(r.id), entry_count: S.entries.filter((e) => e.register_id === r.id).length, last_checked_at: lastCheck(r.id) }));
 const norm = (s: string) => s.toLowerCase().replace(/hydrochloride|sulfate|sulphate|[^a-z0-9]/g, '');
 
 function csvFile(name: string, rows: (string | number | null)[][]) {
@@ -580,6 +581,52 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     if (needStaff()) return needStaff()!;
     for (const r of BOOK()) if (body.ids.includes(r.id) && !r.destroyed_date) Object.assign(r, { destroyed_date: body.destroyed_date, destroyed_by_name: st!.full_name, witness_name: body.witness_name || null, witness_role: body.witness_role || null, destruction_method: body.destruction_method || null });
     return res({ ok: true });
+  }
+  if (path === '/api/stock-counts' || /^\/api\/stock-counts\/[^/]+\/(line|finish)$/.test(path)) {
+    if (needStaff()) return needStaff()!;
+    const C = ((S as any).counts ||= []) as Json[];
+    const L = ((S as any).countLines ||= []) as Json[];
+    const checks = ((S as any).checks ||= []) as Json[];
+    const logCheck = (l: Json) => { const c = { id: uid(), register_id: l.register_id, counted: l.counted, register_balance: l.balance_at_count, notes: l.note || null, checked_by_name: l.counted_by_name ?? st!.full_name, checked_at: l.counted_at ?? new Date().toISOString() }; checks.push(c); l.stock_check_id = c.id; };
+    if (path === '/api/stock-counts') {
+      if (method === 'GET') {
+        const sorted = [...C].sort((a, b) => b.started_at.localeCompare(a.started_at));
+        const id = url.searchParams.get('id');
+        const count = id ? sorted.find((c) => c.id === id) ?? null : sorted.find((c) => c.status === 'open') ?? sorted[0] ?? null;
+        return res({ count, lines: count ? L.filter((l) => l.count_id === count.id) : [], counts: sorted });
+      }
+      const open = C.find((c) => c.status === 'open');
+      if (open) return res({ count: open });
+      const c = { id: uid(), status: 'open', started_at: new Date().toISOString(), finished_at: null, started_by_name: st!.full_name };
+      C.push(c); return res({ count: c });
+    }
+    const cid = path.split('/')[3];
+    const count = C.find((c) => c.id === cid);
+    if (!count) return fail(404, 'Count not found');
+    if (count.status !== 'open') return fail(409, 'This count is finished and can’t be changed');
+    if (path.endsWith('/line')) {
+      let l = L.find((x) => x.count_id === cid && x.register_id === body.register_id);
+      if (l?.stock_check_id) return fail(409, 'This line is complete and logged in its book; it can’t be changed');
+      if (!l) { l = { id: uid(), count_id: cid, register_id: body.register_id, counted: null, balance_at_count: null, counted_at: null, note: null, counted_by_name: null, stock_check_id: null }; L.push(l); }
+      if (body.note !== undefined) l.note = body.note || null;
+      if (body.counted !== undefined) {
+        if (body.counted === null) Object.assign(l, { counted: null, balance_at_count: null, counted_at: null, counted_by_name: null });
+        else if (l.counted === null || Number(l.counted) !== Number(body.counted)) Object.assign(l, { counted: Number(body.counted), balance_at_count: balance(body.register_id), counted_at: new Date().toISOString(), counted_by_name: st!.full_name });
+      }
+      if (body.complete) {
+        if (l.counted === null) return res({ error: 'Enter the count first', line: l }, 400);
+        if (Number(l.counted) !== Number(l.balance_at_count) && !l.note) return res({ error: 'The count doesn’t match the register: add a note on what you found first', line: l }, 400);
+        logCheck(l);
+      }
+      return res({ line: l });
+    }
+    const counted = L.filter((l) => l.count_id === cid && l.counted !== null);
+    if (!counted.length) return fail(400, 'Count at least one book first');
+    const noNote = counted.filter((l) => Number(l.counted) !== Number(l.balance_at_count) && !l.note);
+    if (noNote.length) return fail(400, `${noNote.length} line${noNote.length === 1 ? '' : 's'} don’t match the register: add a note on what you found first`);
+    counted.filter((l) => !l.stock_check_id).forEach(logCheck);
+    Object.assign(count, { status: 'finished', finished_at: new Date().toISOString(), finished_by_name: st!.full_name });
+    return res({ ok: true, recorded: counted.length, differences: counted.filter((l) => Number(l.counted) !== Number(l.balance_at_count)).length });
   }
   if (path === '/api/stock-checks') {
     if (needStaff()) return needStaff()!;

@@ -110,3 +110,13 @@ update risk_assessments set status = 'signed', signed_by_name = 'Aoife Byrne', s
 select pg_temp.expect_error($$ update risk_assessments set data = '{}' where status = 'signed' $$, 'can''t be changed');
 select pg_temp.expect_error($$ delete from risk_assessments where status = 'signed' $$, 'can''t be changed');
 select pg_temp.ok((select count(*) = 1 from risk_assessments where status = 'signed' and data->'head'->>'pharmacy' = 'Test') and (select relrowsecurity from pg_class where relname = 'risk_assessments'), 'risk assessment: one draft each, signed version final, RLS on');
+
+-- 0026: stock counts: one open count per pharmacy; lines editable while open; final once finished
+insert into stock_counts(pharmacy_id) select id from pharmacies limit 1;
+select pg_temp.expect_error($$ insert into stock_counts(pharmacy_id) select id from pharmacies limit 1 $$, 'duplicate key');
+insert into stock_count_lines(count_id, register_id, counted, balance_at_count, counted_at) select c.id, r.id, 10, 12, now() from stock_counts c, cd_registers r limit 1;
+update stock_count_lines set counted = 12, note = 'Recounted';
+update stock_counts set status = 'finished', finished_at = now();
+select pg_temp.expect_error($$ update stock_count_lines set counted = 1 $$, 'can''t be changed');
+select pg_temp.expect_error($$ update stock_counts set status = 'open' $$, 'can''t be changed');
+select pg_temp.ok((select counted = 12 and note = 'Recounted' from stock_count_lines limit 1), 'stock count: one open at a time, editable while open, final once finished');

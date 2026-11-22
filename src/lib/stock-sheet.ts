@@ -3,7 +3,9 @@
  * write the physical count, the difference and initials. Printable, and as a styled Excel file
  * (built in the browser; no patient data, only product names and balances).
  */
-export interface SheetRow { label: string; unit: string; balance: number; quarantined: number; lastChecked: string | null; due: boolean }
+export interface SheetRow { id: string; label: string; unit: string; balance: number; quarantined: number; lastChecked: string | null; due: boolean }
+/** One counted line of a stock count, for the printout and Excel. */
+export interface CountLine { counted: number | null; balance_at_count: number | null; counted_at: string | null; note: string | null; counted_by_name: string | null; stock_check_id: string | null }
 export interface SheetSection { title: string; rows: SheetRow[] }
 
 export const ddmmyyyy = (d: Date) => d.toLocaleDateString('en-IE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Dublin' });
@@ -28,7 +30,7 @@ export function buildSections(registers: any[]): SheetSection[] {
   for (const r of registers) {
     const s = Number(r.product?.schedule ?? 2);
     if (!by.has(s)) by.set(s, []);
-    by.get(s)!.push({ label: sheetLabel(r.product), unit: r.product.unit, balance: Number(r.balance ?? 0), quarantined: Number(r.quarantined ?? 0), lastChecked: r.last_checked_at ?? null, due: !!r.check_due });
+    by.get(s)!.push({ id: r.id, label: sheetLabel(r.product), unit: r.product.unit, balance: Number(r.balance ?? 0), quarantined: Number(r.quarantined ?? 0), lastChecked: r.last_checked_at ?? null, due: !!r.check_due });
   }
   return [...by.entries()].sort((a, b) => a[0] - b[0]).map(([s, rows]) => ({
     title: `Schedule ${s}`,
@@ -37,7 +39,7 @@ export function buildSections(registers: any[]): SheetSection[] {
 }
 
 /** Styled .xlsx: big title, grey header row, schedule bands, difference formula highlighted when not zero. */
-export async function downloadSheetXlsx(sections: SheetSection[], pharmacy: { name?: string | null; address?: string | null }, when: Date, withCount = false) {
+export async function downloadSheetXlsx(sections: SheetSection[], pharmacy: { name?: string | null; address?: string | null }, when: Date, withCount = false, lines: Record<string, CountLine> = {}, startedAt?: Date) {
   const ExcelJS = (await import('exceljs')).default;
   const wb = new ExcelJS.Workbook();
   wb.creator = 'PharmacyCDReg.ie';
@@ -48,8 +50,8 @@ export async function downloadSheetXlsx(sections: SheetSection[], pharmacy: { na
     headerFooter: { oddFooter: '&LPharmacyCDReg.ie&RPage &P of &N' },
     views: [{ state: 'frozen', ySplit: 6 }],
   });
-  ws.columns = withCount ? [{ width: 58 }, { width: 18 }, { width: 30 }, { width: 14 }, { width: 14 }, { width: 12 }] : [{ width: 62 }, { width: 20 }, { width: 34 }];
-  const last = withCount ? 'F' : 'C';
+  ws.columns = withCount ? [{ width: 58 }, { width: 18 }, { width: 22 }, { width: 14 }, { width: 14 }, { width: 12 }, { width: 40 }] : [{ width: 62 }, { width: 20 }, { width: 34 }];
+  const last = withCount ? 'G' : 'C';
   const green = 'FF184B21', light = 'FFE6F4E5', grey = 'FFB7B7B7';
   const thin = { style: 'thin' as const, color: { argb: 'FF9CA3AF' } };
   const box = { top: thin, left: thin, bottom: thin, right: thin };
@@ -60,7 +62,7 @@ export async function downloadSheetXlsx(sections: SheetSection[], pharmacy: { na
   ws.mergeCells(`A2:${last}2`);
   Object.assign(ws.getCell('A2'), { value: [pharmacy.name, pharmacy.address].filter(Boolean).join(' · '), font: { size: 12, color: { argb: 'FF475569' } } });
   ws.mergeCells(`A3:${last}3`);
-  Object.assign(ws.getCell('A3'), { value: `Date: ${ddmmyyyy(when)}      Register balances at ${hhmm(when)}`, font: { size: 14, bold: true } });
+  Object.assign(ws.getCell('A3'), { value: withCount && startedAt ? `Start date: ${ddmmyyyy(startedAt)} ${hhmm(startedAt)}      Printed ${ddmmyyyy(when)} ${hhmm(when)}` : `Date: ${ddmmyyyy(when)}      Register balances at ${hhmm(when)}`, font: { size: 14, bold: true } });
   if (withCount) {
     ws.mergeCells(`A4:${last}4`);
     Object.assign(ws.getCell('A4'), { value: 'Counted by: ______________________      Checked by: ______________________', font: { size: 12 } });
@@ -68,7 +70,7 @@ export async function downloadSheetXlsx(sections: SheetSection[], pharmacy: { na
   }
 
   const head = ws.getRow(6);
-  head.values = withCount ? ['CD Medicine', 'Register balance', 'Last stock check', 'Stock', 'Difference', 'Initials'] : ['CD Medicine', 'Balance', 'Last stock check'];
+  head.values = withCount ? ['CD Medicine', 'Register balance', 'Counted', 'Stock', 'Difference', 'Initials', 'Note'] : ['CD Medicine', 'Balance', 'Last stock check'];
   head.height = 26;
   head.eachCell((c) => { c.font = { bold: true, size: 14 }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: grey } }; c.border = box; c.alignment = { vertical: 'middle', horizontal: Number(c.col) === 1 ? 'left' : 'center' }; });
   ws.pageSetup.printTitlesRow = '6:6';
@@ -87,12 +89,17 @@ export async function downloadSheetXlsx(sections: SheetSection[], pharmacy: { na
     for (const row of s.rows) {
       const x = ws.getRow(r);
       const name = row.quarantined ? `${row.label}  (incl. ${row.quarantined} set aside)` : row.label;
-      x.values = withCount ? [name, row.balance, lastCheckedText(row, when), null, { formula: `IF(D${r}="","",D${r}-B${r})` }, null] : [name, row.balance, lastCheckedText(row, when)];
+      const L = lines[row.id];
+      const counted = L && L.counted !== null;
+      const initials = (L?.counted_by_name ?? '').split(/\s+/).filter(Boolean).map((w) => w[0]).join('').toUpperCase();
+      x.values = withCount
+        ? [name, counted ? Number(L!.balance_at_count) : row.balance, counted && L!.counted_at ? `${ddmmyyyy(new Date(L!.counted_at))} ${hhmm(new Date(L!.counted_at))}${L!.stock_check_id ? ' ✓' : ''}` : '', counted ? Number(L!.counted) : null, { formula: `IF(D${r}="","",D${r}-B${r})` }, counted ? initials : null, L?.note ?? null]
+        : [name, row.balance, lastCheckedText(row, when)];
       x.height = 26;
       x.eachCell({ includeEmpty: true }, (c) => {
         c.border = box;
-        c.font = { size: Number(c.col) === 3 ? 12 : 14, bold: Number(c.col) === 2, color: Number(c.col) === 3 && row.due ? { argb: 'FFB45309' } : undefined };
-        c.alignment = { vertical: 'middle', horizontal: Number(c.col) === 1 ? 'left' : 'center', wrapText: Number(c.col) === 1 };
+        c.font = { size: Number(c.col) === 3 || Number(c.col) === 7 ? 11 : 14, bold: Number(c.col) === 2, color: !withCount && Number(c.col) === 3 && row.due ? { argb: 'FFB45309' } : undefined };
+        c.alignment = { vertical: 'middle', horizontal: Number(c.col) === 1 || Number(c.col) === 7 ? 'left' : 'center', wrapText: Number(c.col) === 1 || Number(c.col) === 7 };
       });
       x.getCell(2).numFmt = `0" ${row.unit.replace(/"/g, '')}"`;
       diffs.push(`E${r}`);
@@ -102,7 +109,7 @@ export async function downloadSheetXlsx(sections: SheetSection[], pharmacy: { na
   if (withCount && diffs.length) {
     ws.addConditionalFormatting({
       ref: `E7:E${r - 1}`,
-      rules: [{ type: 'expression', priority: 1, formulae: ['AND(E7<>"",E7<>0)'], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFFECACA' } }, font: { bold: true, color: { argb: 'FF991B1B' } } } }],
+      rules: [{ type: 'expression', priority: 2, formulae: ['AND(E7<>"",E7=0)'], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFDCFCE7' } }, font: { bold: true, color: { argb: 'FF166534' } } } }, { type: 'expression', priority: 1, formulae: ['AND(E7<>"",E7<>0)'], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFFECACA' } }, font: { bold: true, color: { argb: 'FF991B1B' } } } }],
     });
   }
   r++;

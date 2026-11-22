@@ -349,16 +349,40 @@ await step('CSV export of a register downloads', async () => {
   if (!/\.csv$/.test(dl.suggestedFilename())) throw new Error(dl.suggestedFilename());
 });
 
-await step('CD balances list: dated, every open book with its balance and last stock check; count columns and Excel', async () => {
+await step('CD balances list: dated, every open book with its balance and last stock check; Excel', async () => {
   await page.goto(B + '/dashboard/stock-sheet'); await see('text=CD Balances'); await see('text=/Schedule 2/'); await see('th:has-text("Last stock check")');
   await see('text=/Date: \\d{2}\\/\\d{2}\\/\\d{4}/');
-  let [dl] = await Promise.all([page.waitForEvent('download', { timeout: 15000 }), page.click('button:has-text("Excel")')]);
+  const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 15000 }), page.click('button:has-text("Excel")')]);
   if (!/^CD-balances-\d{4}-\d{2}-\d{2}\.xlsx$/.test(dl.suggestedFilename())) throw new Error(dl.suggestedFilename());
-  await page.check('text=Add columns to write a stock count'); await see('text=CD Stock Count'); await see('th:has-text("Difference")');
-  [dl] = await Promise.all([page.waitForEvent('download', { timeout: 15000 }), page.click('button:has-text("Excel")')]);
-  if (!/^CD-stock-count-/.test(dl.suggestedFilename())) throw new Error(dl.suggestedFilename());
-  await dl.saveAs('/tmp/claude-0/sheet.xlsx');
 });
+
+await step('stock count: start date, counts saved with their date, green 0 / red difference, note needed to complete, rows logged in their book, finish', async () => {
+  await page.goto(B + '/dashboard/stock-sheet'); await see('text=CD Balances');
+  await page.check('text=Stock count (enter counts');
+  await click('button:has-text("Start a count")'); await see('text=/Start date: \\d{2}\\/\\d{2}\\/\\d{4}/');
+  const inputs = page.locator('input[aria-label^="Stock counted"]');
+  // first book: count it as its balance → 0 in green
+  const firstBal = Number((await page.locator('tbody tr:nth-child(2) td:nth-child(2)').first().innerText()).match(/\d+/)[0]);
+  await inputs.nth(0).fill(String(firstBal)); await inputs.nth(0).press('Enter'); await page.waitForTimeout(700);
+  await see('span.bg-green-100:has-text("0")');
+  // second book: 2 short → red, completing asks for a note first
+  const secondBal = Number((await page.locator('tbody tr:nth-child(3) td:nth-child(2)').first().innerText()).match(/\d+/)[0]);
+  await inputs.nth(1).fill(String(secondBal - 2)); await inputs.nth(1).press('Enter'); await page.waitForTimeout(700);
+  await see('span.bg-red-100:has-text("-2")');
+  await page.locator('input[aria-label^="Complete:"]').nth(1).click(); await see('text=/add a note on what you found/');
+  await page.locator('input[aria-label^="Note:"]').fill('2 owed to patient, collecting Friday'); await page.locator('input[aria-label^="Note:"]').press('Enter'); await page.waitForTimeout(700);
+  await page.locator('input[aria-label^="Complete:"]').nth(1).click(); await page.waitForTimeout(800);
+  await see('text=Logged');
+  // saved and modifiable: reload keeps the count; the first book's count can still be changed
+  await page.reload(); await page.check('text=Stock count (enter counts'); await page.waitForTimeout(1200);
+  if (await page.locator('input[aria-label^="Stock counted"]').nth(0).inputValue() !== String(firstBal)) throw new Error('count not saved');
+  page.once('dialog', (d) => d.accept());
+  await click('button:has-text("Finish count")'); await see('text=/Count finished: 2 books logged, 1 with a difference/');
+  await see('text=/Started by .* · Finished \\d{2}\\/\\d{2}/');
+  await see('text=/Last count finished/');
+});
+
+
 
 await step('check one report (any file) against every book: missing lines found in their book and added', async () => {
   await page.goto(B + '/dashboard/report-check'); await see('text=Check a dispensing report');
