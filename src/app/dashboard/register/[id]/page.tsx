@@ -237,9 +237,9 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
       <div className="book-stage">
         <div className={`book ${opened ? 'open' : ''}`}>
           {/* Cover: the PharmacyCDReg.ie register book */}
-          <div className="book-cover no-print flex flex-col overflow-hidden bg-[#0d4e6c]" aria-hidden={opened}>
+          <div className="book-cover no-print !bottom-auto aspect-[1600/1127] overflow-hidden bg-[#eceef0]" aria-hidden={opened}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/previews/register-cover.webp" alt="" className="h-auto w-full" />
+            <img src="/previews/register-cover.webp" alt="" className="h-full w-full object-cover" />
           </div>
 
           {/* Pages */}
