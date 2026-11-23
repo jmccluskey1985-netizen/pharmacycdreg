@@ -171,7 +171,7 @@ export function CountCompare() {
 /** Paper register's last page photographed; its balance carried forward into a new electronic book. */
 export function PaperToDigital() {
   const { ref, phase } = usePhases([1600, 1200, 1900, 1900, 3200]);
-  const PAPER = [['14/11', 'Rec’d Uniphar', '+56', '182'], ['15/11', 'P. Hehir', '−14', '168'], ['17/11', 'N. Corcoran', '−28', '140']];
+  const PAPER = [['14/11', 'Rec’d Unopharma', '+56', '182'], ['15/11', 'P. Hehir', '−14', '168'], ['17/11', 'N. Corcoran', '−28', '140']];
   return (
     <div ref={ref}>
       <Frame caption="The last paper balance becomes the first electronic line">

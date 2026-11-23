@@ -430,7 +430,7 @@ function InvoiceDemo() {
         <div className="flex min-w-0 flex-col">
           <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Read from the invoice</p>
           <div className={`mt-2 rounded-lg bg-white px-3 py-2 text-xs text-slate-700 shadow ring-1 ring-slate-200 ${fade(phase >= 2)}`}>
-            <b>Uniphar</b> · Invoice <b>0974471902</b> · 05/11/2026 <span className="block text-[10px] text-slate-500">Invoice number used, not the account number. Already-recorded invoices are caught.</span>
+            <b>Unopharma</b> · Invoice <b>0974471902</b> · 05/11/2026 <span className="block text-[10px] text-slate-500">Invoice number used, not the account number. Already-recorded invoices are caught.</span>
           </div>
           <div className={`mt-2 rounded-lg bg-white p-3 text-sm shadow ring-2 ring-brand/60 ${fade(phase >= 2)}`} style={{ transitionDelay: '250ms' }}>
             <div className="flex items-start justify-between gap-2">
@@ -450,7 +450,7 @@ function InvoiceDemo() {
             <li className="flex items-center gap-1.5"><ScanLine className="h-3.5 w-3.5" /> NovoRapid FlexPen: not a controlled drug</li>
           </ul>
           <h3 className="mt-6 text-2xl font-bold">Photograph the wholesaler invoice</h3>
-          <p className="mt-1 text-muted-foreground">Uniphar, United Drug, PCO and others. Controlled drug lines are picked out, packs × pack size worked out and matched to the right register, each with a confidence level for you to check. Lines that don’t need a register entry, like Oramorph 10mg/5ml, are left out with the reason shown. Nothing is recorded until you sign.</p>
+          <p className="mt-1 text-muted-foreground">Invoices and CD dockets from the main Irish wholesalers. Controlled drug lines are picked out, packs × pack size worked out and matched to the right register, each with a confidence level for you to check. Lines that don’t need a register entry, like Oramorph 10mg/5ml, are left out with the reason shown. Nothing is recorded until you sign.</p>
           <SampleNote className="mt-2" />
         </div>
       </div>

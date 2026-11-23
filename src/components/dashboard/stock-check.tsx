@@ -121,7 +121,7 @@ function AmendBalance({ check, unit, onDone, onCancel }: { check: Check; unit: s
       <p className="font-semibold">Amend the register balance from {Number(check.register_balance)} to {Number(check.counted)} {unit} ({diff > 0 ? '+' : ''}{diff})</p>
       <p className="text-muted-foreground">This adds a signed <b>stock adjustment</b> line to the register: nothing is overwritten. Only do this once you’ve investigated. An unexplained loss should be reported in line with PSI guidance.</p>
       <div><label className="label">What did you do to investigate, and what did you find?</label>
-        <textarea className="input min-h-[96px]" required minLength={10} value={text} onChange={(e) => setText(e.target.value)} placeholder="e.g. Recounted twice with a second pharmacist. Checked supplies since last check against Rxs and invoices, Uniphar invoice 12345 received 20 but recorded 10." /></div>
+        <textarea className="input min-h-[96px]" required minLength={10} value={text} onChange={(e) => setText(e.target.value)} placeholder="e.g. Recounted twice with a second pharmacist. Checked supplies since last check against Rxs and invoices, wholesaler invoice 12345 received 20 but recorded 10." /></div>
       <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4 accent-[#54BD50]" checked={saveNote} onChange={(e) => setSaveNote(e.target.checked)} /> Also save as a note (you can add photos to it)</label>
       {error && <p className="text-destructive">{error}</p>}
       <div className="flex gap-2">

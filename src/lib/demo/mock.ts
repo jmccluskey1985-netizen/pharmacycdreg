@@ -50,7 +50,7 @@ function seedEntries() {
     return out[out.length - 1];
   };
   const UD = { supplier_name: 'United Drug', supplier_address: 'Magna Business Park, Citywest, Dublin 24' };
-  const UN = { supplier_name: 'Uniphar Wholesale', supplier_address: 'Fourth Avenue, Cookstown, Dublin 24' };
+  const UN = { supplier_name: 'Unopharma Wholesale', supplier_address: 'Unit 7, Fifth Avenue, Cookstown, Dublin 24' };
   const BF = (n: string) => ({ supplier_name: 'Balance brought forward', supplier_address: n, notes: 'Opening balance' });
   // Methadone DTF 1mg/ml (OST)
   add('r6', 'receipt', 20, 5000, 's1', BF('Paper register vol. 2, page 3'));
@@ -100,7 +100,7 @@ function seed() {
       { id: 'c2', kind: 'prescriber', name: 'Dr K. Ryan', address: 'Abbey Street Surgery, Ennis, Co. Clare', registration: '023456', gms_number: 'G0002', role: null },
       { id: 'c3', kind: 'prescriber', name: 'Dr L. Nolan', address: 'Quay Street Clinic, Galway', registration: '034567', gms_number: null, role: null },
       { id: 'c4', kind: 'supplier', name: 'United Drug', address: 'Magna Business Park, Citywest, Dublin 24', registration: null, gms_number: null, role: null },
-      { id: 'c5', kind: 'supplier', name: 'Uniphar Wholesale', address: 'Fourth Avenue, Cookstown, Dublin 24', registration: null, gms_number: null, role: null },
+      { id: 'c5', kind: 'supplier', name: 'Unopharma Wholesale', address: 'Unit 7, Fifth Avenue, Cookstown, Dublin 24', registration: null, gms_number: null, role: null },
       { id: 'c6', kind: 'witness', name: 'P. Doyle', address: null, registration: null, gms_number: null, role: 'Authorised officer (PSI)' },
     ] as Json[],
     activeStaffId: null as string | null,
