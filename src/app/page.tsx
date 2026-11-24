@@ -10,6 +10,7 @@ import { LoginCard } from '@/components/login-card';
 import { DEMO } from '@/lib/demo/flag';
 import { RegisterCoverPreview } from '@/components/register-cover-preview';
 import { LandingDemos, SampleNote } from '@/components/landing-demos';
+import { AdvertVideo } from '@/components/advert-video';
 import { homepageJsonLd, faqJsonLd, jsonLd } from '@/lib/structured-data';
 import { GUIDES } from '@/lib/guides';
 
@@ -223,14 +224,7 @@ export default function LandingPage() {
           <p className="text-sm font-semibold uppercase tracking-widest text-brand">See it in action</p>
           <h2 className="mt-2 text-3xl font-bold tracking-tight text-brand-dark">Your CD register, without the paperwork</h2>
           <p className="mt-2 max-w-2xl text-muted-foreground">Scanning prescriptions and invoices, checking reports against every book, counting stock and keeping the record safe. Turn the sound on for the voiceover.</p>
-          <div className="mt-6 overflow-hidden rounded-2xl bg-black shadow-soft ring-1 ring-border">
-            <video className="hidden aspect-video w-full sm:block" controls playsInline preload="none" poster="/video/advert-poster.jpg" aria-label="Explainer video">
-              <source src="/video/pharmacycdreg-advert.mp4" type="video/mp4" />
-            </video>
-            <video className="mx-auto block aspect-[9/16] w-full max-w-sm sm:hidden" controls playsInline preload="none" poster="/video/advert-poster-vertical.jpg" aria-label="Explainer video">
-              <source src="/video/pharmacycdreg-advert-vertical.mp4" type="video/mp4" />
-            </video>
-          </div>
+          <AdvertVideo />
           <SampleNote className="mt-2" />
         </div>
       </section>
