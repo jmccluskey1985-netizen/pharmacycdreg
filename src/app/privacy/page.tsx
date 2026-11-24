@@ -23,7 +23,7 @@ export default function PrivacyPage() {
         <li>Providing the service and your account, contract (GDPR Art. 6(1)(b)).</li>
         <li>Billing and keeping accounting records, contract and legal obligation (6(1)(b), 6(1)(c)).</li>
         <li>Service emails (trial ending, reminders due, weekly integrity record), contract.</li>
-        <li>Phone notifications, only if you turn them on: we keep the device's notification address and send it the number of reminders due, never patient details. They pass through the phone maker's notification service (Apple, Google or Mozilla); turn them off on the Reminders page.</li>
+        <li>Phone notifications, only if you turn them on: we keep the device’s notification address and send it the number of reminders due, never patient details. They pass through the phone maker’s notification service (Apple, Google or Mozilla); turn them off on the Reminders page.</li>
         <li>Security, audit logs and preventing misuse, legitimate interests (6(1)(f)).</li>
         <li>Anonymous, cookie-free page-view counts to improve the website, legitimate interests.</li>
         <li>Waitlist and product updates: consent, which you can withdraw at any time.</li>
