@@ -16,6 +16,7 @@ import { can } from '@/lib/roles';
 import { useStaff, useCan } from '@/components/dashboard/staff-context';
 import { Modal } from '@/components/modal';
 import { canWrite } from '@/lib/stripe';
+import { AppCard } from '@/components/pwa';
 
 interface Reg {
   id: string;
@@ -81,6 +82,7 @@ export default function RegistersPage() {
   return (
     <div>
       <GettingStarted />
+      <AppCard />
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm text-muted-foreground">{pharmacy?.name}</p>

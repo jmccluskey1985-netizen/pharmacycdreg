@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { sendEmail } from '@/lib/email';
 import { PLAN, formatEuro } from '@/config/pricing';
+import { sendToPharmacy } from '@/lib/push';
+import { irishToday } from '@/lib/late-entry';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,5 +55,16 @@ export async function GET(req: Request) {
     if (r.sent) await db.from('pharmacies').update({ last_reminder_key: key }).eq('id', ph.id);
     results.push({ id: ph.id, kind, sent: r.sent });
   }
-  return NextResponse.json({ checked: data?.length ?? 0, results });
+  // Phone notifications: dispensing reminders due today. Counts only, never names (lock screens).
+  // Sent here, mid-morning, rather than with the early email digest.
+  let pushed = 0;
+  const { data: subs } = await db.from('push_subscriptions').select('pharmacy_id');
+  for (const pharmacyId of [...new Set((subs ?? []).map((s) => s.pharmacy_id))]) {
+    const { data: due } = await db.from('dispense_reminders').select('id').eq('pharmacy_id', pharmacyId).eq('active', true).lte('next_due', irishToday());
+    if (!due?.length) continue;
+    const n = due.length;
+    const r = await sendToPharmacy(db, pharmacyId, { title: `${n} dispensing reminder${n === 1 ? '' : 's'} due today`, body: 'Tap to record them in the registers.', url: '/dashboard/reminders', tag: 'cdreg-reminders' }).catch(() => ({ sent: 0 }));
+    pushed += r.sent;
+  }
+  return NextResponse.json({ checked: data?.length ?? 0, results, pushed });
 }
