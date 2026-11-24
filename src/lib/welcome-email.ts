@@ -15,7 +15,7 @@ export function welcomeEmail({ pharmacy, contact, trialEnds, site }: { pharmacy:
 <table role="presentation" style="border-collapse:collapse;font-size:14px">
 ${step(1, 'Set up your supervising pharmacist and PIN', 'The first time you sign in, then add your team (pharmacists, technicians, locums) in Team &amp; PINs.')}
 ${step(2, 'Open your CD books', 'Pick them from the CD list, or photograph the last page of each paper register: the balance brought forward is read for you.')}
-${step(3, 'Record your first entry', 'Scan Rx for a prescription, or photograph a wholesaler invoice or CD docket. Nothing goes in until a pharmacist signs it.')}
+${step(3, 'Record your first entry', 'Tap Scan and photograph a prescription, a wholesaler invoice or a CD docket. Nothing goes in until a pharmacist signs it.')}
 ${step(4, 'Methadone or buprenorphine patients?', 'Add them once from their bag labels (Patients → From bag labels).')}
 ${step(5, 'Turn on two-step sign-in', 'Settings → Security: a code from your phone protects the register even if a password leaks.')}
 </table>

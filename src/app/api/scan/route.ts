@@ -39,10 +39,12 @@ export async function POST(req: Request) {
     if (files.reduce((n, f) => n + f.size, 0) > MAX_BYTES) return NextResponse.json({ error: 'Files are too large (max 15 MB total)' }, { status: 400 });
 
     const docs = await Promise.all(files.map(async (f) => ({ base64: Buffer.from(await f.arrayBuffer()).toString('base64'), mediaType: f.type })));
-    const hint = form.get('hint') === 'prescription' ? 'prescription' : 'invoice';
+    // 'auto' (the default Scan button): the reader decides whether it's a prescription or an invoice
+    const h = form.get('hint');
+    const hint = h === 'prescription' || h === 'invoice' ? h : 'auto';
     const db = createServiceClient();
     const { extraction, model } = await extractFromDocument(docs, hint, await getReaderConfig(db));
-    if (extraction.document_type === 'other') extraction.document_type = hint; // the pharmacist said what it is
+    if (extraction.document_type === 'other') extraction.document_type = hint !== 'auto' ? hint : extraction.patient_name || extraction.prescriber_name ? 'prescription' : 'invoice'; // the pharmacist said what it is, or the details tell us
     // OST form recognised but its grid came back empty, or a methadone / buprenorphine script with no
     // OST block at all: read just the form once more with a smaller, focused request.
     const looksOst = extraction.ost != null || extraction.items.some((it) => /methadone|buprenorph|physeptone|suboxone|subutex|espranor/i.test(`${it.drug_name} ${it.brand ?? ''}`));

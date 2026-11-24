@@ -6,9 +6,9 @@ import { useState } from 'react';
 import { Search } from 'lucide-react';
 
 const GUIDES: { title: string; tags: string; steps: (string | React.JSX.Element)[]; link?: { href: string; label: string }; visual?: React.ReactNode }[] = [
-  { title: 'Record a supply from a prescription', tags: 'scan rx dispense supply', steps: ['Tap Scan Rx (top of every page).', 'Photograph the prescription: it reads the patient, prescriber, drug and quantity.', 'Check every field against the prescription, then Sign & record. Nothing is recorded until you sign.'], link: { href: '/dashboard/scan?type=prescription', label: 'Scan Rx' } },
+  { title: 'Record a supply from a prescription', tags: 'scan rx dispense supply', steps: ['Tap Scan (top of every page). It works out whether it’s a prescription or an invoice.', 'Photograph the prescription: it reads the patient, prescriber, drug and quantity.', 'Check every field against the prescription, then Sign & record. Nothing is recorded until you sign.'], link: { href: '/dashboard/scan', label: 'Scan' } },
   { title: 'Use the scanner on your PC instead of a photo', tags: 'scanner scan pc computer desktop folder pdf invoice prescription', steps: [
-    'Open Scan Rx in Chrome or Edge on the PC that has the scanner.',
+    'Open Scan in Chrome or Edge on the PC that has the scanner.',
     'Under Scanner on this computer, click Connect scanner folder and choose the folder your scanner saves to (e.g. Pictures › Scans or Documents › Scanned Documents; your scanner app’s settings show it).',
     'Set the scanner to save as PDF or JPEG. If Chrome asks, choose Allow on every visit.',
     'Now just press Scan on the scanner: a prescription is read as soon as it lands; invoice pages are added one by one, then click Read.',

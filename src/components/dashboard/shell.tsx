@@ -27,7 +27,7 @@ async function signOut() {
 const NAV = [
   { href: '/dashboard', label: 'Registers', icon: BookOpen, show: () => true },
   { href: '/dashboard/group', label: 'Group overview', icon: Building2, show: can.manageStaff, group: true },
-  { href: '/dashboard/scan?type=prescription', label: 'Scan Rx', icon: ScanLine, perm: 'scan', show: can.scan, primary: true },
+  { href: '/dashboard/scan', label: 'Scan', icon: ScanLine, perm: 'scan', show: can.scan, primary: true },
   { href: '/dashboard/inbox', label: 'To confirm', icon: Inbox, show: can.record, drafts: true, badge: 'inbox' },
   { href: '/dashboard/search', label: 'Search', icon: Search, show: () => true },
   { href: '/dashboard/patients', label: 'Patients', icon: UserRound, perm: 'patients', show: can.record },
@@ -126,25 +126,28 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <main key={training ? 'training' : 'live'} className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:py-6">
         {/* Top-left: show sidebar + New entry */}
         {!path.startsWith('/dashboard/scan') && !path.startsWith('/dashboard/register/') && <div className="no-print mb-4 flex flex-wrap items-center gap-2">
-          {canDo('scan') && <Link href="/dashboard/scan?type=prescription" className="btn-brand"><ScanLine className="h-4 w-4" /> Scan Rx</Link>}
+          {canDo('scan') && <Link href="/dashboard/scan" className="btn-brand"><ScanLine className="h-4 w-4" /> Scan</Link>}
           {(can.record(staff.role) || canDo('draftEntries')) && <NewEntryButton />}
         </div>}
-        <BillingBanner />
-        {(pharmacy as any)?.twofa_missing && can.manageStaff(staff.role) && (
-          <Link href="/dashboard/settings" className="no-print mb-4 flex items-center gap-3 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            <span className="flex-1"><b>Two-step sign-in is required but not set up.</b> Add an authenticator app in Settings → Security.</span><span className="font-semibold underline">Fix</span>
-          </Link>
-        )}
-        {!(pharmacy as any)?.twofa_missing && (pharmacy as any)?.has_2fa === false && can.manageStaff(staff.role) && <TwoStepSuggestion session={(pharmacy as any)?.login_session ?? null} />}
-        {remindersDue > 0 && canDo('reminders') && !path.startsWith('/dashboard/reminders') && (
-          <Link href="/dashboard/reminders" className="no-print mb-4 flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
-            <BellRing className="h-5 w-5 flex-shrink-0" /> <span className="flex-1"><b>{remindersDue} dispensing reminder{remindersDue === 1 ? '' : 's'} due</b>. Record {remindersDue === 1 ? 'it' : 'them'} in the registers in one click</span><span className="font-semibold underline">Open</span>
-          </Link>
-        )}
+        {/* Notices; hidden on phones while scanning so the camera fills the screen */}
+        <div className={path.startsWith('/dashboard/scan') ? 'hidden lg:block' : undefined}>
+          <BillingBanner />
+          {(pharmacy as any)?.twofa_missing && can.manageStaff(staff.role) && (
+            <Link href="/dashboard/settings" className="no-print mb-4 flex items-center gap-3 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <span className="flex-1"><b>Two-step sign-in is required but not set up.</b> Add an authenticator app in Settings → Security.</span><span className="font-semibold underline">Fix</span>
+            </Link>
+          )}
+          {!(pharmacy as any)?.twofa_missing && (pharmacy as any)?.has_2fa === false && can.manageStaff(staff.role) && <TwoStepSuggestion session={(pharmacy as any)?.login_session ?? null} />}
+          {remindersDue > 0 && canDo('reminders') && !path.startsWith('/dashboard/reminders') && (
+            <Link href="/dashboard/reminders" className="no-print mb-4 flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
+              <BellRing className="h-5 w-5 flex-shrink-0" /> <span className="flex-1"><b>{remindersDue} dispensing reminder{remindersDue === 1 ? '' : 's'} due</b>. Record {remindersDue === 1 ? 'it' : 'them'} in the registers in one click</span><span className="font-semibold underline">Open</span>
+            </Link>
+          )}
+        </div>
         {children}
       </main>
 
-      {/* Mobile bottom nav: 4 main items + raised Scan Rx, everything else under More */}
+      {/* Mobile bottom nav: 4 main items + raised Scan, everything else under More */}
       {(() => {
         const main = items.filter((n) => ['/dashboard', '/dashboard/scan', '/dashboard/inbox', '/dashboard/search', '/dashboard/patients'].includes(n.href.split('?')[0]));
         const bar = [...main.slice(0, 4)];

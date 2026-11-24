@@ -39,13 +39,13 @@ async function compress(blob: Blob, name: string): Promise<File> {
 export default function ScanPage() {
   const { staff } = useStaff();
   const canDo = useCan();
-  // Prescriptions are the everyday scan, so they're the default; the last choice is remembered.
-  const [docType, setDocTypeState] = useState<'invoice' | 'prescription'>('prescription');
-  const setDocType = (t: 'invoice' | 'prescription') => { setDocTypeState(t); try { localStorage.setItem('cdreg-scan-type', t); } catch {} };
+  // One Scan button for everything: by default the reader works out whether it's a prescription or an
+  // invoice. ?type=invoice or ?type=prescription (or the switch) says it up front.
+  const [docType, setDocType] = useState<'auto' | 'invoice' | 'prescription'>('auto');
   useEffect(() => {
-    const t = new URLSearchParams(window.location.search).get('type') ?? (() => { try { return localStorage.getItem('cdreg-scan-type'); } catch { return null; } })();
+    const t = new URLSearchParams(window.location.search).get('type');
     // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
-    if (t === 'prescription' || t === 'invoice') setDocTypeState(t);
+    if (t === 'prescription' || t === 'invoice') setDocType(t);
   }, []);
   const [stage, setStage] = useState<Stage>('capture');
   const [pages, setPages] = useState<Page[]>([]);
@@ -109,8 +109,9 @@ export default function ScanPage() {
     const file = await compress(blob, `page-${pages.length + 1}.jpg`);
     const next = [...pages, { file, url: URL.createObjectURL(file) }];
     setPages(next);
-    // A prescription is one page: read it straight away. Invoices may have several pages.
-    if (docType === 'prescription') { read(next); return; }
+    // Read straight away (a prescription is one page). Only invoice mode collects pages first;
+    // a several-page invoice scanned in auto mode adds its pages from the review screen.
+    if (docType !== 'invoice') { read(next); return; }
     setToast(`Page ${next.length} captured: tap Read, or photograph the next page`);
     setTimeout(() => setToast(null), 3500);
   }
@@ -124,7 +125,7 @@ export default function ScanPage() {
     }
     const next = [...pages, ...added];
     setPages(next);
-    if (docType === 'prescription' && added.length) read(next);
+    if (docType !== 'invoice' && added.length) read(next);
     else if (added.length) { setToast(`Page ${next.length} added: tap Read, or scan the next page`); setTimeout(() => setToast(null), 3500); }
   }
 
@@ -158,6 +159,15 @@ export default function ScanPage() {
     }
   }
 
+  // Several-page invoice: keep what's been photographed and add the next page, then read them together
+  function addPage() {
+    setResult(null);
+    setPatientPick(null);
+    setError(null);
+    setDocType('invoice');
+    setStage('capture');
+  }
+
   function reset() {
     pages.forEach((p) => p.url && URL.revokeObjectURL(p.url));
     setPages([]);
@@ -177,7 +187,7 @@ export default function ScanPage() {
           {pages[0]?.url ? <img src={pages[0].url} alt="" className="h-full w-full object-cover opacity-80" /> : <FileText className="m-auto mt-20 h-12 w-12 text-muted-foreground" />}
           <div className="absolute inset-x-0 h-16 animate-[scanline_1.6s_ease-in-out_infinite] bg-gradient-to-b from-transparent via-brand/50 to-transparent" />
         </div>
-        <p className="mt-6 flex items-center gap-2 text-lg font-semibold"><Sparkles className="h-5 w-5 text-brand" /> Reading {docType === 'invoice' ? 'invoice' : 'prescription'}…</p>
+        <p className="mt-6 flex items-center gap-2 text-lg font-semibold"><Sparkles className="h-5 w-5 text-brand" /> Reading {docType === 'invoice' ? 'invoice' : docType === 'prescription' ? 'prescription' : 'document'}…</p>
         <p className="mt-1 text-sm text-muted-foreground">Finding controlled drugs and working out quantities</p>
         <style>{`@keyframes scanline{0%{top:-20%}50%{top:85%}100%{top:-20%}}`}</style>
       </div>
@@ -194,6 +204,11 @@ export default function ScanPage() {
           <h1 className="text-xl font-bold">Check and record</h1>
           <button onClick={reset} className="btn-ghost"><RotateCcw className="h-4 w-4" /> Scan another</button>
         </div>
+        {x.document_type === 'invoice' && pages.length < 10 && (
+          <button onClick={addPage} className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-brand/50 bg-brand/5 px-4 py-3 text-sm font-semibold text-brand-dark hover:bg-brand/10">
+            <ImagePlus className="h-4 w-4" /> Invoice has more pages? Add the next page{pages.length > 1 ? ` (${pages.length} so far)` : ''}
+          </button>
+        )}
 
 
         {result.exempt?.length > 0 && (
@@ -254,8 +269,8 @@ export default function ScanPage() {
   const live = camera === 'on' || camera === 'starting';
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="mb-3 grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
-        {([['invoice', 'Invoice / docket', Receipt], ['prescription', 'Prescription', ClipboardList]] as const).map(([v, l, I]) => (
+      <div className="mb-3 grid grid-cols-3 gap-1 rounded-xl bg-muted p-1">
+        {([['auto', 'Any', ScanLine], ['prescription', 'Prescription', ClipboardList], ['invoice', 'Invoice', Receipt]] as const).map(([v, l, I]) => (
           <button key={v} onClick={() => setDocType(v)} className={`flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold transition ${docType === v ? 'bg-card shadow-sm' : 'text-muted-foreground'}`}>
             <I className="h-4 w-4" /> {l}
           </button>
@@ -273,11 +288,11 @@ export default function ScanPage() {
 
       {/* Live viewfinder (phones) */}
       {live && (
-        <div className="relative -mx-4 overflow-hidden bg-black sm:mx-0 sm:rounded-2xl" style={{ height: 'min(68vh, 640px)' }}>
+        <div className="relative -mx-4 overflow-hidden bg-black sm:mx-0 sm:rounded-2xl" style={{ height: 'min(74vh, 720px)' }}>
           <video ref={videoRef} playsInline muted className="absolute inset-0 h-full w-full object-cover" />
-          {/* Document frame: dims everything outside an A4-ish box */}
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div className="relative aspect-[1/1.35] h-[78%] max-w-[86%] rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,.55)]">
+          {/* Document frame: close to the edges so the page fills the photo; dims only a thin border */}
+          <div className="pointer-events-none absolute inset-x-3 bottom-28 top-12 flex items-center justify-center">
+            <div className="relative h-full w-full rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,.45)]">
               {['left-0 top-0 border-l-4 border-t-4 rounded-tl-2xl', 'right-0 top-0 border-r-4 border-t-4 rounded-tr-2xl', 'left-0 bottom-0 border-l-4 border-b-4 rounded-bl-2xl', 'right-0 bottom-0 border-r-4 border-b-4 rounded-br-2xl'].map((c) => (
                 <span key={c} className={`absolute h-10 w-10 border-brand ${c}`} />
               ))}
@@ -286,7 +301,7 @@ export default function ScanPage() {
           </div>
           <div className="absolute inset-x-0 top-3 flex justify-center px-4">
             <p className="rounded-full bg-black/60 px-3 py-1.5 text-center text-xs font-medium text-white backdrop-blur">
-              {docType === 'invoice' ? 'Line up the whole invoice page inside the frame' : 'Line up the prescription inside the frame'}
+              {docType === 'invoice' ? (pages.length ? `Page ${pages.length + 1}: fill the frame with the next page` : 'Fill the frame with the whole invoice page') : docType === 'prescription' ? 'Fill the frame with the prescription' : 'Fill the frame with the prescription or invoice'}
             </p>
           </div>
           {camera === 'starting' && <div className="absolute inset-0 flex items-center justify-center text-white"><Loader2 className="h-8 w-8 animate-spin" /></div>}
@@ -319,9 +334,9 @@ export default function ScanPage() {
           onDrop={(e) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files); }}
         >
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand/15 text-brand"><Camera className="h-8 w-8" /></div>
-          <h1 className="text-xl font-bold">{docType === 'invoice' ? 'Scan a wholesaler invoice' : 'Scan a prescription'}</h1>
+          <h1 className="text-xl font-bold">{docType === 'invoice' ? 'Scan a wholesaler invoice' : docType === 'prescription' ? 'Scan a prescription' : 'Scan a prescription or invoice'}</h1>
           <p className="mt-1 max-w-md text-sm text-muted-foreground">
-            {docType === 'invoice' ? 'Controlled drug lines are picked out and pack quantities converted to units. You check each line before it goes in the register.' : 'Patient, prescriber and quantity are read for you to check before recording the supply.'}
+            {docType === 'invoice' ? 'Controlled drug lines are picked out and pack quantities converted to units. You check each line before it goes in the register.' : docType === 'prescription' ? 'Patient, prescriber and quantity are read for you to check before recording the supply.' : 'It works out whether it’s a prescription or a wholesaler invoice. You check everything before it goes in the register.'}
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <button onClick={() => fileRef.current?.click()} className="btn-primary"><ImagePlus className="h-4 w-4" /> Choose photo or PDF</button>
@@ -330,7 +345,7 @@ export default function ScanPage() {
           {camera === 'unavailable' && <p className="mt-3 text-xs text-muted-foreground">Camera not available: choose a photo instead.</p>}
           <p className="mt-3 hidden text-xs text-muted-foreground sm:block">Or drag a scan onto this box, or paste one (Ctrl+V).</p>
           {toast && <p className="mt-3 rounded-full bg-brand/15 px-3 py-1 text-xs font-semibold text-brand-dark" role="status">{toast}</p>}
-          <ScannerFolder active={stage === 'capture'} label={docType === 'invoice' ? 'invoice page' : 'prescription'} onFile={(f) => addFiles([f])} />
+          <ScannerFolder active={stage === 'capture'} label={docType === 'invoice' ? 'invoice page' : docType === 'prescription' ? 'prescription' : 'prescription or invoice'} onFile={(f) => addFiles([f])} />
         </div>
       )}
 

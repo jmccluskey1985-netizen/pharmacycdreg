@@ -279,7 +279,9 @@ import { vertexAccessToken, vertexUrl, type VertexCredentials } from './vertex';
 export type DocFile = { base64: string; mediaType: string };
 
 const userText = (n: number, hint: string) =>
-  `${n > 1 ? `These ${n} images are pages of one document. ` : ''}The pharmacist says this is a ${hint}. Extract the controlled-drug lines.`;
+  `${n > 1 ? `These ${n} images are pages of one document. ` : ''}${hint === 'auto'
+    ? 'First decide what this is: a prescription (including an HSE Opioid Substitution Treatment form) or a wholesaler invoice / delivery docket / CD docket, and set document_type to match.'
+    : `The pharmacist says this is a ${hint}.`} Extract the controlled-drug lines.`;
 
 export interface ReadConfig<T> { system: string; schema: object; name: string; prompt: string; parse: (raw: string | null | undefined) => T; reader?: ReaderConfig | null }
 
@@ -334,7 +336,7 @@ export async function readOstForm(files: DocFile[], reader?: ReaderConfig | null
   return result.ost;
 }
 
-export async function extractFromDocument(files: DocFile[], hint: 'invoice' | 'prescription' = 'invoice', reader?: ReaderConfig | null): Promise<{ extraction: Extraction; model: string }> {
+export async function extractFromDocument(files: DocFile[], hint: 'invoice' | 'prescription' | 'auto' = 'invoice', reader?: ReaderConfig | null): Promise<{ extraction: Extraction; model: string }> {
   const { result, model } = await readDocument(files, { system: SYSTEM, schema: JSON_SCHEMA, name: 'cd_extraction', prompt: userText(files.length, hint), parse: parseResult, reader });
   return { extraction: result, model };
 }

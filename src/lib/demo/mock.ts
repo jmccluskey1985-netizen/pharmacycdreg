@@ -787,7 +787,8 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     if (needStaff()) return needStaff()!;
     await new Promise((r) => setTimeout(r, 1800));
     const fd = init?.body as FormData;
-    const isRx = fd?.get?.('hint') === 'prescription';
+    const hint = fd?.get?.('hint'); const fname = String((fd?.get?.('file') as File | null)?.name ?? '');
+    const isRx = hint === 'prescription' || (hint !== 'invoice' && !/inv|docket/i.test(fname));
     // A file named like "ost…" plays the HSE OST (methadone) form, with made-up details
     const isOst = isRx && /ost/i.test(String((fd?.get?.('file') as File | null)?.name ?? ''));
     const extraction = isRx
