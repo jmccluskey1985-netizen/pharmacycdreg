@@ -8,7 +8,6 @@ import { useStaff } from '@/components/dashboard/staff-context';
 import { ReminderForm, type ReminderData } from '@/components/dashboard/reminder-form';
 import { RepeatSupplies, type SupplyLine } from '@/components/dashboard/repeat-supplies';
 import { describe, type Frequency } from '@/lib/reminders';
-import { ReminderNotifications } from '@/components/pwa';
 
 interface Line { register_id: string; quantity: number; recipient_name: string; recipient_address: string; prescriber_name: string | null; prescriber_address: string | null; authority_to_possess: string | null; patient_id: string | null; label: string; unit: string; balance: number; closed: boolean }
 interface Reminder { id: string; title: string; frequency: Frequency; interval_days: number | null; next_due: string; notes: string | null; active: boolean; due: boolean; lines: Line[]; last_done_on: string | null; last_done_by_name: string | null }
@@ -79,7 +78,6 @@ export default function RemindersPage() {
       {needsMigration && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">Needs a one-off database update: run migration 0012 in Supabase.</p>}
       {msg && <p className="rounded-lg bg-secondary p-3 text-sm">{msg}</p>}
       <p className="text-sm text-muted-foreground">Tip: on a register, select one or more supply rows and choose <b>Set up reminder</b>.</p>
-      <ReminderNotifications />
 
       {list === null ? <p className="text-sm text-muted-foreground">Loading…</p> : list.length === 0 ? (
         <div className="card flex flex-col items-center gap-2 py-10 text-center text-muted-foreground"><BellRing className="h-8 w-8" /><p>No reminders yet.</p></div>

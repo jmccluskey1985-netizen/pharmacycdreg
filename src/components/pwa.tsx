@@ -121,12 +121,15 @@ function usePush() {
   return { state, busy, error, turnOn, turnOff };
 }
 
-/** Reminders page and Settings: turn reminder notifications on or off for this device. */
-export function ReminderNotifications({ className = '' }: { className?: string }) {
+/** Settings: turn reminder notifications on or off for this device. With onDismiss it's the
+ *  dashboard prompt: shown only while they're off, gone once turned on or hidden. */
+export function ReminderNotifications({ className = '', onDismiss }: { className?: string; onDismiss?: () => void }) {
   const n = usePush();
   if (n.state === 'loading' || n.state === 'unavailable') return null;
+  if (onDismiss && n.state !== 'off') return null;
   return (
-    <div className={`card flex flex-wrap items-center gap-3 ${className}`}>
+    <div className={`card relative flex flex-wrap items-center gap-3 ${onDismiss ? 'pr-10' : ''} ${className}`}>
+      {onDismiss && <button onClick={onDismiss} className="absolute right-2 top-2 rounded p-1 text-muted-foreground hover:bg-muted" aria-label="Hide"><X className="h-4 w-4" /></button>}
       {n.state === 'on' ? <Bell className="h-5 w-5 text-brand" /> : <BellOff className="h-5 w-5 text-muted-foreground" />}
       <div className="min-w-0 flex-1">
         <p className="font-semibold">Phone notifications</p>
@@ -148,7 +151,8 @@ export function ReminderNotifications({ className = '' }: { className?: string }
 /* ───────── Dashboard card ───────── */
 
 /** Dashboard: on phones and tablets that haven't installed it yet, how to add it; once it's
- *  installed, the notification switch. Can be hidden; it stays hidden on this device. */
+ *  installed, a prompt to turn notifications on. Gone once they're on, or when hidden (it stays
+ *  hidden on this device). Both stay available in Settings → General. */
 export function AppCard() {
   const i = useInstall();
   const [hidden, setHidden] = useState(true);
@@ -158,7 +162,7 @@ export function AppCard() {
   }, []);
   const hide = () => { setHidden(true); try { localStorage.setItem('cdreg-app-card', 'hidden'); } catch {} };
   if (!i.ready || hidden) return null;
-  if (i.installed) return <ReminderNotifications className="no-print mb-4" />;
+  if (i.installed) return <ReminderNotifications className="no-print mb-4" onDismiss={hide} />;
   if (i.platform === 'desktop' && !i.canPrompt) return null;
   return (
     <div className="no-print card relative mb-4 border-brand/30 bg-brand/5">

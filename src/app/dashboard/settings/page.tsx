@@ -14,6 +14,7 @@ import { useTheme } from '@/components/dashboard/theme';
 import { BackupButton } from '@/components/dashboard/backup-button';
 import { THEMES } from '@/lib/theme';
 import { Palette } from 'lucide-react';
+import { InstallAppButton, ReminderNotifications } from '@/components/pwa';
 
 interface Settings { name: string; address: string; psi_premises_number: string | null; invoice_names: string | null; lock_minutes: number; locum_default_days: number; stock_check_frequency: string; halo_enabled: boolean; require_2fa?: boolean; migrated: boolean }
 interface Reg { id: string; label: string; unit: string; balance: number; low_stock_level: number | null }
@@ -111,6 +112,11 @@ export default function SettingsPage() {
         {current === 'general' && (<>
           <PharmacyDetails s={s} onSaved={onSaved} />
           <Display />
+          <section className="space-y-3">
+            <h2 className="font-semibold">This device</h2>
+            <InstallAppButton className="card" />
+            <ReminderNotifications />
+          </section>
           <section className="card divide-y divide-border p-0">
             {[
               { href: '/dashboard/team', icon: Users, label: 'Team & PINs', text: 'Staff, locums and their roles' },
