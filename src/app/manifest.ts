@@ -4,7 +4,7 @@ import type { MetadataRoute } from 'next';
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'PharmacyCDReg.ie: Controlled Drug Register',
-    short_name: 'CD Register',
+    short_name: 'CDReg',
     description: 'Electronic Controlled Drug Register for Irish community pharmacies.',
     start_url: '/dashboard',
     scope: '/',

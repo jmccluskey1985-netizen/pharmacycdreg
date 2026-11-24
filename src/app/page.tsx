@@ -14,6 +14,7 @@ import { AdvertVideo } from '@/components/advert-video';
 import { homepageJsonLd, faqJsonLd, jsonLd } from '@/lib/structured-data';
 import { GUIDES } from '@/lib/guides';
 import { InstallAppButton } from '@/components/pwa';
+import { PhoneAppDemo } from '@/components/phone-app-demo';
 
 /** Plain answers to what pharmacists ask first. Every answer must stay true of the live system. */
 const DATA_QA: { q: string; a: string; detail: string; more: string }[] = [
@@ -299,10 +300,7 @@ export default function LandingPage() {
               <p className="mt-2 text-lg text-muted-foreground">Check a balance or record an entry from anywhere in the pharmacy. Each person signs in with their own PIN.</p>
               <InstallAppButton className="mt-5 max-w-md rounded-xl bg-card p-4 ring-1 ring-border" />
             </div>
-            <figure className="mx-auto w-60 sm:w-64">
-              <div className="overflow-hidden rounded-[2.2rem] bg-black p-2 shadow-soft ring-1 ring-border"><img src="/previews/phone.webp" alt="PharmacyCDReg on a phone: the OxyNorm 5mg capsule register page" loading="lazy" className="w-full rounded-[1.8rem]" /></div>
-              <figcaption><SampleNote className="mt-2 text-center" /></figcaption>
-            </figure>
+            <PhoneAppDemo />
           </div>
           <p className="mt-8 text-xs text-muted-foreground">All screens and animations use sample data. Names, addresses, prescription numbers and pharmacy details are made up for illustration and are not real patients or pharmacies.</p>
         </div>
