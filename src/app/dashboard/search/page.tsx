@@ -73,7 +73,7 @@ function DrugSearch() {
           {picked ? (
             <div className="input flex items-center justify-between gap-2"><span className="truncate font-medium">{picked.label}</span><button type="button" onClick={() => { setPicked(null); setResults(null); }} aria-label="Clear"><X className="h-4 w-4 text-muted-foreground" /></button></div>
           ) : (
-            <input className="input" value={f.q} onChange={(e) => { setF({ ...f, q: e.target.value }); setOpenList(true); }} onFocus={() => setOpenList(true)} placeholder="e.g. OxyContin, MST, United Drug" autoComplete="off" />
+            <input className="input" value={f.q} onChange={(e) => { setF({ ...f, q: e.target.value }); setOpenList(true); }} onFocus={() => setOpenList(true)} placeholder="e.g. OxyContin, MST or a wholesaler" autoComplete="off" />
           )}
           {!picked && openList && matches.length > 0 && (
             <ul className="absolute left-0 top-full z-50 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-border bg-card py-1 shadow-xl sm:w-[28rem]">

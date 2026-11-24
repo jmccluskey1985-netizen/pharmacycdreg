@@ -49,7 +49,7 @@ function seedEntries() {
     out.push({ ...base, id: uid(), register_id, seq, entry_type, transaction_date: daysAgo(d), recorded_at: new Date(Date.now() - d * 864e5 + 3600e3 * 10).toISOString(), quantity: String(quantity), recorded_by_staff_id: staff, recorded_by_auth_user: 'demo', ...f });
     return out[out.length - 1];
   };
-  const UD = { supplier_name: 'United Drug', supplier_address: 'Magna Business Park, Citywest, Dublin 24' };
+  const UD = { supplier_name: 'Medvale Wholesale', supplier_address: 'Unit 3, Fernhill Business Park, Dublin 24' };
   const UN = { supplier_name: 'Unopharma Wholesale', supplier_address: 'Unit 7, Fifth Avenue, Cookstown, Dublin 24' };
   const BF = (n: string) => ({ supplier_name: 'Balance brought forward', supplier_address: n, notes: 'Opening balance' });
   // Methadone DTF 1mg/ml (OST)
@@ -99,7 +99,7 @@ function seed() {
       { id: 'c1', kind: 'prescriber', name: 'Dr A. Walsh', address: 'Ennis Medical Centre, Ennis, Co. Clare', registration: '012345', gms_number: 'G0001', role: null },
       { id: 'c2', kind: 'prescriber', name: 'Dr K. Ryan', address: 'Abbey Street Surgery, Ennis, Co. Clare', registration: '023456', gms_number: 'G0002', role: null },
       { id: 'c3', kind: 'prescriber', name: 'Dr L. Nolan', address: 'Quay Street Clinic, Galway', registration: '034567', gms_number: null, role: null },
-      { id: 'c4', kind: 'supplier', name: 'United Drug', address: 'Magna Business Park, Citywest, Dublin 24', registration: null, gms_number: null, role: null },
+      { id: 'c4', kind: 'supplier', name: 'Medvale Wholesale', address: 'Unit 3, Fernhill Business Park, Dublin 24', registration: null, gms_number: null, role: null },
       { id: 'c5', kind: 'supplier', name: 'Unopharma Wholesale', address: 'Unit 7, Fifth Avenue, Cookstown, Dublin 24', registration: null, gms_number: null, role: null },
       { id: 'c6', kind: 'witness', name: 'P. Doyle', address: null, registration: null, gms_number: null, role: 'Authorised officer (PSI)' },
     ] as Json[],
@@ -792,7 +792,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     const isOst = isRx && /ost/i.test(String((fd?.get?.('file') as File | null)?.name ?? ''));
     const extraction = isRx
       ? { document_type: 'prescription', document_date: today(), reference: 'Rx 10302', supplier_name: null, supplier_address: null, patient_name: 'MARY KELY', patient_first_name: 'Mary', patient_surname: 'Kely', patient_dob: '1948-07-01', gms_number: '1234567B', patient_address: '14 Main Street, Ennis', prescriber_name: 'Dr A. Walsh', prescriber_address: 'Ennis Medical Centre', prescriber_registration: '012345', warnings: [], items: [{ drug_name: 'Oxycodone hydrochloride', strength: '5mg', form: 'capsule', quantity: 28, quantity_unit: 'capsules', pack_description: '28 (twenty-eight)', is_controlled_drug: true, likely_schedule: 2, confidence: 'high', notes: '', brand: 'OxyNorm', packs: null, pack_size: null, quantity_figures: '28', quantity_words: 'twenty-eight', duration_text: null, is_credit: false }] }
-      : { document_type: 'invoice', document_date: today(), reference: 'Invoice 4472210', supplier_name: 'United Drug', supplier_address: 'Magna Business Park, Citywest, Dublin 24', patient_name: null, patient_address: null, prescriber_name: null, prescriber_address: null, prescriber_registration: null, warnings: [], items: [
+      : { document_type: 'invoice', document_date: today(), reference: 'Invoice 4472210', supplier_name: 'Medvale Wholesale', supplier_address: 'Unit 3, Fernhill Business Park, Dublin 24', patient_name: null, patient_address: null, prescriber_name: null, prescriber_address: null, prescriber_registration: null, warnings: [], items: [
           { drug_name: 'Oxycodone hydrochloride', strength: '5mg', form: 'capsule', quantity: 112, quantity_unit: 'capsules', pack_description: 'OXYNORM CAPS 5MG 56: CD2', is_controlled_drug: true, likely_schedule: 2, confidence: 'high', notes: '', brand: 'OxyNorm', packs: 2, pack_size: 56, quantity_figures: null, quantity_words: null, duration_text: null, is_credit: false },
           { drug_name: 'Morphine sulfate', strength: '10mg', form: 'prolonged-release tablet', quantity: 60, quantity_unit: 'tablets', pack_description: 'MST CONTINUS 10MG PR TABLETS 60', is_controlled_drug: true, likely_schedule: 2, confidence: 'high', notes: '', brand: 'MST Continus', packs: 1, pack_size: 60, quantity_figures: null, quantity_words: null, duration_text: null, is_credit: false },
           { drug_name: 'Morphine sulfate', strength: '10mg/5ml', form: 'oral solution', quantity: 300, quantity_unit: 'ml', pack_description: 'ORAMORPH 10MG/5ML 100ML', is_controlled_drug: true, likely_schedule: 5, confidence: 'high', notes: '', brand: 'Oramorph', packs: 3, pack_size: 100, quantity_figures: null, quantity_words: null, duration_text: null, is_credit: false },

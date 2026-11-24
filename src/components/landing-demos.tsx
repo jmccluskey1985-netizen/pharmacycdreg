@@ -463,7 +463,7 @@ function BalanceDemo() {
   const { ref, phase } = usePhases([1400, 900, 2600, 600]);
   const added = phase >= 1 && phase <= 2;
   const rows = [
-    { d: '01/11', n: 'United Drug', inQ: 112, outQ: null, b: 168 },
+    { d: '01/11', n: 'Medvale Wholesale', inQ: 112, outQ: null, b: 168 },
     { d: '02/11', n: 'Mary Kelly', inQ: null, outQ: 28, b: 140 },
   ];
   return (

@@ -130,7 +130,7 @@ function PasteForm({ kind, onDone }: { kind: Kind; onDone: () => void }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const rows = parsePaste(text, kind);
-  const example = kind === 'prescriber' ? 'Dr Áine Walsh | Ennis Medical Centre, Ennis, Co. Clare | 012345 | G1234\nDr Kevin Ryan | Abbey St Surgery, Ennis | 023456 | G2345' : kind === 'supplier' ? 'United Drug | Magna Business Park, Citywest, Dublin 24' : 'P. Doyle | Authorised officer';
+  const example = kind === 'prescriber' ? 'Dr Áine Walsh | Ennis Medical Centre, Ennis, Co. Clare | 012345 | G1234\nDr Kevin Ryan | Abbey St Surgery, Ennis | 023456 | G2345' : kind === 'supplier' ? 'Medvale Wholesale | Unit 3, Fernhill Business Park, Dublin 24' : 'P. Doyle | Authorised officer';
   async function save() {
     setBusy(true); setMsg(null);
     try { const d = await api('/api/contacts', { method: 'POST', json: { contacts: rows } }); setMsg(`Added ${d.added} (duplicates skipped)`); setTimeout(onDone, 900); }

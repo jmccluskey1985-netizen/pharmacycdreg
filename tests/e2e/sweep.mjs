@@ -73,7 +73,7 @@ await step('receipt: balance goes up by the amount', async () => {
   const before = await balanceOf();
   await openNewEntry(); await click('button:has-text("Obtained")');
   await page.fill('input[type=number]', '56');
-  await page.locator('input[placeholder*="United"]').fill('Uniphar');
+  await page.locator('input[placeholder*="wholesaler"]').fill('Uniphar');
   await field('Address').fill('Belgard Rd, Dublin 24');
   await field('Invoice / docket no.').fill('Invoice 99001');
   await click('button:has-text("Sign & record")'); await page.waitForTimeout(1200);
@@ -109,7 +109,7 @@ await step('different invoice numbers aren’t a duplicate; a flagged one can be
   // Same amount as the earlier receipt, new invoice number: a second delivery, no warning
   await openNewEntry(); await click('button:has-text("Obtained")');
   await page.fill('input[type=number]', '56');
-  await page.locator('input[placeholder*="United"]').fill('Uniphar');
+  await page.locator('input[placeholder*="wholesaler"]').fill('Uniphar');
   await field('Address').fill('Belgard Rd, Dublin 24');
   await field('Invoice / docket no.').fill('Invoice 99002');
   await click('button:has-text("Sign & record")');
@@ -117,7 +117,7 @@ await step('different invoice numbers aren’t a duplicate; a flagged one can be
   // Same amount, no number: flagged; reason typed, then the main button records it
   await openNewEntry(); await click('button:has-text("Obtained")');
   await page.fill('input[type=number]', '56');
-  await page.locator('input[placeholder*="United"]').fill('Uniphar');
+  await page.locator('input[placeholder*="wholesaler"]').fill('Uniphar');
   await field('Address').fill('Belgard Rd, Dublin 24');
   await click('button:has-text("Sign & record")');
   await see('text=/Possible duplicate/i');
@@ -456,7 +456,7 @@ await step('technician drafts an entry (no balance change); a pharmacist signs i
   await click('button:has-text("Draft entry")'); await see('text=Date of transaction');
   await click('button:has-text("Obtained")');
   await page.fill('input[type=number]', '28');
-  await page.locator('input[placeholder*="United"]').fill('Uniphar');
+  await page.locator('input[placeholder*="wholesaler"]').fill('Uniphar');
   await field('Address').fill('Belgard Rd, Dublin 24');
   await field('Invoice / docket no.').fill('Invoice 99777');
   await click('button:has-text("Save for a pharmacist to sign")'); await page.waitForTimeout(1200);

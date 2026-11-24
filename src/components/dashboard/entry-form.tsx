@@ -217,7 +217,7 @@ export function EntryForm({ registerId, unit, balance, initial, correcting, lock
 
       {type === 'receipt' && (
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Obtained from (name)"><QuickFillInput kind="supplier" required value={d.supplier_name ?? ''} onChange={setVal('supplier_name')} onPick={pickSupplier} placeholder="Start typing, e.g. United" /></Field>
+          <Field label="Obtained from (name)"><QuickFillInput kind="supplier" required value={d.supplier_name ?? ''} onChange={setVal('supplier_name')} onPick={pickSupplier} placeholder="Start typing the wholesaler’s name" /></Field>
           <Field label="Address"><input className="input" required value={d.supplier_address ?? ''} onChange={set('supplier_address')} /></Field>
           <Field label="Invoice / docket no." ><input className="input" value={d.notes ?? ''} onChange={set('notes')} /></Field>
         </div>
