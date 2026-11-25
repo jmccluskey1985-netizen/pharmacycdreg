@@ -241,7 +241,7 @@ await step('Rx scan: a misspelt name is matched to the existing patient', async 
   if (await read.isVisible().catch(() => false)) await read.click();
   await see('text=Is this one of your patients?', 15000);
   await see('text=/GMS matches/');
-  await page.getByRole('radio', { name: 'Mary Kelly' }).check();
+  await page.locator('label:has-text("GMS matches") input[type=radio]').first().check(); // the right Mary Kelly, not another one spelt alike
   const open = page.locator('button:has-text("Check details & record")');
   if (await open.count()) await open.first().click();
   await page.waitForTimeout(600);
