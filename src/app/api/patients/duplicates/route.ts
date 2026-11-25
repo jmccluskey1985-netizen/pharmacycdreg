@@ -36,7 +36,9 @@ export async function GET() {
       const pool = Array.from(others.get(a.id)?.values() ?? []);
       if (!pool.length) continue;
       for (const c of matchPatients({ first_name: a.first_name, surname: a.surname, dob: a.date_of_birth, address: a.address, eircode: a.eircode, gms: a.gms_number, dps: a.dps_number, lti: a.lti_number, mrn: a.hospital_mrn }, pool, 3)) {
-        if (c.level === 'possible') continue;
+        // Possible pairs are left out, except a name one letter different at the same address: worth a look.
+        const typo = c.reasons.some((r) => r.includes('one letter different')) && c.reasons.some((r) => r === 'Same address' || r === 'Eircode matches') && !c.conflicts.length;
+        if (c.level === 'possible' && !typo) continue;
         const key = [a.id, c.patient.id].sort().join('|');
         if (seen.has(key)) continue;
         seen.add(key);

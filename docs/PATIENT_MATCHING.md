@@ -163,7 +163,7 @@ Work out each signal, then the level. This follows Halo's rule: **name AND (DOB 
 | Level | Rule | What the UI does |
 |---|---|---|
 | `certain` | `nameExact` and (`dob` or `number`), no conflicts | Preselected, ✓ shown. Safe to auto-link when nobody is there to ask (Halo inbox, import). |
-| `strong` | `nameExact` and (`eircode` or `address`), no conflicts, nothing to compare DOB/number against; **or** `nameClose` and `dob` **and** `number` (Halo's "one letter out counts only if DOB AND a number agree") | Preselected, but the pharmacist confirms it on the card. |
+| `strong` | `nameExact` and (`eircode` or `address`), no conflicts, nothing to compare DOB/number against; **or** `nameClose` and `dob` **and** `number` (Halo's "one letter out counts only if DOB AND a number agree"); **or** surname one letter out at the same address or eircode (added Nov 2026: register lines often carry only name and address, so typos like Kely / Kelly were missed; family members share the exact surname) | Preselected, but the pharmacist confirms it on the card. |
 | `possible` | `nameExact` with nothing else (no DOB, no address on one side); `nameClose` with `dob` or `number` or `eircode`; `dobSwapped`; same DOB + same eircode with a different first name (twins, or a reader mistake); any candidate with conflicts but the same name | Listed, not preselected. |
 | *(dropped)* | Anything else | Not shown. |
 
@@ -255,6 +255,9 @@ Made-up people only. Each row is one probe against a small fixed pool:
 | `Mary Anne O Brien`, no DOB, same eircode | strong |
 | `Seán Murphy` vs `Sean Murphy`, same GMS | certain |
 | `Mary Kely`, same DOB **and** GMS | strong (one letter out, DOB + number) |
+| `Mary Kely`, same address | strong (surname one letter out, same address) |
+| `Mary Kely`, name only | possible |
+| `Jon Smith` vs John Smith, same address | possible, listed under Possible duplicates (first name one letter out could be a family member, e.g. Anne / Anna) |
 | `Mary Kely`, same DOB only | possible |
 | `Mary Kelly`, different DOB, no numbers | possible, conflict `Different DOB`, not preselected |
 | `Mary Kelly`, GMS `1234567A` vs record `1234567B` | possible, conflict "family member" |

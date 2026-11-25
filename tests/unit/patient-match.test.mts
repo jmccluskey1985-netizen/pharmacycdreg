@@ -34,6 +34,11 @@ eq('Mary Anne O Brien, same eircode → strong', top({ full_name: 'Mary Anne O B
 eq('Seán Murphy vs Sean Murphy, same GMS → certain', top({ full_name: 'Seán Murphy', gms: '7654321 C' }), ['murphy', 'certain']);
 eq('Mary Kely, same DOB and GMS → strong', top({ full_name: 'Mary Kely', dob: '1948-07-01', gms: '1234567B' }), ['kelly', 'strong']);
 eq('Mary Kely, same DOB only → possible', top({ full_name: 'Mary Kely', dob: '1948-07-01' }), ['kelly', 'possible']);
+eq('Mary Kely, same address → strong (one letter out)', top({ full_name: 'Mary Kely', address: '14 Main St, Ennis' }), ['kelly', 'strong']);
+eq('Mary Kely, name only → possible', top({ full_name: 'Mary Kely' }), ['kelly', 'possible']);
+eq('Jon Smith, same address → possible (first name one letter out could be family)', top({ full_name: 'Jon Smith', address: '8 Mill Lane, Kilrush' }), ['jsmith', 'possible']);
+eq('Jon Smith, name only → possible', top({ full_name: 'Jon Smith' }), ['jsmith', 'possible']);
+eq('Mary Kely, same address but different DOB → not strong', top({ full_name: 'Mary Kely', address: '14 Main St, Ennis', dob: '1970-02-02' })?.[1] === 'strong', false);
 const diffDob = find({ full_name: 'Mary Kelly', dob: '1960-01-01' }, 'kelly');
 eq('Mary Kelly, different DOB → possible with conflict', [diffDob?.level, diffDob?.conflicts.includes('Different DOB')], ['possible', true]);
 const family = find({ full_name: 'Mary Kelly', gms: '1234567A' }, 'kelly');

@@ -170,7 +170,7 @@ function swappedDob(a: string, b: string) {
 
 export function scorePatient<P extends MatchPatient>(probe: PatientProbe, p: P): PatientCandidate<P> | null {
   const sk = nameKey(p.surname), fg = firstGiven(p.first_name);
-  let best: { exact: boolean; close: boolean; nick: boolean; surEq: boolean; diffFirst: boolean; closeSur: boolean } | null = null;
+  let best: { exact: boolean; close: boolean; nick: boolean; surEq: boolean; diffFirst: boolean; closeSur: boolean; closeFirst: boolean } | null = null;
   for (const r of nameReadings(probe)) {
     if (!r.sur) continue;
     const surEq = r.sur === sk;
@@ -178,13 +178,16 @@ export function scorePatient<P extends MatchPatient>(probe: PatientProbe, p: P):
     const closeSur = !surEq && !!sk && editDistance(r.sur, sk) <= maxEdit;
     const firstEq = !!r.first && r.first === fg;
     const nick = shortFormMatch(r.first, fg);
+    // First name one letter out (Patrik / Patrick, Sinead / Sineád typed without the fada is already equal)
+    const closeFirst = surEq && !!r.first && !!fg && !firstEq && !nick && Math.max(r.first.length, fg.length) >= 4 && editDistance(r.first, fg) <= 1;
     const cand = {
       exact: surEq && firstEq,
-      close: (closeSur && (firstEq || nick)) || (surEq && nick),
+      close: (closeSur && (firstEq || nick)) || (surEq && nick) || closeFirst,
       nick: surEq && nick,
       surEq,
-      diffFirst: surEq && !!r.first && !!fg && !firstEq && !nick,
+      diffFirst: surEq && !!r.first && !!fg && !firstEq && !nick && !closeFirst,
       closeSur: closeSur && (firstEq || nick),
+      closeFirst,
     };
     const rank = (x: typeof cand) => (x.exact ? 3 : x.close ? 2 : x.surEq ? 1 : 0);
     if (!best || rank(cand) > rank(best)) best = cand;
@@ -232,15 +235,20 @@ export function scorePatient<P extends MatchPatient>(probe: PatientProbe, p: P):
   if (!n) return null;
   if (n.exact) reasons.unshift('Name matches');
   else if (n.closeSur) reasons.unshift('Surname one letter different');
+  else if (n.closeFirst) reasons.unshift('First name one letter different');
   else if (n.nick) reasons.unshift('First name short form');
   else if (n.diffFirst) reasons.unshift('Different first name');
 
   const clean = conflicts.length === 0;
   let level: MatchLevel | null = null;
   if ((n.exact && (dob || number) && clean) || (card && (n.exact || n.close || n.nick) && clean)) level = 'certain';
-  else if (clean && ((n.exact && (eircode || address)) || (n.closeSur && dob && number) || (n.nick && (dob || number)))) level = 'strong';
+  // Surname one letter out (a typo or misread) at the same address: very likely the same person, since
+  // family members share the exact surname. A first name one letter out at the same address stays
+  // "possible" (Anne and Anna can be mother and daughter), so it's never linked without asking.
+  else if (clean && ((n.exact && (eircode || address)) || (n.closeSur && dob && number) || (n.nick && (dob || number)) || (n.closeSur && (eircode || address)))) level = 'strong';
   else if (
     n.exact ||
+    (n.close && clean) ||
     (n.close && (dob || number || eircode)) ||
     (n.nick) ||
     ((n.exact || n.close || n.surEq) && dobSwap) ||
