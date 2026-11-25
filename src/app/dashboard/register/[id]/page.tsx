@@ -1,7 +1,7 @@
 'use client';
 
 import { productTitle, genericLine, brandOf } from '@/lib/product-name';
-import { useCallback, useEffect, useMemo, useState, use } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, use } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Plus, Printer, PencilLine, Trash2, Repeat, X, BellRing, StickyNote, Archive } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -88,6 +88,15 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
   // Excel-style selection of supply lines → "Repeat for today" (typical repeat prescriptions).
   const [selected, setSelected] = useState<string[]>([]);
   const [anchor, setAnchor] = useState<string | null>(null);
+  // Phones and tablets: press and hold a supply line to start selecting, then tap to add more.
+  // (A plain tap does nothing until then, so scrolling the book never selects lines by accident.)
+  const [touch, setTouch] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
+    setTouch(window.matchMedia('(pointer: coarse)').matches);
+  }, []);
+  const [selecting, setSelecting] = useState(false); // the Select button: taps select lines
+  const press = useRef<{ timer?: ReturnType<typeof setTimeout>; x: number; y: number; fired: boolean }>({ x: 0, y: 0, fired: false });
   const [repeating, setRepeating] = useState(false);
   const [reminding, setReminding] = useState(false);
 
@@ -183,6 +192,10 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
   const pickable = lines.filter(selectable);
   const choose = (l: Line, e: React.MouseEvent) => {
     if (!selectable(l) || (e.target as HTMLElement).closest('button,a,input')) return;
+    if (touch) {
+      if (press.current.fired) { press.current.fired = false; return; } // the tap that ended a long press
+      if (!selected.length && !selecting) return; // not selecting yet: Select, or press and hold, starts it
+    }
     if (e.shiftKey && anchor) {
       const keys = pickable.map((x) => x.key);
       const [a, b] = [keys.indexOf(anchor), keys.indexOf(l.key)].sort((x, y) => x - y);
@@ -190,6 +203,26 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
     }
     setSelected((cur) => (cur.includes(l.key) ? cur.filter((k) => k !== l.key) : [...cur, l.key]));
     setAnchor(l.key);
+  };
+  const startPress = (l: Line, e: React.TouchEvent) => {
+    if (!selectable(l) || (e.target as HTMLElement).closest('button,a,input')) return;
+    const t = e.touches[0];
+    clearTimeout(press.current.timer);
+    press.current = { x: t.clientX, y: t.clientY, fired: false, timer: setTimeout(() => {
+      press.current.fired = true;
+      if ('vibrate' in navigator) navigator.vibrate?.(25);
+      setSelected((cur) => (cur.includes(l.key) ? cur : [...cur, l.key]));
+      setAnchor(l.key);
+    }, 450) };
+  };
+  const movePress = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    if (Math.abs(t.clientX - press.current.x) > 10 || Math.abs(t.clientY - press.current.y) > 10) clearTimeout(press.current.timer);
+  };
+  const endPress = () => {
+    clearTimeout(press.current.timer);
+    // Some phones send a tap after a long press and some don't: swallow it only if it comes straight away.
+    if (press.current.fired) setTimeout(() => { press.current.fired = false; }, 400);
   };
   const chosenLines: SupplyLine[] = lines.filter((l) => selected.includes(l.key)).map((l) => ({ ...(l.raw as any), id: l.raw.corrects_entry_id ?? l.raw.id }));
 
@@ -227,6 +260,12 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
               catch (e: any) { alert(e?.message ?? 'Could not close it'); }
             }} className="btn-ghost"><Archive className="h-4 w-4" /> Close book</button>
           )}
+          {touch && mayRecord && pickable.length > 0 && (
+            <button onClick={() => { if (selecting || selected.length) { setSelecting(false); setSelected([]); } else setSelecting(true); }}
+              className={`btn-secondary ${selecting || selected.length ? 'ring-2 ring-brand' : ''}`} aria-pressed={selecting || selected.length > 0}>
+              {selecting || selected.length ? <><X className="h-4 w-4" /> Cancel</> : <><Repeat className="h-4 w-4" /> Select</>}
+            </button>
+          )}
           <StockCheckButton registerId={params.id} unit={p.unit} balance={Number(balance)} canRecord={mayCheck} canAmend={!!mayRecord} onChanged={load} />
           <Link href={`/dashboard/notes?register_id=${params.id}`} className="btn-secondary"><StickyNote className="h-4 w-4" /> Notes</Link>
           <QuarantinePanel registerId={params.id} unit={p.unit} balance={Number(balance)} canRecord={!!mayRecord} onChanged={load} />
@@ -234,6 +273,9 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
         </div>
       </div>
 
+      {touch && mayRecord && pickable.length > 0 && selected.length === 0 && (
+        <p className="no-print mb-2 text-xs text-muted-foreground">{selecting ? <>Tap the supply lines to repeat, then <b className="text-foreground">Repeat for today</b>.</> : <>Repeat a supply: tap <b className="text-foreground">Select</b> (or press and hold a line), tap the lines, then <b className="text-foreground">Repeat for today</b>.</>}</p>
+      )}
       <div className="book-stage">
         <div className={`book ${opened ? 'open' : ''}`}>
           {/* Cover: the PharmacyCDReg.ie register book */}
@@ -279,8 +321,10 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
                           const cls = l.struck ? 'struck' : '';
                           return (
                             <tr key={l.key} onClick={(e) => choose(l, e)} aria-selected={selected.includes(l.key) || undefined}
-                              title={selectable(l) ? 'Click to select · Shift-click for a range · then “Repeat for today”' : undefined}
-                              className={`${selectable(l) ? 'cursor-pointer select-none' : ''} ${selected.includes(l.key) ? 'bg-brand/15 outline outline-2 -outline-offset-2 outline-brand' : r.entry_type.includes('patient_return') ? 'bg-sky-50/60 dark:bg-sky-950/30' : r.entry_type === 'destruction' ? 'bg-amber-50/60 dark:bg-amber-950/20' : r.entry_type.startsWith('adjustment') ? 'bg-violet-50/70 dark:bg-violet-950/30' : selectable(l) ? 'hover:bg-brand/5' : ''}`}>
+                              onTouchStart={(e) => startPress(l, e)} onTouchMove={movePress} onTouchEnd={endPress} onTouchCancel={endPress}
+                              onContextMenu={(e) => { if (touch && selectable(l)) e.preventDefault(); }}
+                              title={selectable(l) && !touch ? 'Click to select · Shift-click for a range · then “Repeat for today”' : undefined}
+                              className={`${selectable(l) ? 'cursor-pointer select-none [-webkit-touch-callout:none]' : ''} ${selected.includes(l.key) ? 'bg-brand/15 outline outline-2 -outline-offset-2 outline-brand' : r.entry_type.includes('patient_return') ? 'bg-sky-50/60 dark:bg-sky-950/30' : r.entry_type === 'destruction' ? 'bg-amber-50/60 dark:bg-amber-950/20' : r.entry_type.startsWith('adjustment') ? 'bg-violet-50/70 dark:bg-violet-950/30' : selectable(l) ? 'hover:bg-brand/5' : ''}`}>
                               <td className={`${cls} tabular-nums`}>{fmtDate(r.transaction_date)}</td>
                               <td className={cls}>
                                 <span className="font-medium">{party.name}</span>
@@ -361,17 +405,17 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
             <span className="px-2 font-semibold">{selected.length} selected</span>
             <button onClick={() => setRepeating(true)} className="flex items-center gap-1.5 rounded-full bg-brand px-3 py-1.5 font-semibold text-white"><Repeat className="h-4 w-4" /> Repeat for today</button>
             <button onClick={() => setReminding(true)} className="flex items-center gap-1.5 rounded-full bg-background/15 px-3 py-1.5 font-semibold hover:bg-background/25"><BellRing className="h-4 w-4" /> <span className="hidden sm:inline">Set up</span> reminder</button>
-            <button onClick={() => setSelected([])} className="rounded-full p-1.5 hover:bg-background/20" aria-label="Clear selection"><X className="h-4 w-4" /></button>
+            <button onClick={() => { setSelected([]); setSelecting(false); }} className="rounded-full p-1.5 hover:bg-background/20" aria-label="Clear selection"><X className="h-4 w-4" /></button>
           </div>
         </div>
       )}
       <Modal open={repeating} onClose={() => setRepeating(false)} title={`Repeat ${selected.length > 1 ? `${selected.length} supplies` : 'supply'}: ${brandOf(p) ?? p.drug_name} ${p.strength}`} wide>
         {repeating && <RepeatSupplies registerId={params.id} unit={p.unit} balance={Number(balance)} lines={chosenLines}
-          onCancel={() => setRepeating(false)} onDone={async () => { setRepeating(false); setSelected([]); await load(); }} />}
+          onCancel={() => setRepeating(false)} onDone={async () => { setRepeating(false); setSelected([]); setSelecting(false); await load(); }} />}
       </Modal>
       <Modal open={reminding} onClose={() => setReminding(false)} title="Dispensing reminder" wide>
         {reminding && <ReminderForm initial={{ lines: chosenLines.map((l) => ({ register_id: params.id, quantity: Number(l.quantity), recipient_name: l.recipient_name ?? '', recipient_address: l.recipient_address ?? '', prescriber_name: l.prescriber_name, prescriber_address: l.prescriber_address, authority_to_possess: l.authority_to_possess, patient_id: l.patient_id ?? null })) }}
-          onCancel={() => setReminding(false)} onSaved={() => { setReminding(false); setSelected([]); refresh(); }} />}
+          onCancel={() => setReminding(false)} onSaved={() => { setReminding(false); setSelected([]); setSelecting(false); refresh(); }} />}
       </Modal>
       <Modal open={adding} onClose={() => setAdding(false)} title={`New entry: ${brandOf(p) ?? p.drug_name} ${p.strength}`}>
         <EntryForm registerId={params.id} unit={p.unit} balance={balance} initial={addType ? { entry_type: addType } : undefined} onCancel={() => setAdding(false)} onSaved={async () => { setAdding(false); await load(); }} />
