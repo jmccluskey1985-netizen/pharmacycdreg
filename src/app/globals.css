@@ -205,6 +205,18 @@
   .no-print { display: none !important; }
   .book-pages { opacity: 1 !important; transform: none !important; }
   .print-page { break-after: page; box-shadow: none !important; }
+  /* The printout (.print-register): drug title + headings repeat on every page; small type, tight rows */
+  .print-register .register-table { color: #000; }
+  .print-register .register-table th, .print-register .register-table td { border-color: #999; padding: 2px 4px; }
+  .print-register .register-table th { font-size: 6.8pt; }
+  .print-register .register-table th small { font-size: 5.8pt; margin-top: 1px; }
+  .print-register .register-table td { font-size: 8pt; line-height: 1.25; height: auto; }
+  .print-register .register-table td .text-xs, .print-register .register-table td.text-xs { font-size: 7pt; }
+  .print-register .register-table th.print-title { text-align: left; text-transform: none; letter-spacing: 0; font-size: 8.5pt; font-weight: 400; border: 0; border-bottom: 1.5px solid #000; padding: 0 0 4px; }
+  .print-register .print-title b { font-weight: 700; }
+  .print-register .print-product { font-size: 10pt; font-weight: 800; }
+  .print-register .badge { padding: 0 3px; font-size: 6.5pt; border: 1px solid #999; background: none; }
+  .print-register .print-notes { margin-top: 6px; font-size: 7pt; line-height: 1.3; break-inside: avoid-page; }
 }
 
 /* Data safety sheet: one A4 portrait page, no register footer */

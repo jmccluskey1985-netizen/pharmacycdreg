@@ -3,7 +3,7 @@
 import { productTitle, genericLine, brandOf } from '@/lib/product-name';
 import { useCallback, useEffect, useMemo, useRef, useState, use } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ChevronLeft, ChevronRight, Download, Plus, Printer, PencilLine, Trash2, Repeat, X, BellRing, StickyNote, Archive } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Plus, Printer, PencilLine, Trash2, Repeat, X, BellRing, StickyNote, Archive } from 'lucide-react';
 import { api } from '@/lib/api';
 import { can } from '@/lib/roles';
 import { canWrite } from '@/lib/stripe';
@@ -41,6 +41,15 @@ interface Line {
 }
 
 const fmtDate = (d: string) => new Date(d + (d.length === 10 ? 'T00:00:00' : '')).toLocaleDateString('en-IE', { day: '2-digit', month: '2-digit', year: '2-digit' });
+/** Local calendar day (yyyy-mm-dd) of a date or timestamp. */
+const dayOf = (d: string) => {
+  if (d.length === 10) return d;
+  const t = new Date(d);
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+};
+const todayISO = () => dayOf(new Date().toISOString());
+const lineDay = (l: Line) => dayOf(l.check ? l.check.checked_at : l.raw.transaction_date);
+type PrintSel = { kind: 'all' } | { kind: 'page' } | { kind: 'range'; from: string; to: string };
 const fmtQty = (q: string | number) => Number(q).toLocaleString('en-IE', { maximumFractionDigits: 3 });
 
 function partyCell(r: Raw) {
@@ -99,6 +108,22 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
   const press = useRef<{ timer?: ReturnType<typeof setTimeout>; x: number; y: number; fired: boolean }>({ x: 0, y: 0, fired: false });
   const [repeating, setRepeating] = useState(false);
   const [reminding, setReminding] = useState(false);
+  // Printing: the whole book (also what Ctrl+P gives), this page, or a date range, chosen from a small menu
+  const [printSel, setPrintSel] = useState<PrintSel>({ kind: 'all' });
+  const [printMenu, setPrintMenu] = useState(false);
+  const [printAsk, setPrintAsk] = useState(0);
+  const [range, setRange] = useState<{ from: string; to: string } | null>(null);
+  useEffect(() => {
+    if (!printAsk) return;
+    const t = setTimeout(() => window.print(), 60); // after the print view has re-rendered
+    return () => clearTimeout(t);
+  }, [printAsk]);
+  useEffect(() => {
+    const reset = () => setPrintSel({ kind: 'all' });
+    window.addEventListener('afterprint', reset);
+    return () => window.removeEventListener('afterprint', reset);
+  }, []);
+  const printNow = (sel: PrintSel) => { setPrintSel(sel); setPrintMenu(false); setPrintAsk((n) => n + 1); };
 
   const load = useCallback(async () => {
     const d = await api(`/api/registers/${params.id}`);
@@ -181,6 +206,18 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
   const pageLines = lines.slice(page * LINES_PER_PAGE, (page + 1) * LINES_PER_PAGE);
   const pageNotes = footnotes.filter((f) => pageLines.some((l) => l.footnote === f.n));
   const people = new Map((data?.staff ?? []).map((p) => [p.id, p]));
+  const firstDay = lines.length ? lineDay(lines[0]) : todayISO();
+  // What goes on paper: the chosen lines, the balance brought forward into them, and their footnotes
+  const printIdx = lines.map((l, i) => ({ l, i })).filter(({ l, i }) =>
+    printSel.kind === 'all' ? true
+      : printSel.kind === 'page' ? i >= page * LINES_PER_PAGE && i < (page + 1) * LINES_PER_PAGE
+        : lineDay(l) >= printSel.from && lineDay(l) <= printSel.to);
+  const printLines = printIdx.map((x) => x.l);
+  const startAt = printIdx.length ? printIdx[0].i : printSel.kind === 'range' ? lines.findIndex((l) => lineDay(l) > printSel.to) : lines.length;
+  const broughtForward = printSel.kind === 'all' ? null
+    : [...lines.slice(0, startAt < 0 ? lines.length : startAt)].reverse().find((l) => l.balance !== null)?.balance ?? '0';
+  const printNotes = footnotes.filter((f) => printLines.some((l) => l.footnote === f.n));
+  const printBalance = [...printLines].reverse().find((l) => l.balance !== null)?.balance ?? broughtForward ?? String(balance);
 
   if (!data) return <p className="text-muted-foreground">Opening register…</p>;
   const p = data.register.product;
@@ -232,7 +269,35 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
         <Link href="/dashboard" className="btn-ghost -ml-3"><ArrowLeft className="h-4 w-4" /> All registers</Link>
         <div className="flex flex-wrap gap-2">
           <a href={`/api/registers/${params.id}/export`} className="btn-secondary"><Download className="h-4 w-4" /> <span className="hidden sm:inline">Export</span> CSV</a>
-          <button onClick={() => window.print()} className="btn-secondary"><Printer className="h-4 w-4" /> Print</button>
+          <div className="relative">
+            <button onClick={() => { setPrintMenu((o) => !o); setRange((r) => r ?? { from: firstDay, to: todayISO() }); }} className="btn-secondary" aria-expanded={printMenu} aria-haspopup="dialog">
+              <Printer className="h-4 w-4" /> Print <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+            </button>
+            {printMenu && (
+              <>
+                <button className="fixed inset-0 z-30 cursor-default" aria-label="Close print menu" onClick={() => setPrintMenu(false)} />
+                <div role="dialog" aria-label="Print" className="absolute right-0 z-40 mt-2 w-72 rounded-xl border border-border bg-card p-2 text-sm shadow-xl"
+                  onKeyDown={(e) => { if (e.key === 'Escape') setPrintMenu(false); }}>
+                  <button onClick={() => printNow({ kind: 'all' })} className="w-full rounded-lg px-3 py-2 text-left hover:bg-muted">
+                    <span className="font-semibold">Whole register</span><span className="block text-xs text-muted-foreground">Every line, {lines.length} in all</span>
+                  </button>
+                  {pages > 1 && (
+                    <button onClick={() => printNow({ kind: 'page' })} className="w-full rounded-lg px-3 py-2 text-left hover:bg-muted">
+                      <span className="font-semibold">This page</span><span className="block text-xs text-muted-foreground">Page {page + 1} of {pages}</span>
+                    </button>
+                  )}
+                  <form className="mt-1 border-t border-border px-3 pb-1 pt-3" onSubmit={(e) => { e.preventDefault(); if (range && range.from <= range.to) printNow({ kind: 'range', ...range }); }}>
+                    <p className="font-semibold">Date range</p>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <label className="text-xs text-muted-foreground">From<input type="date" className="input mt-1 w-full" value={range?.from ?? ''} max={range?.to} required onChange={(e) => setRange((r) => ({ from: e.target.value, to: r?.to ?? todayISO() }))} /></label>
+                      <label className="text-xs text-muted-foreground">To<input type="date" className="input mt-1 w-full" value={range?.to ?? ''} min={range?.from} required onChange={(e) => setRange((r) => ({ from: r?.from ?? firstDay, to: e.target.value }))} /></label>
+                    </div>
+                    <button type="submit" className="btn-primary mt-3 w-full justify-center" disabled={!range || range.from > range.to}><Printer className="h-4 w-4" /> Print range</button>
+                  </form>
+                </div>
+              </>
+            )}
+          </div>
           {data.entries.length === 0 && staff && canDo('openRegister') && (
             <button onClick={async () => {
               if (!confirm('Remove this unused CD book? It has no entries.')) return;
@@ -276,7 +341,7 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
       {touch && mayRecord && pickable.length > 0 && selected.length === 0 && (
         <p className="no-print mb-2 text-xs text-muted-foreground">{selecting ? <>Tap the supply lines to repeat, then <b className="text-foreground">Repeat for today</b>.</> : <>Repeat a supply: tap <b className="text-foreground">Select</b> (or press and hold a line), tap the lines, then <b className="text-foreground">Repeat for today</b>.</>}</p>
       )}
-      <div className="book-stage">
+      <div className="book-stage print:hidden">
         <div className={`book ${opened ? 'open' : ''}`}>
           {/* Cover: the PharmacyCDReg.ie register book */}
           <div className="book-cover no-print !bottom-auto aspect-[1600/1127] overflow-hidden bg-[#eceef0]" aria-hidden={opened}>
@@ -314,30 +379,13 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
                         {pageLines.map((l) => {
                           if (l.check) return <CheckRow key={l.key} c={l.check} unit={p.unit} who={l.check.checked_by_staff_id ? people.get(l.check.checked_by_staff_id) : undefined} withAction={!!mayRecord} />;
                           const r = l.raw;
-                          const party = partyCell(r);
-                          const who = people.get(r.recorded_by_staff_id);
-                          const inQty = ['receipt', 'adjustment_in'].includes(r.entry_type) ? fmtQty(r.quantity) : '';
-                          const outQty = ['supply', 'destruction', 'patient_return_destruction', 'adjustment_out'].includes(r.entry_type) ? fmtQty(r.quantity) : '';
-                          const cls = l.struck ? 'struck' : '';
                           return (
                             <tr key={l.key} onClick={(e) => choose(l, e)} aria-selected={selected.includes(l.key) || undefined}
                               onTouchStart={(e) => startPress(l, e)} onTouchMove={movePress} onTouchEnd={endPress} onTouchCancel={endPress}
                               onContextMenu={(e) => { if (touch && selectable(l)) e.preventDefault(); }}
                               title={selectable(l) && !touch ? 'Click to select · Shift-click for a range · then “Repeat for today”' : undefined}
                               className={`${selectable(l) ? 'cursor-pointer select-none [-webkit-touch-callout:none]' : ''} ${selected.includes(l.key) ? 'bg-brand/15 outline outline-2 -outline-offset-2 outline-brand' : r.entry_type.includes('patient_return') ? 'bg-sky-50/60 dark:bg-sky-950/30' : r.entry_type === 'destruction' ? 'bg-amber-50/60 dark:bg-amber-950/20' : r.entry_type.startsWith('adjustment') ? 'bg-violet-50/70 dark:bg-violet-950/30' : selectable(l) ? 'hover:bg-brand/5' : ''}`}>
-                              <td className={`${cls} tabular-nums`}>{fmtDate(r.transaction_date)}</td>
-                              <td className={cls}>
-                                <span className="font-medium">{party.name}</span>
-                                {party.address && <span className="block text-xs opacity-75">{party.address}</span>}
-                                {l.footnote && <sup className="ml-1 font-bold text-red-600">{l.footnote}</sup>}
-                                {r.source === 'scan' && !l.struck && <span className="badge ml-1 bg-brand/15 text-[10px] text-primary no-print">scanned</span>}
-                                {r.notes?.startsWith('Late entry') && <span className="badge ml-1 bg-amber-100 text-[10px] text-amber-900" title={splitLate(r.notes).reason ?? undefined}>late entry</span>}
-                              </td>
-                              <td className={`${cls} text-xs`}>{authorityCell(r)}</td>
-                              <td className={`${cls} text-right font-semibold tabular-nums`}>{inQty}</td>
-                              <td className={`${cls} text-right font-semibold tabular-nums`}>{outQty}</td>
-                              <td className="text-right font-bold tabular-nums">{l.balance !== null ? fmtQty(l.balance) : ''}</td>
-                              <td className={`${cls} text-xs`}>{who?.full_name}{who?.psi_number && <span className="block opacity-70">PSI {who.psi_number}</span>}</td>
+                              <LineCells l={l} people={people} />
                               {mayRecord && (
                                 <td className="no-print text-center">
                                   {l.correctable && (
@@ -392,6 +440,56 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
         </div>
       </div>
 
+      {/* Print view: one table, the drug's title and the column headings repeated at the top of every
+          printed page (thead repeats), smaller type so more lines fit. Not shown on screen. */}
+      <section className="print-register hidden print:block" aria-hidden>
+        <table className="register-table">
+          <thead>
+            <tr>
+              <th colSpan={7} className="print-title">
+                <div className="flex items-baseline justify-between gap-4">
+                  <span><b>CLASS OF DRUG:</b> {p.class_name} &nbsp;·&nbsp; <b>PRODUCT:</b> <span className="print-product">{productTitle(p)}</span>{genericLine(p) && <> ({genericLine(p)})</>}</span>
+                  <span className="whitespace-nowrap">{pharmacy?.name}</span>
+                </div>
+                <div className="flex items-baseline justify-between gap-4 font-normal">
+                  <span>Schedule {p.schedule}{p.schedule_paragraph ? ` (${p.schedule_paragraph})` : ''} · counted in {p.unit}{p.parent ? ` · stereoisomer of ${p.parent.drug_name}` : ''}</span>
+                  <span className="whitespace-nowrap">
+                    {printSel.kind === 'range' ? <>Entries {fmtDate(printSel.from)} to {fmtDate(printSel.to)} · balance at {fmtDate(printSel.to)}: <b>{fmtQty(printBalance)} {p.unit}</b></>
+                      : printSel.kind === 'page' ? <>Page {page + 1} of {pages} · balance: <b>{fmtQty(printBalance)} {p.unit}</b></>
+                        : <>Whole register · current balance: <b>{fmtQty(balance)} {p.unit}</b></>}
+                    {' '}· printed {fmtDate(todayISO())}
+                  </span>
+                </div>
+              </th>
+            </tr>
+            <tr>
+              <th rowSpan={2} className="w-[62px]">Date</th>
+              <th rowSpan={2}>Name and address of person from whom obtained or to whom supplied</th>
+              <th rowSpan={2} className="w-[170px]">Authority of person supplied<small>(prescription / requisition, prescriber)</small></th>
+              <th colSpan={2}>Amount</th>
+              <th rowSpan={2} className="w-[64px]">Stock balance</th>
+              <th rowSpan={2} className="w-[120px]">Pharmacist<small>(PSI number)</small></th>
+            </tr>
+            <tr><th className="w-[56px]">Obtained</th><th className="w-[56px]">Supplied</th></tr>
+          </thead>
+          <tbody>
+            {broughtForward !== null && (
+              <tr><td /><td colSpan={4} className="italic">Balance brought forward</td><td className="text-right font-bold tabular-nums">{fmtQty(broughtForward)}</td><td /></tr>
+            )}
+            {printLines.map((l) => l.check
+              ? <CheckRow key={l.key} c={l.check} unit={p.unit} who={l.check.checked_by_staff_id ? people.get(l.check.checked_by_staff_id) : undefined} withAction={false} />
+              : <tr key={l.key}><LineCells l={l} people={people} /></tr>)}
+            {!printLines.length && <tr><td colSpan={7} className="text-center italic">No entries in this date range.</td></tr>}
+          </tbody>
+        </table>
+        {printNotes.length > 0 && (
+          <div className="print-notes">
+            <p><b>Footnotes</b></p>
+            {printNotes.map((f) => <p key={f.n}><b>{f.n}</b> {f.text}</p>)}
+          </div>
+        )}
+      </section>
+
       {/* Mobile floating add button */}
       {mayRecord && (
         <button onClick={() => setAdding(true)} className="no-print fixed bottom-24 right-4 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl lg:hidden" aria-label="New entry">
@@ -434,6 +532,33 @@ export default function RegisterBook(props: { params: Promise<{ id: string }> })
         )}
       </Modal>
     </div>
+  );
+}
+
+/** The seven written columns of a register line (shared by the book on screen and the printout). */
+function LineCells({ l, people }: { l: Line; people: Map<string, Person> }) {
+  const r = l.raw;
+  const party = partyCell(r);
+  const who = people.get(r.recorded_by_staff_id);
+  const inQty = ['receipt', 'adjustment_in'].includes(r.entry_type) ? fmtQty(r.quantity) : '';
+  const outQty = ['supply', 'destruction', 'patient_return_destruction', 'adjustment_out'].includes(r.entry_type) ? fmtQty(r.quantity) : '';
+  const cls = l.struck ? 'struck' : '';
+  return (
+    <>
+      <td className={`${cls} tabular-nums`}>{fmtDate(r.transaction_date)}</td>
+      <td className={cls}>
+        <span className="font-medium">{party.name}</span>
+        {party.address && <span className="block text-xs opacity-75">{party.address}</span>}
+        {l.footnote && <sup className="ml-1 font-bold text-red-600">{l.footnote}</sup>}
+        {r.source === 'scan' && !l.struck && <span className="badge ml-1 bg-brand/15 text-[10px] text-primary no-print">scanned</span>}
+        {r.notes?.startsWith('Late entry') && <span className="badge ml-1 bg-amber-100 text-[10px] text-amber-900" title={splitLate(r.notes).reason ?? undefined}>late entry</span>}
+      </td>
+      <td className={`${cls} text-xs`}>{authorityCell(r)}</td>
+      <td className={`${cls} text-right font-semibold tabular-nums`}>{inQty}</td>
+      <td className={`${cls} text-right font-semibold tabular-nums`}>{outQty}</td>
+      <td className="text-right font-bold tabular-nums">{l.balance !== null ? fmtQty(l.balance) : ''}</td>
+      <td className={`${cls} text-xs`}>{who?.full_name}{who?.psi_number && <span className="block opacity-70">PSI {who.psi_number}</span>}</td>
+    </>
   );
 }
 

@@ -67,7 +67,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const active = (href: string) => { const h = href.split('?')[0]; return h === '/dashboard' ? path === h || path.startsWith('/dashboard/register') : path.startsWith(h); };
 
   return (
-    <div className={`min-h-screen pb-24 transition-[padding] duration-200 lg:pb-0 ${hidden ? 'lg:pl-16' : 'lg:pl-64'} ${training ? 'pt-9' : ''}`}>
+    <div className={`min-h-screen pb-24 transition-[padding] duration-200 lg:pb-0 print:!p-0 ${hidden ? 'lg:pl-16' : 'lg:pl-64'} ${training ? 'pt-9' : ''}`}>
       <TrainingBar />
       {/* Desktop sidebar: full, or collapsed to an icon rail (remembered on this device) */}
       <aside className={`no-print fixed bottom-0 left-0 ${training ? 'top-9' : 'top-0'} hidden flex-col border-r border-border bg-card transition-[width] duration-200 lg:flex ${hidden ? 'w-16' : 'w-64'}`}>
@@ -123,7 +123,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </button>
       </header>
 
-      <main key={training ? 'training' : 'live'} className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:py-6">
+      <main key={training ? 'training' : 'live'} className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:py-6 print:max-w-none print:p-0">
         {/* Top-left: show sidebar + New entry */}
         {!path.startsWith('/dashboard/scan') && !path.startsWith('/dashboard/register/') && <div className="no-print mb-4 flex flex-wrap items-center gap-2">
           {canDo('scan') && <Link href="/dashboard/scan" className="btn-brand"><ScanLine className="h-4 w-4" /> Scan</Link>}
