@@ -1,3 +1,4 @@
+import { normBrand } from '@/data/cd-products';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireStaff, errorResponse, audit } from '@/lib/access';
@@ -91,7 +92,7 @@ export async function POST(req: Request) {
     }
 
     // Reuse an identical product definition if one exists (shared catalogue), same brand too.
-    const brand = b.brand?.trim() || null;
+    const brand = normBrand(b.brand); // "MST" / "MST CONTINUS" → "MST Continus", so the same product isn't named two ways
     const { data: candidates } = await db.from('cd_products').select('*').ilike('drug_name', b.drug_name).ilike('form', b.form).ilike('strength', b.strength).limit(20);
     const hasBrandColumn = (candidates ?? []).some((c: any) => 'brand' in c);
     let product: { id: string } | null = (candidates ?? []).find((c: any) =>

@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
-    "test:unit": "tsx tests/unit/rules.test.ts && tsx tests/unit/vertex.test.mts && tsx tests/unit/logic.test.mts && tsx tests/unit/patient-match.test.mts && tsx tests/unit/ost.test.mts && tsx tests/unit/report-reconcile.test.mts && tsx tests/unit/permissions.test.mts && tsx tests/unit/qrp.test.mts && tsx tests/unit/report-text.test.mts && tsx tests/unit/report-csv.test.mts",
+    "test:unit": "tsx tests/unit/rules.test.ts && tsx tests/unit/vertex.test.mts && tsx tests/unit/logic.test.mts && tsx tests/unit/patient-match.test.mts && tsx tests/unit/ost.test.mts && tsx tests/unit/report-reconcile.test.mts && tsx tests/unit/permissions.test.mts && tsx tests/unit/qrp.test.mts && tsx tests/unit/report-text.test.mts && tsx tests/unit/report-csv.test.mts && tsx tests/unit/product-name.test.mts",
     "test:rules": "tsx scripts/test-invoice-rules.ts",
     "test:e2e": "node tests/e2e/demo.mjs",
     "test:db": "bash tests/db/run.sh",

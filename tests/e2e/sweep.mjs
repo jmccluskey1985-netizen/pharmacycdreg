@@ -515,6 +515,30 @@ await step('methadone book: OST patients and used doctors offered on click, typi
   await page.keyboard.press('Escape');
 });
 
+await step('new CD book: "MST" is named MST Continus; picking Sevredol from the morphine varieties sets its own form', async () => {
+  await page.goto(B + '/dashboard?new=register'); await page.waitForTimeout(1200);
+  const dlg = page.getByRole('dialog'), brand = dlg.locator('input[list="all-brands"]');
+  await brand.fill('MST'); await brand.blur();
+  if ((await brand.inputValue()) !== 'MST Continus') throw new Error(`brand reads ${await brand.inputValue()}`);
+  await dlg.getByRole('button', { name: 'Sevredol tablet' }).click();
+  if ((await brand.inputValue()) !== 'Sevredol') throw new Error('Sevredol not picked');
+  if (!(await dlg.getByRole('button', { name: 'Sevredol tablet' }).getAttribute('aria-pressed'))?.includes('true')) throw new Error('Sevredol not marked');
+  await page.keyboard.press('Escape');
+});
+
+await step('print menu: whole register, or a date range with the balance brought forward', async () => {
+  await page.goto(B + '/dashboard/register/r1'); await page.waitForTimeout(2000);
+  await page.evaluate(() => { window.print = () => { window.__printed = (window.__printed || 0) + 1; }; });
+  await page.getByRole('button', { name: /^Print/ }).click();
+  const inputs = page.locator('input[type=date]');
+  const iso = (d) => new Date(Date.now() - d * 864e5).toISOString().slice(0, 10);
+  await inputs.nth(0).fill(iso(10)); await inputs.nth(1).fill(iso(3));
+  await page.getByRole('button', { name: 'Print range' }).click(); await page.waitForTimeout(300);
+  if (!(await page.evaluate(() => window.__printed))) throw new Error('print not started');
+  const rows = await page.$$eval('.print-register tbody tr', (t) => t.map((x) => x.textContent));
+  if (!/Balance brought forward/.test(rows[0] ?? '')) throw new Error('no balance brought forward line');
+});
+
 await step('no page errors during the workflows', async () => { if (page.errors.length) throw new Error(page.errors.slice(0, 3).join(' | ')); });
 
 await step('sign out from the sidebar returns to the home page', async () => {

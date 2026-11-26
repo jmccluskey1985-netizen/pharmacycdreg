@@ -8,7 +8,7 @@ import { Plus, ScanLine, Users, Download, Camera, Loader2, AlertTriangle, CheckC
 import { SetupFromList } from '@/components/dashboard/setup-from-list';
 import { SnapPaperRegisters } from '@/components/dashboard/snap-paper-registers';
 import { Shelf, type Ghost } from '@/components/dashboard/shelf';
-import { CD_PRODUCTS, searchCdProducts } from '@/data/cd-products';
+import { CD_PRODUCTS, searchCdProducts, normBrand, type CdProduct } from '@/data/cd-products';
 import { isOpen } from '@/components/dashboard/setup-from-list';
 import { filterRegisters } from '@/lib/register-filter';
 import { api, ApiError } from '@/lib/api';
@@ -152,6 +152,34 @@ export default function RegistersPage() {
   );
 }
 
+/**
+ * The other products of the same drug (e.g. morphine: MST Continus prolonged-release tablets,
+ * Zomorph capsules, Sevredol tablets), as buttons, so the right variety is picked rather than typed.
+ * Each sets its own brand, form and unit. Shown once the drug is known.
+ */
+function Varieties({ f, onPick }: { f: { brand: string; drug_name: string; class_name: string; form: string }; onPick: (p: CdProduct) => void }) {
+  const cls = (f.class_name || CD_PRODUCTS.find((p) => p.generic.toLowerCase() === f.drug_name.trim().toLowerCase())?.class || '').toLowerCase();
+  const list = cls ? CD_PRODUCTS.filter((p) => p.class.toLowerCase() === cls) : [];
+  if (list.length < 2) return null;
+  const brand = normBrand(f.brand)?.toLowerCase() ?? '';
+  return (
+    <div className="-mt-1 sm:col-span-2">
+      <p className="text-xs text-muted-foreground">Varieties of {list[0].class.toLowerCase()}: pick the one this book is for</p>
+      <div className="mt-1 flex flex-wrap gap-1.5">
+        {list.map((p) => {
+          const on = (p.brands[0]?.toLowerCase() ?? '') === brand && p.form === f.form;
+          return (
+            <button type="button" key={p.key} onClick={() => onPick(p)} aria-pressed={on}
+              className={`rounded-lg border px-2.5 py-1 text-left text-xs ${on ? 'border-brand bg-brand text-white' : 'border-border bg-background hover:border-brand/60'}`}>
+              <b>{p.brands[0] ?? p.generic}</b> <span className={on ? 'text-white/85' : 'text-muted-foreground'}>{p.form}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function NewRegisterForm({ onDone, registers, initialText = '' }: { onDone: () => void; registers: Reg[]; initialText?: string }) {
   // Anything typed in the shelf search ("methadone rowex", "oxynorm 10") seeds the form.
   const seedFrom = (text: string) => {
@@ -235,10 +263,13 @@ function NewRegisterForm({ onDone, registers, initialText = '' }: { onDone: () =
         <input className="input" list="all-brands" value={f.brand} placeholder="Pick or type any brand, e.g. Rowex"
           onChange={(e) => {
             const v = e.target.value;
-            const p = CD_PRODUCTS.find((x) => x.brands.some((b) => b.toLowerCase() === v.trim().toLowerCase()));
-            setF((x) => ({ ...x, brand: v, ...(p && !x.drug_name ? { drug_name: p.generic, class_name: p.class, form: p.form, unit: p.unit } : {}) }));
-          }} />
-        <datalist id="all-brands">{[...new Set(CD_PRODUCTS.flatMap((p) => p.brands))].sort().map((b) => <option key={b} value={b} />)}</datalist></div>
+            const known = normBrand(v);
+            const p = known && CD_PRODUCTS.find((x) => x.brands[0] === known);
+            // A known brand sets its own form: switching MST Continus → Sevredol changes prolonged-release tablet → tablet
+            setF((x) => ({ ...x, brand: v, ...(p ? { drug_name: p.generic, class_name: p.class, form: p.form, unit: p.unit } : {}) }));
+          }}
+          onBlur={() => setF((x) => ({ ...x, brand: normBrand(x.brand) ?? '' }))} />
+        <datalist id="all-brands">{CD_PRODUCTS.filter((p) => p.brands.length).sort((a, b) => a.brands[0].localeCompare(b.brands[0])).filter((p, i, all) => all.findIndex((q) => q.brands[0] === p.brands[0]) === i).map((p) => <option key={p.key} value={p.brands[0]} label={`${p.generic} · ${p.form}`} />)}</datalist></div>
       <div><label className="label">Drug (generic name)</label>
         <input className="input" required list="all-generics" value={f.drug_name} placeholder="e.g. Methadone hydrochloride"
           onChange={(e) => {
@@ -247,6 +278,7 @@ function NewRegisterForm({ onDone, registers, initialText = '' }: { onDone: () =
             setF((x) => ({ ...x, drug_name: v, ...(p ? { class_name: x.class_name || p.class, unit: x.unit === 'tablets' && !x.form ? p.unit : x.unit } : {}) }));
           }} />
         <datalist id="all-generics">{[...new Set(CD_PRODUCTS.map((p) => p.generic))].sort().map((g) => <option key={g} value={g} />)}</datalist></div>
+      <Varieties f={f} onPick={(p) => setF((x) => ({ ...x, brand: p.brands[0] ?? '', drug_name: p.generic, class_name: p.class, form: p.form, unit: p.unit }))} />
       <label className="flex items-start gap-2 text-sm sm:col-span-2">
         <input type="checkbox" className="mt-0.5 h-5 w-5" checked={stereo} onChange={(e) => setStereo(e.target.checked)} />
         <span>This is a <b>stereoisomer</b> of a drug already registered. It will be recorded in that drug&apos;s part of the register.</span>
