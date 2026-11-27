@@ -1,5 +1,6 @@
 'use client';
 
+import { CameraCapture, useTouch } from '@/components/dashboard/camera-capture';
 import { paperRegisterNote } from '@/lib/register-page';
 import { useRef, useState } from 'react';
 import Link from 'next/link';
@@ -27,10 +28,12 @@ export function SnapPaperRegisters({ onChanged }: { onChanged: () => void }) {
   const [items, setItems] = useState<Item[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
+  const touch = useTouch();
+  const [camOpen, setCamOpen] = useState(false);
   const update = (key: string, patch: Partial<Item> | ((i: Item) => Partial<Item>)) =>
     setItems((xs) => xs.map((x) => (x.key === key ? { ...x, ...(typeof patch === 'function' ? patch(x) : patch) } : x)));
 
-  async function add(list: FileList | null) {
+  async function add(list: FileList | File[] | null) {
     if (!list?.length) return;
     const files = Array.from(list).slice(0, 20);
     const fresh: Item[] = files.map((f, i) => ({ key: `${Date.now()}-${i}`, thumb: f.type.startsWith('image/') ? URL.createObjectURL(f) : '', status: 'reading', f: { drug_name: '', form: '', strength: '', unit: 'tablets', balance: '', date: '' } }));
@@ -80,10 +83,11 @@ export function SnapPaperRegisters({ onChanged }: { onChanged: () => void }) {
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">Photograph the <b>latest page</b> of each drug in your paper register. One photo per drug. Each becomes a new register, blank apart from the balance brought forward and its date. Sideways photos are fine; names aren’t read.</p>
       <div className="grid gap-2 sm:grid-cols-2">
-        <button onClick={() => cameraRef.current?.click()} className="btn-brand"><Camera className="h-5 w-5" /> Take photo</button>
+        <button onClick={() => (touch ? setCamOpen(true) : cameraRef.current?.click())} className="btn-brand"><Camera className="h-5 w-5" /> Take photo</button>
         <button onClick={() => fileRef.current?.click()} className="btn-secondary"><ImagePlus className="h-5 w-5" /> Choose photos</button>
       </div>
-      <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { add(e.target.files); e.target.value = ''; }} />
+      <CameraCapture open={camOpen} multiple hint="One drug per photo: fill the frame with its latest page" onClose={() => setCamOpen(false)} onPhotos={(f) => { setCamOpen(false); add(f); }} />
+      <input ref={cameraRef} type="file" accept="image/*" hidden onChange={(e) => { add(e.target.files); e.target.value = ''; }} />
       <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple hidden onChange={(e) => { add(e.target.files); e.target.value = ''; }} />
 
       <div className="max-h-[55vh] space-y-3 overflow-y-auto pr-1">

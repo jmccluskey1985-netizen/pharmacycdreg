@@ -1,4 +1,6 @@
 'use client';
+import { CameraCapture, useTouch } from '@/components/dashboard/camera-capture';
+import { compressAll } from '@/lib/compress-image';
 import { paperRegisterNote } from '@/lib/register-page';
 import { GettingStarted } from '@/components/dashboard/getting-started';
 
@@ -199,15 +201,20 @@ function NewRegisterForm({ onDone, registers, initialText = '' }: { onDone: () =
   const [reading, setReading] = useState(false);
   const [paper, setPaper] = useState<any>(null);
 
+  const touch = useTouch();
+  const [camOpen, setCamOpen] = useState(false);
   async function readPage(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     e.target.value = '';
+    await readFiles(files);
+  }
+  async function readFiles(files: File[]) {
     if (!files.length) return;
     setReading(true);
     setError(null);
     try {
       const fd = new FormData();
-      files.forEach((file) => fd.append('file', file));
+      (await compressAll(files)).forEach((file) => fd.append('file', file)); // full-size phone photos are over the upload limit
       const res = await fetch('/api/scan/register-page', { method: 'POST', body: fd });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error || 'Could not read the page');
@@ -254,10 +261,11 @@ function NewRegisterForm({ onDone, registers, initialText = '' }: { onDone: () =
 
   return (
     <form onSubmit={save} className="grid gap-4 sm:grid-cols-2">
-      <label className={`sm:col-span-2 flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-brand/50 bg-brand/5 p-4 text-sm hover:bg-brand/10 ${reading ? 'pointer-events-none opacity-70' : ''}`}>
+      <CameraCapture open={camOpen} multiple hint="Fill the frame with the last page of the register" onClose={() => setCamOpen(false)} onPhotos={(f) => { setCamOpen(false); readFiles(f); }} />
+      <label onClick={(e) => { if (touch) { e.preventDefault(); setCamOpen(true); } }} className={`sm:col-span-2 flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-brand/50 bg-brand/5 p-4 text-sm hover:bg-brand/10 ${reading ? 'pointer-events-none opacity-70' : ''}`}>
         {reading ? <Loader2 className="h-6 w-6 flex-shrink-0 animate-spin text-brand" /> : <Camera className="h-6 w-6 flex-shrink-0 text-brand" />}
         <span><b>{reading ? 'Reading the page…' : 'Photograph the last page of your paper register'}</b><br /><span className="text-muted-foreground">Fills in the drug, balance brought forward and date. Sideways photos are fine. Names aren’t read.</span></span>
-        <input type="file" accept="image/*,application/pdf" capture="environment" multiple className="hidden" onChange={readPage} />
+        <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={readPage} />
       </label>
       {paper && <PaperResult d={paper} chosen={f.opening_balance} onChoose={(n) => setF((x) => ({ ...x, opening_balance: String(n) }))} />}
       <div><label className="label">Brand</label>

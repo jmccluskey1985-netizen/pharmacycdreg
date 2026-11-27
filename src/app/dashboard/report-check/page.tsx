@@ -1,5 +1,6 @@
 'use client';
 
+import { compressAll } from '@/lib/compress-image';
 import { useState } from 'react';
 import Link from 'next/link';
 import { FileSearch, Loader2, CheckCircle2, BookPlus, Upload } from 'lucide-react';
@@ -35,7 +36,7 @@ export default function ReportCheckAll() {
     setBusy(true); setError(null); setRes(null);
     try {
       const fd = new FormData();
-      list.forEach((f) => fd.append('file', f));
+      (await compressAll(list)).forEach((f) => fd.append('file', f));
       setRes(await api('/api/stock-checks/reconcile-all', { method: 'POST', body: fd }));
       setRun((n) => n + 1);
     } catch (e) { setError(e instanceof ApiError ? e.message : 'Could not read the report'); }

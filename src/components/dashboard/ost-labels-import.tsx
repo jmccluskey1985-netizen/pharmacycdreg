@@ -1,4 +1,6 @@
 'use client';
+import { CameraCapture, useTouch } from '@/components/dashboard/camera-capture';
+import { compressAll } from '@/lib/compress-image';
 import { useState } from 'react';
 import { OstOnboardDemo } from '@/components/ost-onboard-demo';
 import { Loader2, Tags, Check } from 'lucide-react';
@@ -18,18 +20,20 @@ type Row = Proposal & { include: boolean; patient_id: string | 'new'; card: stri
 export function OstLabelsImport({ onDone, autoOpen = false }: { onDone: () => void; autoOpen?: boolean }) {
   const [open, setOpen] = useState(autoOpen);
   const [busy, setBusy] = useState(false);
+  const touch = useTouch();
+  const [camOpen, setCamOpen] = useState(false);
   const [rows, setRows] = useState<Row[] | null>(null);
   const [regs, setRegs] = useState<{ id: string; label: string }[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const close = () => { setOpen(false); setRows(null); setMsg(null); };
   const upd = (i: number, x: Partial<Row>) => setRows((r) => r && r.map((row, j) => (j === i ? { ...row, ...x } : row)));
 
-  async function read(files: FileList | null) {
+  async function read(files: FileList | File[] | null) {
     if (!files?.length) return;
     setBusy(true); setMsg(null);
     try {
       const fd = new FormData();
-      for (const f of Array.from(files)) fd.append('file', f);
+      for (const f of await compressAll(files)) fd.append('file', f);
       const res = await fetch('/api/scan/labels', { method: 'POST', body: fd });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error || 'Could not read the labels');
@@ -53,14 +57,15 @@ export function OstLabelsImport({ onDone, autoOpen = false }: { onDone: () => vo
   return (
     <>
       <button onClick={() => setOpen(true)} className="btn-secondary"><Tags className="h-4 w-4" /> <span className="hidden sm:inline">From bag labels</span></button>
+      <CameraCapture open={camOpen} multiple hint="Fill the frame with the bag labels" onClose={() => setCamOpen(false)} onPhotos={(f) => { setCamOpen(false); read(f); }} />
       <Modal open={open} onClose={close} title="OST patients from bag labels" wide>
         <div className="space-y-3 text-sm">
           <p className="text-muted-foreground">A one-off start: lay out a bag label for each of your methadone and buprenorphine patients and photograph them (several per photo is fine). Printed labels give accurate names, addresses and your dispensing system’s patient code, e.g. <b>(F12)</b>, which then identifies the patient on every OST form. The photos aren’t kept.</p>
           {!rows && !busy && <OstOnboardDemo compact />}
           {!rows && (
-            <label className={`btn-primary w-fit cursor-pointer ${busy ? 'pointer-events-none opacity-60' : ''}`}>
+            <label onClick={(e) => { if (touch) { e.preventDefault(); setCamOpen(true); } }} className={`btn-primary w-fit cursor-pointer ${busy ? 'pointer-events-none opacity-60' : ''}`}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Tags className="h-4 w-4" />} {busy ? 'Reading labels…' : 'Take or choose photos'}
-              <input type="file" accept="image/*,application/pdf" multiple capture="environment" className="sr-only" onChange={(e) => read(e.target.files)} />
+              <input type="file" accept="image/*,application/pdf" multiple className="sr-only" onChange={(e) => read(e.target.files)} />
             </label>
           )}
           {rows && rows.length > 0 && (

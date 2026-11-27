@@ -1,5 +1,6 @@
 'use client';
 
+import { compressAll } from '@/lib/compress-image';
 import { useState } from 'react';
 import { FileSearch, Loader2, CheckCircle2, AlertTriangle, Plus, Clock, UserCheck } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
@@ -38,7 +39,7 @@ export function ReportCheck({ registerId, unit, balance, counted, draft = false,
     try {
       const fd = new FormData();
       fd.append('register_id', registerId);
-      Array.from(list).forEach((f) => fd.append('file', f));
+      (await compressAll(list)).forEach((f) => fd.append('file', f));
       const d = await api('/api/stock-checks/reconcile', { method: 'POST', body: fd });
       setData(d);
       setSel(Object.fromEntries(d.lines.filter((l: Line) => l.status === 'missing' && !((l.row.date_options?.length ?? 0) > 1)).map((l: Line) => [l.i, true])));

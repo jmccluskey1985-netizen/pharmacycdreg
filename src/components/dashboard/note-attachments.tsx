@@ -1,5 +1,6 @@
 'use client';
 
+import { CameraCapture, useTouch } from '@/components/dashboard/camera-capture';
 import { useRef, useState } from 'react';
 import { Camera, Paperclip, Loader2, FileText, X } from 'lucide-react';
 import { compressImage } from '@/lib/compress-image';
@@ -10,11 +11,13 @@ export interface Attachment { id: string; file_name: string; mime_type: string; 
 /** Photos / scans / PDFs on a note: take a photo or choose files; tap a thumbnail to open it. */
 export function NoteAttachments({ noteId, attachments, canEdit, onChanged }: { noteId: string; attachments: Attachment[]; canEdit: boolean; onChanged: (list: Attachment[]) => void }) {
   const cam = useRef<HTMLInputElement>(null);
+  const touch = useTouch();
+  const [camOpen, setCamOpen] = useState(false);
   const pick = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function add(files: FileList | null) {
+  async function add(files: FileList | File[] | null) {
     if (!files?.length) return;
     setBusy(true); setError(null);
     let list = attachments;
@@ -56,10 +59,11 @@ export function NoteAttachments({ noteId, attachments, canEdit, onChanged }: { n
       )}
       {canEdit && (
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => cam.current?.click()} disabled={busy} className="btn-secondary py-1.5 text-sm"><Camera className="h-4 w-4" /> Take photo</button>
+          <button type="button" onClick={() => (touch ? setCamOpen(true) : cam.current?.click())} disabled={busy} className="btn-secondary py-1.5 text-sm"><Camera className="h-4 w-4" /> Take photo</button>
           <button type="button" onClick={() => pick.current?.click()} disabled={busy} className="btn-ghost py-1.5 text-sm"><Paperclip className="h-4 w-4" /> Attach file</button>
           {busy && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-          <input ref={cam} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { add(e.target.files); e.target.value = ''; }} />
+          <CameraCapture open={camOpen} hint="Fill the frame" onClose={() => setCamOpen(false)} onPhotos={(f) => { setCamOpen(false); add(f); }} />
+          <input ref={cam} type="file" accept="image/*" hidden onChange={(e) => { add(e.target.files); e.target.value = ''; }} />
           <input ref={pick} type="file" accept="image/*,application/pdf" multiple hidden onChange={(e) => { add(e.target.files); e.target.value = ''; }} />
         </div>
       )}
