@@ -1,4 +1,5 @@
 'use client';
+import { paperRegisterNote } from '@/lib/register-page';
 import { GettingStarted } from '@/components/dashboard/getting-started';
 
 import { productTitle, genericLine, brandOf } from '@/lib/product-name';
@@ -224,7 +225,7 @@ function NewRegisterForm({ onDone, registers, initialText = '' }: { onDone: () =
         unit: p.unit || x.unit,
         opening_balance: o.balance != null ? String(o.balance) : '',
         opening_date: o.date || '',
-        opening_balance_note: `Paper CD register${p.product_written ? ` (${p.product_written})` : ''}, last entry ${fmt(o.date)}`.replace(/, last entry $/, ''),
+        opening_balance_note: paperRegisterNote(p, o.date),
       }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not read the page');
@@ -326,7 +327,7 @@ function PaperResult({ d, chosen, onChoose }: { d: any; chosen: string; onChoose
     <div className={`space-y-2 rounded-xl border p-4 text-sm sm:col-span-2 ${o.blocking ? 'border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100' : 'border-brand/40 bg-brand/10'}`}>
       <p className="flex items-center gap-2 font-semibold">
         {o.blocking ? <AlertTriangle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4 text-brand" />}
-        {d.page.product_written || 'Product not read'} · balance {o.label}{o.date ? ` · ${o.date.split('-').reverse().join('/')}` : ''}
+        {d.page.product_written || 'Product not read'}{d.page.page_number ? ` · page ${d.page.page_number}` : ''} · balance {o.label}{o.date ? ` · ${o.date.split('-').reverse().join('/')}` : ''}
       </p>
       <p className="text-xs opacity-80">Checked {o.rows_checked} line{o.rows_checked === 1 ? '' : 's'} on the page{d.page.balance_transferred != null ? `, from ${d.page.balance_transferred} brought forward` : ''}.</p>
       {o.options.length > 1 && (

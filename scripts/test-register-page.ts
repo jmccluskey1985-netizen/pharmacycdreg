@@ -3,7 +3,7 @@ import { decideOpening, type RegisterPage } from '../src/lib/register-page';
 const r = (date: string, obtained: number | null, supplied: number | null, balance: number | null, balance_unclear = false) => ({ date, date_written: date.split('-').reverse().join('/'), obtained, supplied, balance, balance_unclear });
 const page = (last: number, unclear: boolean): RegisterPage => ({
   is_cd_register_page: true, product_written: 'OXYCODONE OXYNORM 5mg', drug_name: 'Oxycodone hydrochloride', brand: 'OxyNorm', strength: '5mg', form: 'capsule', unit: 'capsules', likely_schedule: 2,
-  balance_transferred: 518, warnings: [],
+  balance_transferred: 518, page_number: null, warnings: [],
   rows: [
     r('2026-11-09', null, 10, 508), r('2026-11-09', null, 8, 500), r('2026-11-09', 112, null, 612),
     r('2026-11-10', null, 12, 600), r('2026-11-10', null, 12, 588), r('2026-11-10', null, 18, 570),

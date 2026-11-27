@@ -1,6 +1,6 @@
 // Photo of the last paper register page → balance brought forward. Figures from a real page layout,
 // no names (the reader never transcribes them).
-import { decideOpening, type RegisterPage } from '../../src/lib/register-page';
+import { decideOpening, paperRegisterNote, type RegisterPage } from '../../src/lib/register-page';
 
 let fail = 0;
 const eq = (name: string, got: unknown, want: unknown) => {
@@ -10,7 +10,7 @@ const eq = (name: string, got: unknown, want: unknown) => {
 };
 const page = (balance_transferred: number | null, rows: [string, number | null, number | null, number | null][]): RegisterPage => ({
   is_cd_register_page: true, product_written: 'Oxycodone liquid OxyNorm liquid 1mg/ml', drug_name: 'Oxycodone hydrochloride', brand: 'OxyNorm', strength: '1mg/ml', form: 'oral solution', unit: 'ml', likely_schedule: 2,
-  balance_transferred, warnings: [],
+  balance_transferred, page_number: 'PAGE 44', warnings: [],
   rows: rows.map(([date, obtained, supplied, balance]) => ({ date, date_written: date, obtained, supplied, balance, balance_unclear: false })),
 });
 const past = (d: number) => new Date(Date.now() - d * 864e5).toISOString().slice(0, 10);
@@ -41,5 +41,9 @@ eq('receipt kept, sum agrees', [rec.balance, rec.source, rec.flags.some((f) => /
 // Book and sum disagree: both offered, pharmacist chooses
 const bad = decideOpening(page(100, [[past(2), null, 20, 80], [past(1), null, 10, 75]]));
 eq('disagreement offers both', [bad.balance, bad.options, bad.blocking], [null, [75, 70], true]);
+
+// The page number goes into the opening line's "Transferred from"
+eq('note has page, product and last date', paperRegisterNote(oxy, '2026-11-24'), 'Paper CD register page 44 (Oxycodone liquid OxyNorm liquid 1mg/ml), last entry 24/11/2026');
+eq('note without a page number', paperRegisterNote({ page_number: null, product_written: null }, null), 'Paper CD register');
 
 if (fail) { console.log(`${fail} failed`); process.exit(1); }

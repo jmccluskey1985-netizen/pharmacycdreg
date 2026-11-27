@@ -30,6 +30,7 @@ export const RegisterPageSchema = z.object({
   unit: z.enum(['tablets', 'capsules', 'ml', 'patches', 'ampoules', 'vials', 'units']).nullable().catch(null),
   likely_schedule: numN,
   balance_transferred: numN,
+  page_number: strN,
   rows: z.array(Row).catch([]),
   warnings: z.array(z.string()).catch([]),
 });
@@ -40,7 +41,7 @@ const nn = { type: ['number', 'null'] };
 export const REGISTER_PAGE_JSON_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['is_cd_register_page', 'product_written', 'drug_name', 'brand', 'strength', 'form', 'unit', 'likely_schedule', 'balance_transferred', 'rows', 'warnings'],
+  required: ['is_cd_register_page', 'page_number', 'product_written', 'drug_name', 'brand', 'strength', 'form', 'unit', 'likely_schedule', 'balance_transferred', 'rows', 'warnings'],
   properties: {
     is_cd_register_page: { type: 'boolean', description: 'True if this is a page of a controlled drugs register' },
     product_written: { ...ns, description: 'The PRODUCT / CLASS OF DRUG heading exactly as written, e.g. "OXYCODONE OXYNORM 5mg"' },
@@ -51,6 +52,7 @@ export const REGISTER_PAGE_JSON_SCHEMA = {
     unit: { type: ['string', 'null'], enum: ['tablets', 'capsules', 'ml', 'patches', 'ampoules', 'vials', 'units', null] },
     likely_schedule: { type: ['integer', 'null'], description: 'Irish Misuse of Drugs Regulations schedule (2, 3 or 4)' },
     balance_transferred: { ...nn, description: 'The "balance transferred" / brought-forward figure at the top of the balance column, if written' },
+    page_number: { ...ns, description: 'The page number printed or written on this page (e.g. "PAGE 44" at the bottom → "44"), else null. For several pages, the last (most recent) page.' },
     rows: {
       type: 'array',
       description: 'Every filled-in row, top to bottom. Skip blank rows.',
@@ -82,7 +84,15 @@ export const REGISTER_PAGE_SYSTEM = `You read a photo of a page from an Irish ph
 - "BALANCE TRANSFERRED" (the figure at the top of the balance column, under the heading) is the opening figure carried from the previous page. It is NOT the last balance: put it in balance_transferred and never as a row.
 - Rows run down the page from just under the column headings to the last filled line before the blank lines. List EVERY filled row; the most recent is the lowest filled row. When the photo is sideways, the top of the page is the edge with the CLASS OF DRUG / PRODUCT heading.
 - Read each amount in the column it is written in, even if it looks misplaced; the rules check it against the balance.
+- Read the page number (often printed at the bottom, e.g. "PAGE 44") into page_number.
 - If the page is not a CD register page, set is_cd_register_page false.`;
+
+/** The "Transferred from" text for the opening line: "Paper CD register page 44 (OXYNORM LIQUID 1mg/ml), last entry 24/11/26". */
+export function paperRegisterNote(page: Pick<RegisterPage, 'page_number' | 'product_written'> | null | undefined, date: string | null | undefined): string {
+  const pg = page?.page_number?.replace(/^\s*(page|pg\.?|p\.?)\s*/i, '').trim();
+  const d = date ? date.split('-').reverse().join('/') : '';
+  return `Paper CD register${pg ? ` page ${pg}` : ''}${page?.product_written ? ` (${page.product_written})` : ''}${d ? `, last entry ${d}` : ''}`;
+}
 
 export const registerPagePrompt = (n: number) =>
   `${n > 1 ? `These ${n} images are consecutive pages; the last image is the most recent page. ` : ''}Read the product, the balance transferred and every filled row.`;

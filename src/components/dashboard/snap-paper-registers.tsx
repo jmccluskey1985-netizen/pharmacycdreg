@@ -1,5 +1,6 @@
 'use client';
 
+import { paperRegisterNote } from '@/lib/register-page';
 import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { Camera, ImagePlus, Loader2, AlertTriangle, CheckCircle2, BookOpen, X } from 'lucide-react';
@@ -63,7 +64,7 @@ export function SnapPaperRegisters({ onChanged }: { onChanged: () => void }) {
         drug_name: it.f.drug_name, brand: p?.brand ?? cat?.brands[0] ?? null, class_name: cat?.class ?? it.f.drug_name.split(' ')[0], schedule: p?.likely_schedule ?? 2, schedule_paragraph: cat?.para ?? null,
         form: it.f.form, strength: it.f.strength, unit: it.f.unit,
         opening_balance: it.f.balance ? Number(it.f.balance) : undefined, opening_date: it.f.date || undefined,
-        opening_balance_note: `Paper CD register${p?.product_written ? ` (${p.product_written})` : ''}${it.f.date ? `, last entry ${fmt(it.f.date)}` : ''}`,
+        opening_balance_note: paperRegisterNote(p, it.f.date),
       } });
       update(it.key, { status: 'opened', registerId: d.id });
       onChanged();
@@ -102,7 +103,7 @@ export function SnapPaperRegisters({ onChanged }: { onChanged: () => void }) {
                   )}
                   {(it.status === 'ready' || it.status === 'opening') && (
                     <>
-                      <p className="font-semibold">{it.result?.page?.product_written || 'Product not read'} <span className="font-normal text-muted-foreground">· {o?.rows_checked ?? 0} lines checked</span></p>
+                      <p className="font-semibold">{it.result?.page?.product_written || 'Product not read'}{it.result?.page?.page_number ? ` · page ${it.result.page.page_number}` : ''} <span className="font-normal text-muted-foreground">· {o?.rows_checked ?? 0} lines checked</span></p>
                       <div className="grid gap-2 sm:grid-cols-4">
                         <input className="input py-1.5 sm:col-span-2" value={it.f.drug_name} onChange={(e) => update(it.key, (x) => ({ f: { ...x.f, drug_name: e.target.value } }))} placeholder="Drug (generic)" />
                         <input className="input py-1.5" value={it.f.strength} onChange={(e) => update(it.key, (x) => ({ f: { ...x.f, strength: e.target.value } }))} placeholder="Strength" />

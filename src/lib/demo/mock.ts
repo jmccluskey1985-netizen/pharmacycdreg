@@ -780,7 +780,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
     if (needStaff()) return needStaff()!;
     await new Promise((r) => setTimeout(r, 1500));
     const { decideOpening } = await import('@/lib/register-page');
-    const page = { is_cd_register_page: true, product_written: 'MORPHINE ZOMORPH 30mg', drug_name: 'Morphine sulfate', brand: 'Zomorph', strength: '30mg', form: 'prolonged-release capsule', unit: 'capsules' as const, likely_schedule: 2, balance_transferred: 120, warnings: [],
+    const page = { is_cd_register_page: true, product_written: 'MORPHINE ZOMORPH 30mg', drug_name: 'Morphine sulfate', brand: 'Zomorph', strength: '30mg', form: 'prolonged-release capsule', unit: 'capsules' as const, likely_schedule: 2, balance_transferred: 120, page_number: '44', warnings: [],
       rows: [{ date: '2026-11-03', date_written: '03/11/26', obtained: null, supplied: 28, balance: 92, balance_unclear: false }, { date: '2026-11-08', date_written: '08/11/26', obtained: null, supplied: 14, balance: 78, balance_unclear: false }, { date: '2026-11-10', date_written: '10/11/26', obtained: null, supplied: 28, balance: 50, balance_unclear: false }] };
     return res({ page, opening: decideOpening(page), exempt: null, existing: null });
   }
