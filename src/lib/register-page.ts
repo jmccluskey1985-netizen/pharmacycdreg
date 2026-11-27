@@ -79,6 +79,9 @@ export const REGISTER_PAGE_SYSTEM = `You read a photo of a page from an Irish ph
 - Transcribe ONLY dates and the three amount columns for every filled row, in order, top to bottom. Do NOT transcribe names, addresses, prescribers or reference numbers. They are not needed.
 - Handwritten digits are easy to confuse (1/7, 4/9, 5/6, 0/6, 3/8). Read each balance as written and set balance_unclear when unsure. Do not "fix" it to make the sums work; the rules check the arithmetic.
 - A row with an amount obtained is a receipt (balance goes up); supplied goes down.
+- "BALANCE TRANSFERRED" (the figure at the top of the balance column, under the heading) is the opening figure carried from the previous page. It is NOT the last balance: put it in balance_transferred and never as a row.
+- Rows run down the page from just under the column headings to the last filled line before the blank lines. List EVERY filled row; the most recent is the lowest filled row. When the photo is sideways, the top of the page is the edge with the CLASS OF DRUG / PRODUCT heading.
+- Read each amount in the column it is written in, even if it looks misplaced; the rules check it against the balance.
 - If the page is not a CD register page, set is_cd_register_page false.`;
 
 export const registerPagePrompt = (n: number) =>
@@ -105,12 +108,29 @@ export function decideOpening(page: RegisterPage): OpeningDecision {
   if (!rows.length && page.balance_transferred == null) {
     return { balance: null, date: null, source: 'none', options: [], label: 'No entries read', flags: [...flags, 'No balance could be read: type it in'], blocking: true, rows_checked: 0 };
   }
+  // Only the "balance transferred" at the top was read, none of the lines under it: that figure is
+  // where the page STARTED, not the current balance. Never offer it as the answer on its own.
+  if (!rows.length) {
+    return { balance: null, date: null, source: 'none', options: [], label: `Only the balance brought forward at the top of the page (${page.balance_transferred}) was read, not the entries below it`, flags: [...flags, 'The entries on the page couldn’t be read: take a straighter, closer photo, or type the last balance from the bottom line'], blocking: true, rows_checked: 0 };
+  }
 
   let running: number | null = page.balance_transferred;
   let lastExpected: number | null = null;
   let lastDate: string | null = null;
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
+    // An amount in the wrong column (handwriting drifts): if the written balance shows it went the
+    // other way, follow the balance and say so.
+    const near = (a: number | null, b: number | null) => a != null && b != null && Math.abs(a - b) < 0.001;
+    if (running != null && r.balance != null && !r.balance_unclear) {
+      if (r.obtained && !r.supplied && !near(r.balance, running + r.obtained) && near(r.balance, running - r.obtained)) {
+        flags.push(`Line ${i + 1}${r.date_written ? ` (${r.date_written})` : ''}: ${r.obtained} looks like it’s in the Obtained column, but the balance went down, so it’s read as supplied`);
+        r.supplied = r.obtained; r.obtained = null;
+      } else if (r.supplied && !r.obtained && !near(r.balance, running - r.supplied) && near(r.balance, running + r.supplied)) {
+        flags.push(`Line ${i + 1}${r.date_written ? ` (${r.date_written})` : ''}: ${r.supplied} looks like it’s in the Supplied column, but the balance went up, so it’s read as obtained`);
+        r.obtained = r.supplied; r.supplied = null;
+      }
+    }
     const expected = running == null ? null : running + (r.obtained ?? 0) - (r.supplied ?? 0);
     if (r.date) lastDate = r.date;
     if (i === rows.length - 1) lastExpected = expected;

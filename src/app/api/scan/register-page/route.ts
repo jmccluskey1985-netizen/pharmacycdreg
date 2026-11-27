@@ -32,14 +32,16 @@ export async function POST(req: Request) {
 
     const docs = await Promise.all(files.map(async (f) => ({ base64: Buffer.from(await f.arrayBuffer()).toString('base64'), mediaType: f.type })));
     const db = createServiceClient();
-    const { result: page, model } = await readDocument(docs, {
-      reader: await getReaderConfig(db),
-      system: REGISTER_PAGE_SYSTEM,
-      schema: REGISTER_PAGE_JSON_SCHEMA,
-      name: 'cd_register_page',
-      prompt: registerPagePrompt(docs.length),
-      parse: parseJsonWith(RegisterPageSchema),
-    });
+    const reader = await getReaderConfig(db);
+    const read = (prompt: string) => readDocument(docs, { reader, system: REGISTER_PAGE_SYSTEM, schema: REGISTER_PAGE_JSON_SCHEMA, name: 'cd_register_page', prompt, parse: parseJsonWith(RegisterPageSchema) });
+    let { result: page, model } = await read(registerPagePrompt(docs.length));
+    // Nothing read under the "balance transferred" (often a sideways or skewed photo): read once more,
+    // pointing at the rows. The balance at the top is where the page started, never the answer.
+    const filled = (p: typeof page) => p.rows.filter((r) => r.obtained != null || r.supplied != null || r.balance != null).length;
+    if (page.is_cd_register_page && !filled(page)) {
+      const again = await read(`${registerPagePrompt(docs.length)} The first reading found no filled rows. Look again: find the column headings (DATE … STOCK BALANCE), then list every handwritten row below them down to the last filled line, with its amounts and stock balance.`).catch(() => null);
+      if (again && filled(again.result)) ({ result: page, model } = again);
+    }
     const fix = canonicalForm(page.brand, page.form ?? '');
     if (fix) { page.form = fix.form; page.unit = fix.unit; }
     const opening = decideOpening(page);
