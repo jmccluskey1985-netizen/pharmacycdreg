@@ -145,7 +145,7 @@ export default function SettingsPage() {
         {current === 'risk' && (
           <div className="card space-y-2 p-5">
             <h2 className="font-semibold">Risk assessment for the electronic register</h2>
-            <p className="text-sm text-muted-foreground">PSI guidance expects a risk assessment before using electronic records. Yours is ready-made from your pharmacy’s details with suggested answers: review it, then the superintendent or supervising pharmacist signs it with one click. Print it any time.</p>
+            <p className="text-sm text-muted-foreground">PSI guidance expects a risk assessment before using electronic records. A template is created from your pharmacy’s details with suggested answers: review it, then the superintendent or supervising pharmacist signs it with one click. Print it any time.</p>
             <Link href="/dashboard/risk-assessment" className="btn-primary w-fit">Open risk assessment</Link>
           </div>
         )}

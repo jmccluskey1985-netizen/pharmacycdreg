@@ -464,8 +464,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
       { key: 'twofa', label: 'Turn on two-step sign-in', done: false, href: '/dashboard/settings' },
       { key: 'scan', label: 'Try scanning a prescription', done: false, href: '/dashboard/scan?type=prescription' },
       { key: 'check', label: 'Do your first stock check', done: !!((S as any).checks || []).length, href: '/dashboard' },
-      { key: 'risk', label: 'Review and sign your risk assessment', done: !!(((S as any).risk || []) as Json[]).some((r) => r.status === 'signed'), href: '/dashboard/risk-assessment' },
-      { key: 'reminder', label: 'Set up a reminder for a regular weekly supply', done: REM().length > 1, href: '/dashboard/reminders' },
+      { key: 'risk', label: 'Review and sign your risk assessment (template created from your details)', done: !!(((S as any).risk || []) as Json[]).some((r) => r.status === 'signed'), href: '/dashboard/risk-assessment' },
       { key: 'backup', label: 'Download a full backup and keep it safe', done: false, href: '/dashboard/settings' },
     ] });
   }
