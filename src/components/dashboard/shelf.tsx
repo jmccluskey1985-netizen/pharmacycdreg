@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import { productFor, CD_PRODUCTS, type CdProduct } from '@/data/cd-products';
+import { standardForm } from '@/data/cd-products';
 import { brandOf } from '@/lib/product-name';
 
 export interface Ghost { product: CdProduct; strength: string }
@@ -21,9 +22,9 @@ function arrange(regs: Reg[]) {
   for (const r of regs) {
     const p = productFor(r.product.drug_name, r.product.form, brandOf(r.product));
     const brand = brandOf(r.product) ?? r.product.drug_name;
-    const key = `${p ? p.key : `${r.product.drug_name}|${r.product.form}`}|${brand.toLowerCase()}`;
+    const key = `${p ? p.key : `${r.product.drug_name}|${standardForm(r.product.form)}`}|${brand.toLowerCase()}`;
     const types = byClass.get(r.product.class_name) ?? new Map<string, TypeGroup>();
-    const g = types.get(key) ?? { key, brand, form: p?.form ?? r.product.form, order: p ? CD_PRODUCTS.indexOf(p) : 999, regs: [] };
+    const g = types.get(key) ?? { key, brand, form: p?.form ?? standardForm(r.product.form), order: p ? CD_PRODUCTS.indexOf(p) : 999, regs: [] };
     g.regs.push(r);
     types.set(key, g);
     byClass.set(r.product.class_name, types);
@@ -35,7 +36,11 @@ function arrange(regs: Reg[]) {
     .sort(([a, ta], [b, tb]) => Number(mine(tb)) - Number(mine(ta)) || order(a) - order(b) || a.localeCompare(b))
     .map(([cls, types]) => ({
       cls,
-      types: [...types.values()].sort((a, b) => a.order - b.order || a.brand.localeCompare(b.brand)).map((t) => ({ ...t, regs: t.regs.sort((a, b) => strengthNum(a.product.strength) - strengthNum(b.product.strength)) })),
+      // Open books on the left: types with an open book first, and in each type its open books
+      // before the "Start book" cards, each in strength order.
+      types: [...types.values()]
+        .sort((a, b) => Number(b.regs.some((r) => !r.ghost)) - Number(a.regs.some((r) => !r.ghost)) || a.order - b.order || a.brand.localeCompare(b.brand))
+        .map((t) => ({ ...t, regs: t.regs.sort((a, b) => Number(!!a.ghost) - Number(!!b.ghost) || strengthNum(a.product.strength) - strengthNum(b.product.strength)) })),
     }));
 }
 
@@ -93,7 +98,7 @@ function ShelfRow({ cls, types, onStart, onRemove }: { cls: string; types: TypeG
                     className="group relative flex h-48 w-40 flex-shrink-0 snap-start flex-col rounded-r-xl rounded-l-md border-2 border-dashed border-border bg-card/60 p-3.5 pl-5 text-left text-muted-foreground transition hover:-translate-y-1 hover:border-brand hover:text-foreground">
                     <p className="text-[10px] font-semibold uppercase tracking-widest">{t.brand}</p>
                     <p className="mt-1 text-2xl font-bold leading-none tabular-nums">{r.product.strength}</p>
-                    <p className="mt-1 line-clamp-2 text-xs">{r.product.form}</p>
+                    <p className="mt-1 line-clamp-2 text-xs">{standardForm(r.product.form)}</p>
                     <span className="mt-auto flex items-center gap-1 text-sm font-semibold text-primary"><Plus className="h-4 w-4" /> Start book</span>
                   </button>
                 );
@@ -110,10 +115,10 @@ function ShelfRow({ cls, types, onStart, onRemove }: { cls: string; types: TypeG
                   )}
                   <span className="absolute inset-y-0 left-2 w-px bg-white/20" aria-hidden />
                   {/* Long names (e.g. "Methadone hydrochloride Rowex") are clamped and shrink, never overlap */}
-                  <div className="min-h-0 overflow-hidden" title={`${t.brand} ${r.product.strength} ${r.product.form}${r.product.parent ? ` · stereoisomer of ${r.product.parent.drug_name}` : ''}`}>
+                  <div className="min-h-0 overflow-hidden" title={`${t.brand} ${r.product.strength} ${standardForm(r.product.form)}${r.product.parent ? ` · stereoisomer of ${r.product.parent.drug_name}` : ''}`}>
                     <p className={`line-clamp-2 break-words pr-4 font-semibold uppercase leading-tight text-white/60 ${t.brand.length > 16 ? 'text-[9px] tracking-wide' : 'text-[10px] tracking-widest'}`}>{t.brand}</p>
                     <p className={`mt-1 font-bold leading-none tabular-nums ${r.product.strength.length > 7 ? 'text-xl' : 'text-2xl'}`}>{r.product.strength}</p>
-                    <p className="mt-1 truncate text-xs capitalize text-white/75">{r.product.form}</p>
+                    <p className="mt-1 truncate text-xs capitalize text-white/75">{standardForm(r.product.form)}</p>
                     {r.product.parent && <p className="mt-0.5 truncate text-[10px] text-white/60">Stereoisomer of {r.product.parent.drug_name}</p>}
                   </div>
                   <div className="mt-auto">

@@ -37,7 +37,8 @@ const PRODUCTS = [
   P('p1', 'Oxycodone hydrochloride', 'Oxycodone', 'capsule', '5mg', 'capsules', { brand: 'OxyNorm' }),
   P('p2', 'Oxycodone hydrochloride', 'Oxycodone', 'prolonged-release tablet', '10mg', 'tablets', { brand: 'OxyContin' }),
   P('p3', 'Morphine sulfate', 'Morphine', 'prolonged-release tablet', '10mg', 'tablets', { brand: 'MST Continus' }),
-  P('p4', 'Fentanyl', 'Fentanyl', 'transdermal patch', '25mcg/hr', 'patches', { brand: 'Durogesic' }),
+  // Saved as plain "patch" on purpose (as a scan can): it must still be the Durogesic transdermal patch book
+  P('p4', 'Fentanyl', 'Fentanyl', 'patch', '25mcg/hr', 'patches', { brand: 'Durogesic' }),
   P('p5', 'Methylphenidate hydrochloride', 'Methylphenidate', 'prolonged-release tablet', '18mg', 'tablets', { brand: 'Concerta XL' }),
   P('p6', 'Methadone hydrochloride', 'Methadone', 'oral solution', '1mg/ml', 'ml', { brand: 'Methadone DTF' }),
 ];

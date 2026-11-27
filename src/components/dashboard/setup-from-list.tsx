@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Search, Loader2, Check } from 'lucide-react';
-import { CD_PRODUCTS, searchCdProducts, normBrand, type CdProduct } from '@/data/cd-products';
+import { CD_PRODUCTS, searchCdProducts, normBrand, formKey, type CdProduct } from '@/data/cd-products';
 import { brandOf } from '@/lib/product-name';
 import { genericKey, sameStrength } from '@/lib/cd-catalogue';
 import { api, ApiError } from '@/lib/api';
@@ -10,7 +10,7 @@ import { api, ApiError } from '@/lib/api';
 interface Existing { product: { drug_name: string; strength: string; form: string; brand?: string | null } }
 type Pick = { product: CdProduct; strength: string; balance: string; brand: string };
 
-const sameForm = (a: string, b: string) => a.toLowerCase().replace(/s$/, '') === b.toLowerCase().replace(/s$/, '');
+const sameForm = (a: string, b: string) => formKey(a) === formKey(b); // "patch" = "transdermal patch"
 // Same drug, strength, form AND brand (each brand has its own register).
 export const isOpen = (regs: Existing[], p: CdProduct, strength: string) =>
   regs.some((r) => genericKey(r.product.drug_name) === genericKey(p.generic) && sameStrength(r.product.strength, strength) && sameForm(r.product.form, p.form)

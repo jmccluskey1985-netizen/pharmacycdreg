@@ -1,7 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import { genericKey, sameStrength } from '@/lib/cd-catalogue';
 import { productTitle, genericLine, brandOf } from '@/lib/product-name';
-import { normBrand } from '@/data/cd-products';
+import { normBrand, formKey } from '@/data/cd-products';
 
 const norm = (s: string) => s.toLowerCase().replace(/hydrochloride|sulfate|sulphate|tartrate|citrate|base|\(.*?\)/g, '').replace(/[^a-z0-9]/g, '');
 const normStrength = (s: string) => s.toLowerCase().replace(/\s+/g, '').replace(/micrograms?|µg|ug/g, 'mcg').replace(/milligrams?/g, 'mg');
@@ -49,7 +49,8 @@ export function matchRegister(regs: RegisterOption[], drugName: string, strength
   let exact = sameDrug.filter((r) => sameStrength(r.strength, strength));
   if (exact.length > 1 && form) {
     const f = form.toLowerCase();
-    const byForm = exact.filter((r) => f.includes(r.form.toLowerCase().split(' ').pop()!) || r.form.toLowerCase().includes(f.split(' ').pop()!));
+    const same = exact.filter((r) => formKey(r.form) === formKey(form));
+    const byForm = same.length ? same : exact.filter((r) => f.includes(r.form.toLowerCase().split(' ').pop()!) || r.form.toLowerCase().includes(f.split(' ').pop()!));
     if (byForm.length) exact = byForm;
   }
   // Brands are not interchangeable (OxyNorm ≠ Shortec): a read brand only goes in that brand's book.

@@ -1,4 +1,4 @@
-import { normBrand } from '@/data/cd-products';
+import { normBrand, standardForm } from '@/data/cd-products';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireStaff, errorResponse, audit } from '@/lib/access';
@@ -73,6 +73,7 @@ export async function POST(req: Request) {
     const parsed = Body.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) return NextResponse.json({ error: 'Check the product details', issues: parsed.error.flatten() }, { status: 400 });
     const b = parsed.data;
+    b.form = standardForm(b.form); // "patch" → "transdermal patch", so the same product is never two books
     const db = createServiceClient();
 
     let parentProductId: string | null = null;

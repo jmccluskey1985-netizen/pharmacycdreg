@@ -556,6 +556,15 @@ await step('settings: camera sound and recorded chime switch on and off separate
   await page.getByRole('switch', { name: 'Camera sound' }).click();
 });
 
+await step('shelf: a book saved as "patch" is the Durogesic transdermal patch book, open books first, no duplicate Start book', async () => {
+  await page.goto(B + '/dashboard'); await page.waitForTimeout(2000);
+  const row = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Fentanyl', exact: true }) }).first();
+  const cards = await row.locator('[data-type] > a, [data-type] > button').allInnerTexts();
+  if (!/25mcg\/hr/.test(cards[0] ?? '') || /Start book/.test(cards[0] ?? '')) throw new Error(`first card: ${cards[0]}`);
+  if (cards.some((c) => /25mcg\/hr/.test(c) && /Start book/.test(c) && /Durogesic/i.test(c))) throw new Error('duplicate Start book for an open book');
+  if ((await row.innerText()).split('\n').some((l) => l.trim() === 'Durogesic patch')) throw new Error('separate "Durogesic patch" type');
+});
+
 await step('no page errors during the workflows', async () => { if (page.errors.length) throw new Error(page.errors.slice(0, 3).join(' | ')); });
 
 await step('sign out from the sidebar returns to the home page', async () => {

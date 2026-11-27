@@ -1,4 +1,4 @@
-import { productFor, normBrand } from '@/data/cd-products';
+import { productFor, normBrand, standardForm } from '@/data/cd-products';
 
 export interface ProductLike { drug_name: string; strength: string; form: string; brand?: string | null }
 
@@ -19,7 +19,7 @@ function tidyCase(b: string | null): string | null {
 /** "OxyNorm 5mg capsule", brand first (CDs are prescribed by brand); generic if no brand known. */
 export function productTitle(p: ProductLike): string {
   const b = brandOf(p);
-  return `${b ?? p.drug_name} ${p.strength} ${p.form}`;
+  return `${b ?? p.drug_name} ${p.strength} ${standardForm(p.form)}`;
 }
 
 /** The generic line shown under the brand: "Oxycodone hydrochloride". Null when the title is already generic. */

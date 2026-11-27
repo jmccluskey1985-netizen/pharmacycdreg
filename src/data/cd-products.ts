@@ -111,7 +111,28 @@ export function searchCdProducts(q: string): CdProduct[] {
   });
 }
 
-const formKey = (f: string) => f.toLowerCase().replace(/s$/, '').replace(/\s+/g, ' ').trim();
+/**
+ * Forms written different ways for the same thing ("patch" / "transdermal patches" / "TD patch",
+ * "caps", "PR tablet") → the catalogue's wording, so one product is never treated as two.
+ */
+const FORM_ALIASES: [RegExp, string][] = [
+  [/^(transdermal |td |matrix )?patch$/, 'transdermal patch'],
+  [/^(cap|capsule)$/, 'capsule'],
+  [/^(tab|tablet)$/, 'tablet'],
+  [/^(pr|sr|prolonged release|sustained release|slow release|controlled release|m\/r) (tab|tablet)$/, 'prolonged-release tablet'],
+  [/^(pr|sr|prolonged release|sustained release|slow release) (cap|capsule)$/, 'prolonged-release capsule'],
+  [/^(oral liquid|liquid|oral soln\.?|solution)$/, 'oral solution'],
+];
+const formBase = (f: string) => f.toLowerCase().replace(/-/g, ' ').replace(/\s+/g, ' ').trim().replace(/patches$/, 'patch').replace(/s$/, '');
+/** The catalogue's wording for a form when it's a known alias ("patch" → "transdermal patch"), else as written. */
+export function standardForm(f: string): string {
+  const base = formBase(f);
+  for (const [re, to] of FORM_ALIASES) if (re.test(base)) return to;
+  return f.trim();
+}
+/** Comparable form: lower case, singular, hyphens as spaces, aliases resolved. */
+export const formKey = (f: string) => formBase(standardForm(f));
+
 const genKey = (g: string) => g.toLowerCase().replace(/\b(hydrochloride|sulfate|sulphate|hcl|tartrate|citrate|dimesylate)\b/g, '').replace(/[^a-z/]/g, '');
 
 /** The catalogue product for a register (generic + form, and brand when known). */
