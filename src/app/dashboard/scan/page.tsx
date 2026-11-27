@@ -3,13 +3,14 @@ import { productTitle, brandOf, genericLine } from '@/lib/product-name';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ScanLine, Camera, CheckCircle2, FileText, ImagePlus, Loader2, Plus, RotateCcw, Sun, Maximize, Hand, Sparkles, X, AlertTriangle, Receipt, ClipboardList } from 'lucide-react';
+import { ChevronRight, ScanLine, Camera, CheckCircle2, FileText, ImagePlus, Loader2, Plus, RotateCcw, Sun, Maximize, Hand, Sparkles, X, AlertTriangle, Receipt, ClipboardList } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 import { can } from '@/lib/roles';
 import { useStaff, useCan } from '@/components/dashboard/staff-context';
 import { EntryForm } from '@/components/dashboard/entry-form';
 import { PatientChoice, type PatientPick } from '@/components/dashboard/patient-choice';
-import { productFor } from '@/data/cd-products';
+import { productFor, normBrand } from '@/data/cd-products';
+import { RecordedDone, DoneTick, ting, type UpdatedBook } from '@/components/dashboard/recorded-done';
 import { ScannerFolder } from '@/components/dashboard/scanner-folder';
 
 type Page = { file: File; url: string };
@@ -52,6 +53,11 @@ export default function ScanPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
   const [patientPick, setPatientPick] = useState<PatientPick>(null);
+  // Books started from this scan (by product), so a second line of the same product goes into the
+  // same new book instead of trying to start another; and the latest balance of every book used.
+  const [started, setStarted] = useState<Record<string, { id: string; label: string; balance: number }>>({});
+  const [balances, setBalances] = useState<Record<string, number>>({});
+  const [updated, setUpdated] = useState<UpdatedBook[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -174,6 +180,9 @@ export default function ScanPage() {
     setResult(null);
     setPatientPick(null);
     setError(null);
+    setStarted({});
+    setBalances({});
+    setUpdated([]);
     setStage('capture');
   }
 
@@ -240,7 +249,21 @@ export default function ScanPage() {
 
         <div className="space-y-4">
           {result.proposals.map((p: any, i: number) => (
-            <ProposalCard key={i} p={p} patientPick={patientPick} canOpenBook={canDo('openRegister')} autoOpen={result.proposals.length === 1 && !!p.register_id} done={!!result.done[i]} onDone={(saved?: { patient_id?: string | null }) => { if (saved?.patient_id) setPatientPick({ patient_id: saved.patient_id }); setResult((cur: any) => ({ ...cur, done: { ...cur.done, [i]: true } })); }} canRecord={!!staff && (can.record(staff.role) || canDo('draftEntries'))} />
+            <ProposalCard key={i} p={p} patientPick={patientPick} canOpenBook={canDo('openRegister')} autoOpen={result.proposals.length === 1 && !!p.register_id} done={!!result.done[i]}
+              sharedBook={started[productKey(p.item)]} balances={balances}
+              onStartedBook={(b) => setStarted((cur) => ({ ...cur, [productKey(p.item)]: b }))}
+              onDone={(saved, book) => {
+                if (saved?.patient_id) setPatientPick({ patient_id: saved.patient_id });
+                if (book) {
+                  if (book.balance != null) setBalances((cur) => ({ ...cur, [book.id]: book.balance! }));
+                  setUpdated((cur) => {
+                    const had = cur.find((b) => b.id === book.id);
+                    return had ? cur.map((b) => (b.id === book.id ? { ...b, change: b.change + book.change, balance: book.balance } : b)) : [...cur, book];
+                  });
+                }
+                if (remaining > 1) ting(); // the last one gets the big "all done" chime
+                setResult((cur: any) => ({ ...cur, done: { ...cur.done, [i]: true } }));
+              }} canRecord={!!staff && (can.record(staff.role) || canDo('draftEntries'))} />
           ))}
         </div>
 
@@ -251,16 +274,15 @@ export default function ScanPage() {
           <p className="text-muted-foreground">{result.proposals.length} controlled drug line{result.proposals.length === 1 ? '' : 's'} found{result.ignored ? ` · ${result.ignored} other line${result.ignored === 1 ? '' : 's'} ignored` : ''}</p>
         </div>
 
-        {result.proposals.length > 0 && remaining === 0 && (
-          <div className="card mt-6 flex items-center gap-3 border-brand/40 bg-brand/10">
-            <CheckCircle2 className="h-6 w-6 text-brand" />
-            <p className="font-semibold">Recorded.</p>
-            <div className="ml-auto flex gap-2">
-              <Link href="/dashboard" className="btn-secondary">Registers</Link>
-              <button onClick={reset} className="btn-brand"><ScanLine className="h-4 w-4" /> Scan next</button>
+        {result.proposals.length > 0 && remaining === 0 && (updated.length
+          ? <RecordedDone books={updated} onScanNext={reset} />
+          : (
+            <div className="card mt-6 flex items-center gap-3 border-brand/40 bg-brand/10">
+              <DoneTick size={32} />
+              <p className="font-semibold">Done: sent to To confirm for a pharmacist to sign.</p>
+              <button onClick={reset} className="btn-brand ml-auto"><ScanLine className="h-4 w-4" /> Scan next</button>
             </div>
-          </div>
-        )}
+          ))}
       </div>
     );
   }
@@ -386,19 +408,39 @@ export default function ScanPage() {
   );
 }
 
-function ProposalCard({ p, done, onDone, canRecord, autoOpen, canOpenBook, patientPick }: { p: any; patientPick?: PatientPick; done: boolean; onDone: (saved?: { patient_id?: string | null }) => void; canRecord: boolean; autoOpen?: boolean; canOpenBook?: boolean }) {
+/** Same product on two lines of one scan: brand (standard spelling), drug, strength, form. */
+const productKey = (item: any) => [normBrand(item.brand) ?? '', item.drug_name, item.strength, item.form].join('|').toLowerCase().replace(/\s+/g, '');
+
+function ProposalCard({ p, done, onDone, canRecord, autoOpen, canOpenBook, patientPick, sharedBook, balances, onStartedBook }: {
+  p: any; patientPick?: PatientPick; done: boolean; canRecord: boolean; autoOpen?: boolean; canOpenBook?: boolean;
+  onDone: (saved: { patient_id?: string | null } | undefined, book: UpdatedBook | null) => void;
+  sharedBook?: { id: string; label: string; balance: number }; balances: Record<string, number>;
+  onStartedBook: (b: { id: string; label: string; balance: number }) => void;
+}) {
   const [registerId, setRegisterId] = useState<string | null>(p.register_id);
   const [candidates, setCandidates] = useState<any[]>(p.candidates);
   const [started, setStarted] = useState<{ id: string; balance: number } | null>(null);
+  // Another line of this scan already started this product's book: use it, don't start a second one.
+  useEffect(() => {
+    if (!sharedBook || registerId || started) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- follows a book started from another card
+    setCandidates((c) => (c.some((x: any) => x.id === sharedBook.id) ? c : [...c, { id: sharedBook.id, label: sharedBook.label }]));
+    setRegisterId(sharedBook.id);
+    setStarted({ id: sharedBook.id, balance: sharedBook.balance });
+  }, [sharedBook, registerId, started]);
+  const [recordedIn, setRecordedIn] = useState<string | null>(null);
   const [startOpen, setStartOpen] = useState(!p.candidates.length);
   // One drug matched to your register (the usual prescription): go straight to the filled-in entry.
   const [open, setOpen] = useState(!!autoOpen && canRecord);
   const chosen = candidates.find((c: any) => c.id === registerId);
+  // The book's balance before this line: as updated by earlier lines of this scan, else as read
+  const before = registerId && balances[registerId] != null ? balances[registerId]
+    : started && registerId === started.id ? started.balance : registerId === p.register_id ? Number(p.current_balance ?? 0) : NaN;
   const conf = p.item.confidence as 'high' | 'medium' | 'low';
   const confCls = conf === 'high' ? 'bg-brand/15 text-primary' : conf === 'medium' ? 'bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100' : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200';
 
   return (
-    <div className={`card ${done ? 'opacity-60' : ''}`}>
+    <div className={`card ${done ? 'border-brand/30 [&>div:first-child]:opacity-60' : ''}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-lg font-bold leading-tight">{p.item.brand || p.item.drug_name} {p.item.strength} <span className="text-base font-normal text-muted-foreground">{p.item.form}</span></p>
@@ -418,7 +460,11 @@ function ProposalCard({ p, done, onDone, canRecord, autoOpen, canOpenBook, patie
       )}
 
       {done ? (
-        <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-primary"><CheckCircle2 className="h-4 w-4" /> Recorded</p>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <DoneTick size={28} />
+          <p className="text-sm font-semibold text-primary">Recorded{recordedIn ? ` in ${recordedIn}` : ''}</p>
+          {registerId && <Link href={`/dashboard/register/${registerId}`} className="btn-secondary ml-auto py-1.5 text-sm">View book <ChevronRight className="h-4 w-4" /></Link>}
+        </div>
       ) : (
         <>
           <div className="mt-3">
@@ -431,7 +477,7 @@ function ProposalCard({ p, done, onDone, canRecord, autoOpen, canOpenBook, patie
             )}
             {!started && p.match_state !== 'your_register' && (canOpenBook ? (
               startOpen
-                ? <StartBook item={p.item} receipt={p.draft?.entry_type === 'receipt'} onStarted={(id, label, balance) => { setCandidates((c) => [...c, { id, label }]); setRegisterId(id); setStarted({ id, balance }); setStartOpen(false); if (canRecord) setOpen(true); }} onCancel={candidates.length ? () => setStartOpen(false) : undefined} />
+                ? <StartBook item={p.item} receipt={p.draft?.entry_type === 'receipt'} onStarted={(id, label, balance) => { setCandidates((c) => [...c, { id, label }]); setRegisterId(id); setStarted({ id, balance }); onStartedBook({ id, label, balance }); setStartOpen(false); if (canRecord) setOpen(true); }} onCancel={candidates.length ? () => setStartOpen(false) : undefined} />
                 : <button type="button" onClick={() => setStartOpen(true)} className="mt-2 text-sm font-semibold text-primary underline">Not listed? Start a new CD book for it</button>
             ) : !candidates.length && <p className="rounded-lg bg-muted p-3 text-sm">No CD book for this product yet: ask the supervising pharmacist to start one.</p>)}
           </div>
@@ -442,13 +488,22 @@ function ProposalCard({ p, done, onDone, canRecord, autoOpen, canOpenBook, patie
               <EntryForm
                 registerId={registerId}
                 unit={chosen?.label ? p.item.quantity_unit : 'units'}
-                balance={started && registerId === started.id ? started.balance : registerId === p.register_id ? Number(p.current_balance ?? 0) : NaN}
+                balance={before}
                 initial={p.draft}
                 patientPick={patientPick}
                 lockType
                 submitLabel="Confirm & record"
                 onCancel={() => setOpen(false)}
-                onSaved={(res: any) => { setOpen(false); onDone(res); }}
+                onSaved={(res: any) => {
+                  setOpen(false);
+                  const label = chosen?.label ?? p.register_label ?? `${p.item.brand || p.item.drug_name} ${p.item.strength}`;
+                  setRecordedIn(label);
+                  const after = typeof res?.balance === 'number' ? res.balance : null;
+                  const q = Number(p.draft?.quantity) || 0;
+                  const change = after != null && Number.isFinite(before) ? after - before : p.draft?.entry_type === 'receipt' ? q : -q;
+                  // A technician's draft changes nothing until signed: no book to show as updated
+                  onDone(res, after == null ? null : { id: registerId, label, change, unit: p.item.quantity_unit || 'units', balance: after });
+                }}
               />
             </div>
           )}

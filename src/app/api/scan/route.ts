@@ -1,3 +1,4 @@
+import { combineRepeatLines } from '@/lib/combine-lines';
 import { NextResponse } from 'next/server';
 import { requireStaff, errorResponse, audit } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase/server';
@@ -151,6 +152,12 @@ export async function POST(req: Request) {
         },
       };
     }));
+
+    // The same product on more than one line of an invoice or docket (e.g. two lines of Durogesic
+    // 12mcg/hr, 2 × 5 each) is one delivery into one book: combine them into a single receipt.
+    // Recorded separately, the second line would hit the "same docket already received" guard,
+    // and with no book yet each line would try to start its own book.
+    if (isInvoice) combineRepeatLines(proposals);
 
     // OST form (methadone / buprenorphine in instalments): today's rows are the supply; the form
     // is held with its schedule; earlier rows not yet in the register are offered as late entries.

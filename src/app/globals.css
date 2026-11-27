@@ -231,3 +231,14 @@
 /* Home page: report lines appearing one by one */
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { [style*="fadeInUp"] { animation: none !important; } }
+
+/* Scan recorded: tick pops in, ring pulses out, tick draws; the updated books slide in after. */
+.done-tick .done-circle { transform: scale(.3); transform-origin: center; transform-box: fill-box; animation: tickPop .5s cubic-bezier(.3,1.6,.5,1) forwards; }
+.done-tick .done-path { stroke-dasharray: 36; stroke-dashoffset: 36; animation: tickDraw .4s ease-out .35s forwards; }
+.done-tick .done-ring { opacity: 0; animation: doneRing .9s ease-out .2s; }
+@keyframes doneRing { 0% { opacity: .7; transform: scale(.8); } 100% { opacity: 0; transform: scale(1.9); } }
+.done-row { opacity: 0; animation: fadeInUp .4s ease-out forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .done-tick .done-circle, .done-tick .done-path, .done-row { animation: none; transform: none; stroke-dashoffset: 0; opacity: 1; }
+  .done-tick .done-ring { display: none; }
+}

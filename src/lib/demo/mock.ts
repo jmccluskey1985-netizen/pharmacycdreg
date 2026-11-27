@@ -6,6 +6,7 @@
  * rows, balance can't go negative, role checks.
  */
 'use client';
+import { combineRepeatLines } from '@/lib/combine-lines';
 import { decideQuantity } from '@/lib/quantity';
 import { productTitle } from '@/lib/product-name';
 import { STOCK_EFFECT } from '@/lib/entry-schema';
@@ -807,6 +808,7 @@ async function handle(method: string, path: string, url: URL, init?: RequestInit
       const qty = decideQuantity(item, extraction.document_type as any);
       return { item, qty, match_state: match ? 'your_register' : same.length ? 'pick_register' : 'no_register', register_id: match?.id ?? null, register_label: match ? productTitle(match.product) : null, current_balance: match?.balance ?? null, candidates: regs.filter((r) => norm(r.product.drug_name).includes(norm(item.drug_name))).map((r) => ({ id: r.id, label: productTitle(r.product) })), draft: { entry_type: isRx ? 'supply' : 'receipt', transaction_date: today(), quantity: qty.quantity ?? '', supplier_name: extraction.supplier_name, supplier_address: extraction.supplier_address, recipient_name: extraction.patient_name, recipient_address: extraction.patient_address, patient_dob: (extraction as any).patient_dob ?? null, patient_details: isRx ? { first_name: (extraction as any).patient_first_name, surname: (extraction as any).patient_surname, gms: (extraction as any).gms_number } : null, prescriber_name: extraction.prescriber_name, prescriber_address: extraction.prescriber_address, authority_to_possess: isRx ? `Prescription: ${extraction.prescriber_name}` : null, prescription_ref: extraction.reference, notes: isRx ? null : extraction.reference, scan_id: null } };
     });
+    if (!isRx) combineRepeatLines(proposals as any);
     audit('scan.read', { document_type: extraction.document_type });
     let patient_match: Json | null = null;
     if (isRx) {

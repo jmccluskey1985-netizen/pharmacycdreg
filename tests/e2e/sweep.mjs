@@ -229,9 +229,16 @@ await step('invoice scan: read, check and record a line', async () => {
   await page.getByRole('button', { name: /Read/ }).first().click();
   await see('text=Check and record', 15000);
   await click('button:has-text("Check details & record") >> nth=0'); await page.waitForTimeout(800);
-  const sign = page.locator('button:has-text("Sign & record")');
+  const sign = page.locator('button:has-text("Sign & record"), button:has-text("Confirm & record")');
   if (await sign.count()) { await sign.first().click(); await page.waitForTimeout(1500); }
   if (await page.isVisible('text=/Could not|error/i')) throw new Error('recording failed');
+  await see('a:has-text("View book")'); // each recorded line links to its book
+  for (let k = 0; k < 5 && await page.locator('button:has-text("Check details & record")').count(); k++) {
+    await click('button:has-text("Check details & record") >> nth=0'); await page.waitForTimeout(600);
+    await click('button:has-text("Confirm & record") >> nth=0'); await page.waitForTimeout(1200);
+  }
+  await see('[role=status]:has-text("books were updated"), [role=status]:has-text("This book was updated")'); // tick + the books, tap to open
+  if (!(await page.locator('[role=status] a[href^="/dashboard/register/"]').count())) throw new Error('updated books not listed');
 });
 
 await step('Rx scan: a misspelt name is matched to the existing patient', async () => {
