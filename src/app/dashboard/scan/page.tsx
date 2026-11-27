@@ -10,7 +10,7 @@ import { useStaff, useCan } from '@/components/dashboard/staff-context';
 import { EntryForm } from '@/components/dashboard/entry-form';
 import { PatientChoice, type PatientPick } from '@/components/dashboard/patient-choice';
 import { productFor, normBrand } from '@/data/cd-products';
-import { shutter } from '@/lib/sounds';
+import { shutter, preloadShutter, soundOn } from '@/lib/sounds';
 import { RecordedDone, DoneTick, ting, type UpdatedBook } from '@/components/dashboard/recorded-done';
 import { ScannerFolder } from '@/components/dashboard/scanner-folder';
 
@@ -98,7 +98,7 @@ export default function ScanPage() {
   useEffect(() => {
     const touch = window.matchMedia('(pointer: coarse)').matches;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (storage, URL, fetched data) read after hydration
-    if (touch && stage === 'capture') startCamera();
+    if (touch && stage === 'capture') { startCamera(); if (soundOn('shutter')) preloadShutter(); }
     return stopCamera;
   }, [stage, startCamera, stopCamera]);
 

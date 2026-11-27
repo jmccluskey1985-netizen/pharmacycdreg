@@ -24,22 +24,22 @@ function audio(): AudioContext | null {
 }
 const closeSoon = (ctx: AudioContext) => setTimeout(() => ctx.close().catch(() => {}), 1500);
 
-/** A camera shutter: two short filtered clicks (shutter open, shutter close). */
+/** An old-school camera shutter ("ka-chunk"): a short recording made for the app, /sounds/shutter.mp3 (9 KB). */
+let shutterEl: HTMLAudioElement | null = null;
 export function shutter(force = false) {
   if (!force && !soundOn('shutter')) return;
-  const ctx = audio();
-  if (!ctx) return;
-  const len = Math.floor(ctx.sampleRate * 0.06);
-  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
-  const d = buf.getChannelData(0);
-  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
-  [[0, 0.5, 3200], [0.075, 0.3, 2200]].forEach(([at, vol, hz]) => {
-    const src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
-    src.buffer = buf; bp.type = 'bandpass'; bp.frequency.value = hz; bp.Q.value = 0.9; g.gain.value = vol;
-    src.connect(bp).connect(g).connect(ctx.destination);
-    src.start(ctx.currentTime + at);
-  });
-  closeSoon(ctx);
+  try {
+    shutterEl ??= Object.assign(new Audio('/sounds/shutter.mp3'), { preload: 'auto' });
+    const a = shutterEl.paused ? shutterEl : (shutterEl.cloneNode() as HTMLAudioElement); // quick repeat shots overlap
+    a.currentTime = 0;
+    a.volume = 0.8;
+    a.play().catch(() => {});
+  } catch { /* no sound is fine */ }
+}
+
+/** Load the shutter sound ahead of the first photo (the scanner calls this when the camera opens). */
+export function preloadShutter() {
+  try { shutterEl ??= Object.assign(new Audio('/sounds/shutter.mp3'), { preload: 'auto' }); shutterEl.load(); } catch { /* ignore */ }
 }
 
 /** A soft bell "ting"; `big` adds a higher third note for "all done". */
