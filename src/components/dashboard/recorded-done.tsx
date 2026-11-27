@@ -3,35 +3,12 @@
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 import { BookOpen, ChevronRight, ScanLine } from 'lucide-react';
+import { ting } from '@/lib/sounds';
+
+export { ting };
 
 /** One book a scan was recorded into, for the "done" panel. */
 export interface UpdatedBook { id: string; label: string; change: number; unit: string; balance: number | null }
-
-/**
- * A short "ting": two soft bell tones made in the browser (no sound file). Quiet, and silent where
- * the browser blocks audio. `big` adds a third, higher note for "all done".
- */
-export function ting(big = false) {
-  try {
-    const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AC) return;
-    const ctx = new AC();
-    const notes = big ? [1318.5, 1760, 2637] : [1568, 2093];
-    notes.forEach((f, i) => {
-      const o = ctx.createOscillator(), g = ctx.createGain();
-      const t = ctx.currentTime + i * 0.09;
-      o.type = 'sine';
-      o.frequency.value = f;
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(0.16, t + 0.012);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
-      o.connect(g).connect(ctx.destination);
-      o.start(t);
-      o.stop(t + 0.95);
-    });
-    setTimeout(() => ctx.close().catch(() => {}), 1500);
-  } catch { /* no sound is fine */ }
-}
 
 /** The green tick: the circle pops in, a ring pulses out, then the tick draws itself. */
 export function DoneTick({ size = 72 }: { size?: number }) {

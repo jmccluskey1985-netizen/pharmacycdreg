@@ -1,5 +1,6 @@
 'use client';
 
+import { SoundSettings } from '@/components/dashboard/sound-settings';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { UserCog, ScanLine, Mail, Building2, ShieldCheck, ClipboardCheck, Database, Loader2, Check, Download, Users, BookUser, CreditCard, Plug, ChevronRight, Archive } from 'lucide-react';
@@ -116,6 +117,7 @@ export default function SettingsPage() {
             <h2 className="font-semibold">This device</h2>
             <InstallAppButton className="card" />
             <ReminderNotifications />
+            <SoundSettings />
           </section>
           <section className="card divide-y divide-border p-0">
             {[

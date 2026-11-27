@@ -10,6 +10,7 @@ import { useStaff, useCan } from '@/components/dashboard/staff-context';
 import { EntryForm } from '@/components/dashboard/entry-form';
 import { PatientChoice, type PatientPick } from '@/components/dashboard/patient-choice';
 import { productFor, normBrand } from '@/data/cd-products';
+import { shutter } from '@/lib/sounds';
 import { RecordedDone, DoneTick, ting, type UpdatedBook } from '@/components/dashboard/recorded-done';
 import { ScannerFolder } from '@/components/dashboard/scanner-folder';
 
@@ -109,6 +110,7 @@ export default function ScanPage() {
     canvas.height = v.videoHeight;
     canvas.getContext('2d')!.drawImage(v, 0, 0);
     setFlash(true);
+    shutter();
     setTimeout(() => setFlash(false), 180);
     if ('vibrate' in navigator) navigator.vibrate?.(30);
     const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b!), 'image/jpeg', 0.92));

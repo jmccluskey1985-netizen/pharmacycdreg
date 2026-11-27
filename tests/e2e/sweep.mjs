@@ -546,6 +546,16 @@ await step('print menu: whole register, or a date range with the balance brought
   if (!/Balance brought forward/.test(rows[0] ?? '')) throw new Error('no balance brought forward line');
 });
 
+await step('settings: camera sound and recorded chime switch on and off separately, kept on this device', async () => {
+  await page.goto(B + '/dashboard/settings'); await page.waitForTimeout(1500);
+  const cam = page.getByRole('switch', { name: 'Camera sound' }), chime = page.getByRole('switch', { name: 'Recorded chime' });
+  await cam.click();
+  if ((await cam.getAttribute('aria-checked')) !== 'false' || (await chime.getAttribute('aria-checked')) !== 'true') throw new Error('switches not independent');
+  await page.reload(); await page.waitForTimeout(1500);
+  if ((await page.getByRole('switch', { name: 'Camera sound' }).getAttribute('aria-checked')) !== 'false') throw new Error('choice not kept');
+  await page.getByRole('switch', { name: 'Camera sound' }).click();
+});
+
 await step('no page errors during the workflows', async () => { if (page.errors.length) throw new Error(page.errors.slice(0, 3).join(' | ')); });
 
 await step('sign out from the sidebar returns to the home page', async () => {
